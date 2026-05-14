@@ -30,7 +30,6 @@ export function AuthProvider({ children }) {
   async function loadProfile(authUser) {
     if (!authUser) return;
     const meta = authUser.user_metadata || {};
-
     const { data } = await supabase
       .from('profiles')
       .select('*')
@@ -38,12 +37,8 @@ export function AuthProvider({ children }) {
       .maybeSingle();
 
     if (data) {
-      setProfile({
-        ...data,
-        terms_accepted: data.terms_accepted || meta.terms_accepted || false,
-      });
+      setProfile({ ...data, terms_accepted: data.terms_accepted || meta.terms_accepted || false });
     } else {
-      // Profile missing — create it now
       const newProfile = {
         id: authUser.id,
         email: authUser.email,
@@ -57,21 +52,18 @@ export function AuthProvider({ children }) {
         total_earnings: 0,
         fraud_score: 0,
       };
-      // Try to insert — may fail due to RLS but we still use local state
       await supabase.from('profiles').upsert(newProfile, { onConflict: 'id' });
       setProfile(newProfile);
     }
   }
 
-  async function refreshProfile() {
-    if (session) {
-      const { data: { user } } = await supabase.auth.getUser();
-      await loadProfile(user || session.user);
-    }
-  }
-
   function updateProfileLocally(updates) {
     setProfile(prev => prev ? { ...prev, ...updates } : updates);
+  }
+
+  async function refreshProfile() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) await loadProfile(user);
   }
 
   async function signUp(email, password, fullName) {

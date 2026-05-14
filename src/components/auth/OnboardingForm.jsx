@@ -51,7 +51,7 @@ export default function OnboardingForm() {
       <div className="w-full max-w-sm relative z-10">
         <div className="text-center mb-6">
           <div className="inline-flex mb-3">
-            <Logo size={48} />
+            <Logo size={64} className="rounded-xl" />
           </div>
           <h1 className="text-2xl font-bold text-white">Set up your profile</h1>
           <p className="text-gray-400 text-sm mt-1">Step {step} of 2</p>

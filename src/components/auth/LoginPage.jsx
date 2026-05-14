@@ -42,11 +42,10 @@ export default function LoginPage() {
       <div className="w-full max-w-sm relative z-10">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-4">
-            <Logo size={72} />
+          <div className="inline-flex items-center justify-center mb-3">
+            <Logo size={120} className="rounded-2xl shadow-xl shadow-brand-500/20" />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Campus Run</h1>
-          <p className="text-gray-400 mt-1.5 text-sm">Campus delivery, made simple</p>
+          <p className="text-gray-400 mt-2 text-sm tracking-wide uppercase font-medium">We Deliver. You Relax.</p>
         </div>
 
         {/* Mode toggle */}

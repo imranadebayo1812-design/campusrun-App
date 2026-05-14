@@ -16,8 +16,7 @@ export default function MobileShell({ children }) {
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 bg-surface-900 border-b border-white/[0.08] safe-top shrink-0 z-10">
         <div className="flex items-center gap-2.5">
-          <Logo size={34} />
-          <span className="font-bold text-white text-lg tracking-tight">Campus Run</span>
+          <Logo size={38} />
         </div>
 
         {profile && (

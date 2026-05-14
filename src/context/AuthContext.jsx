@@ -6,19 +6,19 @@ const AuthContext = createContext(null);
 const ADMIN_EMAILS = ['imranadebayo1812@gmail.com', 'okekejohnk8012@gmail.com'];
 
 export function AuthProvider({ children }) {
-  const [session, setSession] = useState(undefined); // undefined = loading
+  const [session, setSession] = useState(undefined);
   const [profile, setProfile] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) loadProfile(session.user.id);
+      if (session) loadProfile(session.user.id, session.user);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) {
-        loadProfile(session.user.id);
+        loadProfile(session.user.id, session.user);
       } else {
         setProfile(null);
       }
@@ -27,17 +27,30 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function loadProfile(userId) {
+  async function loadProfile(userId, authUser) {
     const { data } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
-    setProfile(data);
+
+    if (data) {
+      // Merge auth metadata into profile so terms_accepted from metadata works
+      const meta = authUser?.user_metadata || {};
+      setProfile({
+        ...data,
+        terms_accepted: data.terms_accepted || meta.terms_accepted || false,
+      });
+    } else {
+      setProfile(data);
+    }
   }
 
   async function refreshProfile() {
-    if (session) await loadProfile(session.user.id);
+    if (session) {
+      const { data: { user } } = await supabase.auth.getUser();
+      await loadProfile(session.user.id, user);
+    }
   }
 
   async function signUp(email, password, fullName) {

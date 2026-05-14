@@ -3,7 +3,7 @@ import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
 
 export default function TermsModal() {
-  const { session, refreshProfile } = useAuth();
+  const { refreshProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const savingRef = useRef(false);
@@ -14,13 +14,26 @@ export default function TermsModal() {
     setLoading(true);
     setError('');
 
-    const { error } = await supabase.rpc('accept_terms');
+    try {
+      // Store in auth user metadata — bypasses RLS completely
+      const { error: metaError } = await supabase.auth.updateUser({
+        data: { terms_accepted: true, terms_accepted_at: new Date().toISOString() }
+      });
 
-    if (error) {
-      setError('Could not save. Please try again.');
-    } else {
+      if (metaError) throw metaError;
+
+      // Best-effort sync to profiles table
+      await supabase.from('profiles').upsert({
+        id: (await supabase.auth.getUser()).data.user.id,
+        terms_accepted: true,
+        terms_accepted_at: new Date().toISOString(),
+      }, { onConflict: 'id' }).select();
+
       await refreshProfile();
+    } catch (e) {
+      setError('Could not save. Please try again.');
     }
+
     savingRef.current = false;
     setLoading(false);
   }

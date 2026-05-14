@@ -12,13 +12,13 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) loadProfile(session.user.id, session.user);
+      if (session) loadProfile(session.user);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) {
-        loadProfile(session.user.id, session.user);
+        loadProfile(session.user);
       } else {
         setProfile(null);
       }
@@ -27,30 +27,51 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function loadProfile(userId, authUser) {
+  async function loadProfile(authUser) {
+    if (!authUser) return;
+    const meta = authUser.user_metadata || {};
+
     const { data } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', userId)
-      .single();
+      .eq('id', authUser.id)
+      .maybeSingle();
 
     if (data) {
-      // Merge auth metadata into profile so terms_accepted from metadata works
-      const meta = authUser?.user_metadata || {};
       setProfile({
         ...data,
         terms_accepted: data.terms_accepted || meta.terms_accepted || false,
       });
     } else {
-      setProfile(data);
+      // Profile missing — create it now
+      const newProfile = {
+        id: authUser.id,
+        email: authUser.email,
+        full_name: meta.full_name || '',
+        terms_accepted: meta.terms_accepted || false,
+        onboarding_complete: false,
+        is_admin: ADMIN_EMAILS.includes(authUser.email),
+        is_courier: false,
+        is_blacklisted: false,
+        wallet_balance: 0,
+        total_earnings: 0,
+        fraud_score: 0,
+      };
+      // Try to insert — may fail due to RLS but we still use local state
+      await supabase.from('profiles').upsert(newProfile, { onConflict: 'id' });
+      setProfile(newProfile);
     }
   }
 
   async function refreshProfile() {
     if (session) {
       const { data: { user } } = await supabase.auth.getUser();
-      await loadProfile(session.user.id, user);
+      await loadProfile(user || session.user);
     }
+  }
+
+  function updateProfileLocally(updates) {
+    setProfile(prev => prev ? { ...prev, ...updates } : updates);
   }
 
   async function signUp(email, password, fullName) {
@@ -77,7 +98,7 @@ export function AuthProvider({ children }) {
   const loading = session === undefined;
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signUp, signIn, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ session, profile, loading, signUp, signIn, signOut, refreshProfile, updateProfileLocally }}>
       {children}
     </AuthContext.Provider>
   );

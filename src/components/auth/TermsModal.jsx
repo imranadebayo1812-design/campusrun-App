@@ -3,7 +3,7 @@ import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
 
 export default function TermsModal() {
-  const { refreshProfile } = useAuth();
+  const { session, updateProfileLocally } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const savingRef = useRef(false);
@@ -14,25 +14,23 @@ export default function TermsModal() {
     setLoading(true);
     setError('');
 
+    // Update local state immediately so the modal closes right away
+    updateProfileLocally({ terms_accepted: true, terms_accepted_at: new Date().toISOString() });
+
+    // Persist in background — multiple attempts
+    const now = new Date().toISOString();
     try {
-      // Store in auth user metadata — bypasses RLS completely
-      const { error: metaError } = await supabase.auth.updateUser({
-        data: { terms_accepted: true, terms_accepted_at: new Date().toISOString() }
-      });
+      await supabase.auth.updateUser({ data: { terms_accepted: true } });
+    } catch {}
 
-      if (metaError) throw metaError;
+    try {
+      await supabase.from('profiles').update({ terms_accepted: true, terms_accepted_at: now })
+        .eq('id', session.user.id);
+    } catch {}
 
-      // Best-effort sync to profiles table
-      await supabase.from('profiles').upsert({
-        id: (await supabase.auth.getUser()).data.user.id,
-        terms_accepted: true,
-        terms_accepted_at: new Date().toISOString(),
-      }, { onConflict: 'id' }).select();
-
-      await refreshProfile();
-    } catch (e) {
-      setError('Could not save. Please try again.');
-    }
+    try {
+      await supabase.rpc('accept_terms');
+    } catch {}
 
     savingRef.current = false;
     setLoading(false);

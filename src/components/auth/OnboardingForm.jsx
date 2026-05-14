@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
 import { User, Phone, BookOpen, Home } from 'lucide-react';
+import Logo from '@/components/ui/Logo';
 
 const HOSTELS = [
   'Nile Hall A', 'Nile Hall B', 'Nile Hall C', 'Nile Hall D',
@@ -41,75 +42,60 @@ export default function OnboardingForm() {
     setLoading(false);
   }
 
+  const inputClass = "w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50";
+
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-surface-950 flex items-center justify-center p-4">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-72 bg-brand-600/20 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="w-full max-w-sm relative z-10">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Set up your profile</h1>
-          <p className="text-gray-500 text-sm mt-1">Step {step} of 2</p>
+          <div className="inline-flex mb-3">
+            <Logo size={48} />
+          </div>
+          <h1 className="text-2xl font-bold text-white">Set up your profile</h1>
+          <p className="text-gray-400 text-sm mt-1">Step {step} of 2</p>
           <div className="flex gap-2 mt-3 justify-center">
-            {[1,2].map(s => (
-              <div key={s} className={`h-1.5 w-10 rounded-full transition-colors ${s <= step ? 'bg-brand-500' : 'bg-gray-200'}`} />
+            {[1, 2].map(s => (
+              <div key={s} className={`h-1.5 w-10 rounded-full transition-colors ${s <= step ? 'bg-brand-500' : 'bg-surface-800'}`} />
             ))}
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow p-6 space-y-4">
+        <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-6 space-y-4">
           {step === 1 && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1">
                   <User className="w-4 h-4" /> Full Name
                 </label>
-                <input
-                  type="text"
-                  value={data.full_name}
-                  onChange={e => update('full_name', e.target.value)}
-                  placeholder="Your full name"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
-                />
+                <input type="text" value={data.full_name} onChange={e => update('full_name', e.target.value)} placeholder="Your full name" className={inputClass} />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1">
                   <Phone className="w-4 h-4" /> Phone Number
                 </label>
-                <input
-                  type="tel"
-                  value={data.phone_number}
-                  onChange={e => update('phone_number', e.target.value)}
-                  placeholder="08012345678"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
-                />
+                <input type="tel" value={data.phone_number} onChange={e => update('phone_number', e.target.value)} placeholder="08012345678" className={inputClass} />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1">
                   <BookOpen className="w-4 h-4" /> Course
                 </label>
-                <input
-                  type="text"
-                  value={data.course}
-                  onChange={e => update('course', e.target.value)}
-                  placeholder="e.g. Computer Science"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
-                />
+                <input type="text" value={data.course} onChange={e => update('course', e.target.value)} placeholder="e.g. Computer Science" className={inputClass} />
               </div>
-
               <button
                 disabled={!data.full_name || !data.phone_number || !data.course}
                 onClick={() => setStep(2)}
-                className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl mt-2"
+                className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold py-3.5 rounded-xl mt-2 transition-colors"
               >
                 Next
               </button>
             </>
           )}
-
           {step === 2 && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Campus Status</label>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Campus Status</label>
                 <div className="grid grid-cols-2 gap-3">
                   {['residential', 'commuter'].map(status => (
                     <button
@@ -117,8 +103,8 @@ export default function OnboardingForm() {
                       onClick={() => update('campus_status', status)}
                       className={`py-3 rounded-xl border-2 text-sm font-medium capitalize transition-all ${
                         data.campus_status === status
-                          ? 'border-brand-500 bg-brand-50 text-brand-700'
-                          : 'border-gray-200 text-gray-600'
+                          ? 'border-brand-500 bg-brand-500/10 text-white'
+                          : 'border-white/[0.08] text-gray-400 bg-surface-800'
                       }`}
                     >
                       {status}
@@ -126,39 +112,21 @@ export default function OnboardingForm() {
                   ))}
                 </div>
               </div>
-
               {data.campus_status === 'residential' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1">
                     <Home className="w-4 h-4" /> Hostel
                   </label>
-                  <select
-                    value={data.hostel}
-                    onChange={e => update('hostel', e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
-                  >
+                  <select value={data.hostel} onChange={e => update('hostel', e.target.value)} className={`${inputClass} bg-surface-800`}>
                     <option value="">Select hostel…</option>
                     {HOSTELS.map(h => <option key={h} value={h}>{h}</option>)}
                   </select>
                 </div>
               )}
-
-              {error && (
-                <p className="text-sm text-red-600">{error}</p>
-              )}
-
+              {error && <p className="text-sm text-red-400">{error}</p>}
               <div className="flex gap-3">
-                <button
-                  onClick={() => setStep(1)}
-                  className="flex-1 border border-gray-300 text-gray-700 font-medium py-3 rounded-xl"
-                >
-                  Back
-                </button>
-                <button
-                  disabled={!data.campus_status || loading}
-                  onClick={finish}
-                  className="flex-1 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl"
-                >
+                <button onClick={() => setStep(1)} className="flex-1 bg-surface-800 border border-white/[0.08] text-gray-400 font-medium py-3 rounded-xl">Back</button>
+                <button disabled={!data.campus_status || loading} onClick={finish} className="flex-1 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors">
                   {loading ? 'Saving…' : 'Finish'}
                 </button>
               </div>

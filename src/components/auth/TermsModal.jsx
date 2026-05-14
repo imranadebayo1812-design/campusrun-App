@@ -14,17 +14,14 @@ export default function TermsModal() {
     setLoading(true);
     setError('');
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ terms_accepted: true, terms_accepted_at: new Date().toISOString() })
-      .eq('id', session.user.id);
+    const { error } = await supabase.rpc('accept_terms');
 
     if (error) {
       setError('Could not save. Please try again.');
-      savingRef.current = false;
     } else {
       await refreshProfile();
     }
+    savingRef.current = false;
     setLoading(false);
   }
 

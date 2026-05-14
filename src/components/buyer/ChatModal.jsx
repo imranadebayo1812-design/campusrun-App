@@ -1,0 +1,95 @@
+import { useState, useEffect, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/api/supabaseClient';
+import { useAuth } from '@/context/AuthContext';
+import { X, Send } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+
+export default function ChatModal({ deliveryId, onClose }) {
+  const { session } = useAuth();
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const bottomRef = useRef(null);
+  const queryClient = useQueryClient();
+
+  const { data: messages = [] } = useQuery({
+    queryKey: ['chat', deliveryId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('chat_messages')
+        .select('*, profiles!sender_id(full_name)')
+        .eq('delivery_id', deliveryId)
+        .order('created_at', { ascending: true });
+      return data || [];
+    },
+    refetchInterval: 5_000,
+  });
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  async function sendMessage(e) {
+    e.preventDefault();
+    if (!message.trim()) return;
+    setSending(true);
+    await supabase.from('chat_messages').insert({
+      delivery_id: deliveryId,
+      sender_id: session.user.id,
+      sender_role: 'buyer',
+      message: message.trim(),
+    });
+    setMessage('');
+    queryClient.invalidateQueries(['chat', deliveryId]);
+    setSending(false);
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
+      <div className="bg-white rounded-t-2xl w-full max-w-md mx-auto h-[70vh] flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b">
+          <p className="font-semibold text-gray-900">Chat with Courier</p>
+          <button onClick={onClose}><X className="w-5 h-5 text-gray-400" /></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {messages.map(msg => {
+            const isMine = msg.sender_id === session.user.id;
+            return (
+              <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
+                  isMine ? 'bg-brand-500 text-white rounded-tr-sm' : 'bg-gray-100 text-gray-900 rounded-tl-sm'
+                }`}>
+                  <p>{msg.message}</p>
+                  <p className={`text-xs mt-0.5 ${isMine ? 'text-brand-100' : 'text-gray-400'}`}>
+                    {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+          {messages.length === 0 && (
+            <p className="text-center text-sm text-gray-400 py-8">No messages yet. Say hello!</p>
+          )}
+          <div ref={bottomRef} />
+        </div>
+
+        <form onSubmit={sendMessage} className="p-4 border-t flex gap-2">
+          <input
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            placeholder="Type a message…"
+            className="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+          />
+          <button
+            type="submit"
+            disabled={!message.trim() || sending}
+            className="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center disabled:opacity-50"
+          >
+            <Send className="w-4 h-4 text-white" />
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}

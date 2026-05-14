@@ -1,113 +1,172 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
 import { isOrderingOpen, orderingClosedMessage } from '@/lib/restaurantHours';
-import { Package, ShoppingBag, Plus, Clock } from 'lucide-react';
+import { Plus, ChevronRight, Clock, Package, ShoppingBag, AlertCircle } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
-function VendorCard({ vendor, onOrder }) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="h-24 bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center">
-        <ShoppingBag className="w-10 h-10 text-white" />
-      </div>
-      <div className="p-3">
-        <p className="font-semibold text-gray-900 text-sm">{vendor}</p>
-        <button
-          onClick={() => onOrder(vendor)}
-          className="mt-2 w-full bg-brand-50 text-brand-700 text-xs font-semibold py-1.5 rounded-lg"
-        >
-          Order from here
-        </button>
-      </div>
-    </div>
-  );
-}
+const STATUS_LABEL = {
+  placed: 'Waiting',
+  bought: 'Bought',
+  on_the_way: 'On the way',
+  arrived: 'Arrived',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
+};
+
+const STATUS_COLOR = {
+  placed: 'text-yellow-400',
+  bought: 'text-blue-400',
+  on_the_way: 'text-brand-400',
+  arrived: 'text-indigo-400',
+  delivered: 'text-green-400',
+  cancelled: 'text-red-400',
+};
 
 export default function HomePage() {
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const { session } = useAuth();
   const open = isOrderingOpen();
 
-  const { data: vendors = [] } = useQuery({
-    queryKey: ['vendors'],
+  const { data: activeOrders = [] } = useQuery({
+    queryKey: ['active-orders-home', session?.user.id],
     queryFn: async () => {
       const { data } = await supabase
-        .from('menu_items')
-        .select('vendor_name')
-        .eq('is_available', true);
-      return [...new Set((data || []).map(r => r.vendor_name))];
+        .from('deliveries')
+        .select('*')
+        .eq('buyer_id', session.user.id)
+        .in('status', ['placed', 'bought', 'on_the_way', 'arrived'])
+        .order('created_at', { ascending: false })
+        .limit(3);
+      return data || [];
     },
-    staleTime: 5 * 60_000,
+    refetchInterval: 12_000,
+    enabled: !!session,
   });
 
-  function startOrder(vendor) {
-    navigate('/create-order', { state: { vendor } });
-  }
+  const firstName = (profile?.full_name || 'Student').split(' ')[0];
 
   return (
-    <div className="p-4 space-y-5">
-      {/* Greeting */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-500">Hello,</p>
-          <h2 className="text-xl font-bold text-gray-900">{profile?.full_name || 'Student'} 👋</h2>
-        </div>
-        <button
-          onClick={() => navigate('/create-order')}
-          className="flex items-center gap-1.5 bg-brand-500 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow"
-        >
-          <Plus className="w-4 h-4" />
-          New Order
-        </button>
+    <div className="bg-surface-950 min-h-full">
+      {/* Top greeting */}
+      <div className="px-4 pt-5 pb-4">
+        <p className="text-gray-400 text-sm">Hello,</p>
+        <h2 className="text-2xl font-bold text-white">{firstName} 👋</h2>
       </div>
 
-      {/* Ordering hours banner */}
+      {/* Ordering hours warning */}
       {!open && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
-          <Clock className="inline w-4 h-4 mr-1" />
+        <div className="mx-4 mb-4 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-center gap-2 text-sm text-amber-400">
+          <AlertCircle className="w-4 h-4 shrink-0" />
           {orderingClosedMessage()}
         </div>
       )}
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* New Delivery Hero Banner */}
+      <div className="mx-4 mb-5">
+        <div
+          className="rounded-2xl p-5 relative overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
+          style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 60%, #2563eb 100%)' }}
+          onClick={() => navigate('/create-order')}
+        >
+          {/* Decorative circles */}
+          <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-white/10" />
+          <div className="absolute -right-2 -bottom-8 w-20 h-20 rounded-full bg-white/[0.07]" />
+
+          <div className="relative z-10 flex items-center justify-between">
+            <div>
+              <p className="text-white/70 text-xs font-medium uppercase tracking-wider mb-1">Quick Action</p>
+              <h3 className="text-white font-bold text-xl">New Delivery</h3>
+              <p className="text-white/60 text-sm mt-0.5">Order food or send a package</p>
+            </div>
+            <button className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shrink-0 border border-white/30">
+              <Plus className="w-6 h-6 text-white" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick action cards */}
+      <div className="px-4 grid grid-cols-2 gap-3 mb-5">
         <button
           onClick={() => navigate('/create-order', { state: { type: 'purchase' } })}
-          className="bg-brand-50 border border-brand-100 rounded-2xl p-4 text-left"
+          className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4 text-left active:scale-[0.97] transition-transform"
         >
-          <ShoppingBag className="w-6 h-6 text-brand-600 mb-2" />
-          <p className="font-semibold text-gray-900 text-sm">Food Order</p>
-          <p className="text-xs text-gray-500 mt-0.5">Order food from campus vendors</p>
+          <div className="w-10 h-10 bg-brand-500/15 rounded-xl flex items-center justify-center mb-3">
+            <ShoppingBag className="w-5 h-5 text-brand-400" />
+          </div>
+          <p className="font-semibold text-white text-sm">Item Purchase</p>
+          <p className="text-xs text-gray-500 mt-0.5">Food & campus vendors</p>
         </button>
         <button
           onClick={() => navigate('/create-order', { state: { type: 'errand' } })}
-          className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-left"
+          className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4 text-left active:scale-[0.97] transition-transform"
         >
-          <Package className="w-6 h-6 text-blue-600 mb-2" />
-          <p className="font-semibold text-gray-900 text-sm">Send Package</p>
-          <p className="text-xs text-gray-500 mt-0.5">Send a parcel across campus</p>
+          <div className="w-10 h-10 bg-blue-500/15 rounded-xl flex items-center justify-center mb-3">
+            <Package className="w-5 h-5 text-blue-400" />
+          </div>
+          <p className="font-semibold text-white text-sm">Package / Errand</p>
+          <p className="text-xs text-gray-500 mt-0.5">Send items across campus</p>
         </button>
       </div>
 
-      {/* Vendors */}
-      {vendors.length > 0 && (
-        <div>
-          <h3 className="font-bold text-gray-900 mb-3">Campus Vendors</h3>
-          <div className="grid grid-cols-2 gap-3">
-            {vendors.map(v => (
-              <VendorCard key={v} vendor={v} onOrder={startOrder} />
+      {/* Active orders section */}
+      <div className="px-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-white text-base uppercase tracking-wide text-sm">
+            Active Orders
+          </h3>
+          {activeOrders.length > 0 && (
+            <button
+              onClick={() => navigate('/orders')}
+              className="text-brand-400 text-xs font-semibold flex items-center gap-0.5"
+            >
+              See all <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {activeOrders.length === 0 ? (
+          <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-6 text-center">
+            <div className="w-12 h-12 bg-surface-800 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Clock className="w-6 h-6 text-gray-500" />
+            </div>
+            <p className="text-gray-400 text-sm">No active orders</p>
+            <p className="text-gray-500 text-xs mt-1">Your live orders will appear here</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {activeOrders.map(order => (
+              <button
+                key={order.id}
+                onClick={() => navigate(`/track/${order.id}`)}
+                className="w-full bg-surface-900 border border-white/[0.08] rounded-2xl p-4 text-left flex items-center gap-3 active:scale-[0.98] transition-transform"
+              >
+                <div className="w-10 h-10 bg-brand-500/15 rounded-xl flex items-center justify-center shrink-0">
+                  <Package className="w-5 h-5 text-brand-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-semibold truncate">{order.pickup_location}</p>
+                  <p className="text-gray-500 text-xs">→ {order.dropoff_location}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className={`text-xs font-semibold ${STATUS_COLOR[order.status]}`}>
+                    {STATUS_LABEL[order.status]}
+                  </p>
+                  <p className="text-gray-500 text-xs mt-0.5">
+                    {formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}
+                  </p>
+                </div>
+              </button>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {vendors.length === 0 && (
-        <div className="text-center py-8 text-gray-400">
-          <ShoppingBag className="w-10 h-10 mx-auto mb-2 opacity-40" />
-          <p className="text-sm">No vendors available right now</p>
-        </div>
-      )}
+      <div className="h-4" />
     </div>
   );
 }

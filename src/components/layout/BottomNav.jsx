@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { useMode } from '@/context/ModeContext';
 import { useAuth } from '@/context/AuthContext';
-import { Home, Clock, Wallet, Bike, Bell, User } from 'lucide-react';
+import { Home, Clock, Wallet, Bike, Bell, User, ShieldCheck } from 'lucide-react';
 
 export default function BottomNav() {
   const { mode } = useMode();
@@ -22,14 +22,11 @@ export default function BottomNav() {
     { to: '/profile', icon: User, label: 'Profile' },
   ];
 
-  const adminTabs = profile?.is_admin ? [
-    { to: '/admin', icon: Home, label: 'Admin' },
-  ] : [];
-
   const tabs = isCourier ? courierTabs : buyerTabs;
+  const adminTab = profile?.is_admin ? { to: '/admin', icon: ShieldCheck, label: 'Admin' } : null;
 
   return (
-    <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 safe-bottom z-10">
+    <nav className="absolute bottom-0 left-0 right-0 bg-surface-900 border-t border-white/[0.08] safe-bottom z-10">
       <div className="flex">
         {tabs.map(({ to, icon: Icon, label }) => (
           <NavLink
@@ -37,8 +34,8 @@ export default function BottomNav() {
             to={to}
             end={to === '/' || to === '/courier'}
             className={({ isActive }) =>
-              `flex-1 flex flex-col items-center py-2 gap-0.5 text-xs font-medium transition-colors ${
-                isActive ? 'text-brand-600' : 'text-gray-400'
+              `flex-1 flex flex-col items-center py-2.5 gap-0.5 text-xs font-medium transition-colors ${
+                isActive ? 'text-brand-400' : 'text-gray-500'
               }`
             }
           >
@@ -46,20 +43,19 @@ export default function BottomNav() {
             {label}
           </NavLink>
         ))}
-        {adminTabs.map(({ to, icon: Icon, label }) => (
+        {adminTab && (
           <NavLink
-            key={to}
-            to={to}
+            to={adminTab.to}
             className={({ isActive }) =>
-              `flex-1 flex flex-col items-center py-2 gap-0.5 text-xs font-medium transition-colors ${
-                isActive ? 'text-brand-600' : 'text-gray-400'
+              `flex-1 flex flex-col items-center py-2.5 gap-0.5 text-xs font-medium transition-colors ${
+                isActive ? 'text-brand-400' : 'text-gray-500'
               }`
             }
           >
-            <Icon className="w-5 h-5" />
-            {label}
+            <adminTab.icon className="w-5 h-5" />
+            {adminTab.label}
           </NavLink>
-        ))}
+        )}
       </div>
     </nav>
   );

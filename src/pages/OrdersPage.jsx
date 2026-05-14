@@ -1,22 +1,35 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
-import { Package, Clock, CheckCircle, XCircle, ChevronRight } from 'lucide-react';
+import { Package, ChevronRight, Plus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-const STATUS_COLOR = {
-  placed: 'bg-yellow-100 text-yellow-700',
-  bought: 'bg-blue-100 text-blue-700',
-  on_the_way: 'bg-purple-100 text-purple-700',
-  arrived: 'bg-indigo-100 text-indigo-700',
-  delivered: 'bg-green-100 text-green-700',
-  cancelled: 'bg-red-100 text-red-700',
+const STATUS_DOT = {
+  placed:     'bg-yellow-400',
+  bought:     'bg-blue-400',
+  on_the_way: 'bg-brand-400',
+  arrived:    'bg-indigo-400',
+  delivered:  'bg-green-400',
+  cancelled:  'bg-red-400',
 };
+
+const STATUS_LABEL = {
+  placed:     'Waiting',
+  bought:     'Bought',
+  on_the_way: 'On The Way',
+  arrived:    'Arrived',
+  delivered:  'Delivered',
+  cancelled:  'Cancelled',
+};
+
+const ACTIVE_STATUSES = ['placed', 'bought', 'on_the_way', 'arrived'];
 
 export default function OrdersPage() {
   const navigate = useNavigate();
   const { session } = useAuth();
+  const [filter, setFilter] = useState('all');
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders', session?.user.id],
@@ -31,78 +44,123 @@ export default function OrdersPage() {
     refetchInterval: 12_000,
   });
 
-  const active = orders.filter(o => !['delivered', 'cancelled'].includes(o.status));
-  const history = orders.filter(o => ['delivered', 'cancelled'].includes(o.status));
+  const active = orders.filter(o => ACTIVE_STATUSES.includes(o.status));
+  const inProgress = orders.filter(o => ['on_the_way', 'arrived'].includes(o.status));
+  const completed = orders.filter(o => o.status === 'delivered');
+
+  const filtered = {
+    all: orders,
+    active: active,
+    in_progress: inProgress,
+    completed: completed,
+  }[filter] || orders;
+
+  const tabs = [
+    { key: 'all', label: 'All', count: orders.length },
+    { key: 'active', label: 'Active', count: active.length },
+    { key: 'in_progress', label: 'In Progress', count: inProgress.length },
+    { key: 'completed', label: 'Completed', count: completed.length },
+  ];
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-64"><div className="w-8 h-8 border-4 border-brand-200 border-t-brand-500 rounded-full animate-spin" /></div>;
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="w-8 h-8 border-4 border-brand-800 border-t-brand-500 rounded-full animate-spin" />
+      </div>
+    );
   }
 
   function OrderCard({ order }) {
-    const isActive = !['delivered', 'cancelled'].includes(order.status);
+    const isActive = ACTIVE_STATUSES.includes(order.status);
     return (
       <button
         onClick={() => navigate(`/track/${order.id}`)}
-        className="w-full bg-white border border-gray-100 rounded-2xl p-4 text-left flex items-center gap-3 shadow-sm active:scale-[0.98] transition-transform"
+        className="w-full bg-surface-900 border border-white/[0.08] rounded-2xl p-4 text-left flex items-center gap-3 active:scale-[0.98] transition-transform"
       >
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isActive ? 'bg-brand-100' : 'bg-gray-100'}`}>
-          <Package className={`w-5 h-5 ${isActive ? 'text-brand-600' : 'text-gray-400'}`} />
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isActive ? 'bg-brand-500/15' : 'bg-surface-800'}`}>
+          <Package className={`w-5 h-5 ${isActive ? 'text-brand-400' : 'text-gray-500'}`} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <p className="text-sm font-semibold text-gray-900 truncate">{order.pickup_location}</p>
-            <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${STATUS_COLOR[order.status]}`}>
-              {order.status.replace(/_/g, ' ')}
-            </span>
-          </div>
+          <p className="text-sm font-semibold text-white truncate">{order.pickup_location}</p>
           <p className="text-xs text-gray-500">→ {order.dropoff_location}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}</p>
+          <p className="text-xs text-gray-600 mt-0.5">
+            {formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}
+          </p>
         </div>
-        <div className="text-right shrink-0">
-          <p className="text-sm font-bold text-brand-600">₦{order.total_amount?.toLocaleString()}</p>
-          <ChevronRight className="w-4 h-4 text-gray-400 mt-1 ml-auto" />
+        <div className="text-right shrink-0 flex flex-col items-end gap-1.5">
+          <div className="flex items-center gap-1.5">
+            <div className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[order.status]}`} />
+            <span className="text-xs font-medium text-gray-400">{STATUS_LABEL[order.status]}</span>
+          </div>
+          <p className="text-sm font-bold text-white">₦{order.total_amount?.toLocaleString()}</p>
         </div>
       </button>
     );
   }
 
   return (
-    <div className="p-4 space-y-5">
-      <h1 className="text-xl font-bold text-gray-900">My Orders</h1>
+    <div className="bg-surface-950 min-h-full">
+      {/* Header */}
+      <div className="px-4 pt-5 pb-3 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-white">My Orders</h1>
+        <button
+          onClick={() => navigate('/create-order')}
+          className="w-8 h-8 bg-brand-500 rounded-xl flex items-center justify-center"
+        >
+          <Plus className="w-4 h-4 text-white" />
+        </button>
+      </div>
 
-      {active.length > 0 && (
-        <div>
-          <p className="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-1.5">
-            <Clock className="w-4 h-4 text-brand-500" /> Active ({active.length})
-          </p>
-          <div className="space-y-2">
-            {active.map(o => <OrderCard key={o.id} order={o} />)}
+      {/* Filter tabs */}
+      <div className="px-4 mb-4">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {tabs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setFilter(tab.key)}
+              className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                filter === tab.key
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-surface-900 text-gray-400 border border-white/[0.08]'
+              }`}
+            >
+              {tab.label}
+              <span className={`text-xs rounded-full px-1.5 py-0.5 ${
+                filter === tab.key ? 'bg-white/20 text-white' : 'bg-surface-800 text-gray-500'
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Order list */}
+      <div className="px-4 space-y-2">
+        {filtered.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="w-14 h-14 bg-surface-900 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Package className="w-7 h-7 text-gray-600" />
+            </div>
+            <p className="text-gray-400 font-medium">No orders here</p>
+            <p className="text-gray-600 text-sm mt-1">
+              {filter === 'all' ? 'Place your first delivery order' : 'No orders in this category'}
+            </p>
+            {filter === 'all' && (
+              <button
+                onClick={() => navigate('/create-order')}
+                className="mt-4 bg-brand-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold"
+              >
+                Create Order
+              </button>
+            )}
           </div>
-        </div>
-      )}
+        ) : (
+          filtered.map(o => <OrderCard key={o.id} order={o} />)
+        )}
+      </div>
 
-      {history.length > 0 && (
-        <div>
-          <p className="text-sm font-semibold text-gray-600 mb-3">History</p>
-          <div className="space-y-2">
-            {history.map(o => <OrderCard key={o.id} order={o} />)}
-          </div>
-        </div>
-      )}
-
-      {orders.length === 0 && (
-        <div className="text-center py-16 text-gray-400">
-          <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No orders yet</p>
-          <p className="text-sm mt-1">Place your first delivery order</p>
-          <button
-            onClick={() => navigate('/create-order')}
-            className="mt-4 bg-brand-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold"
-          >
-            Create Order
-          </button>
-        </div>
-      )}
+      <div className="h-4" />
     </div>
   );
 }

@@ -4,7 +4,7 @@
  * See docs/SECURITY.md for full documentation.
  */
 
-import { base44 } from '@/api/base44Client';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
 
 export function generateFingerprint() {
   try {
@@ -71,12 +71,19 @@ export function checkRateLimit(action) {
   } catch { return { allowed: true }; }
 }
 
-export function logSecurityEvent({ action, details = '', risk_level = 'low' }) {
+export function logSecurityEvent({ userId, action, details = '', risk_level = 'low' }) {
   try {
-    base44.functions.invoke('securityEvent', {
-      action, details, risk_level,
-      device_fingerprint: generateFingerprint(),
-      device_info: getDeviceInfo(),
+    fetch(`${BACKEND_URL}/api/security/event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        action,
+        details,
+        risk_level,
+        device_fingerprint: generateFingerprint(),
+        device_info: getDeviceInfo(),
+      }),
     }).catch(() => {});
   } catch {}
 }

@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
-import { ensurePaystack, PAYSTACK_PUBLIC_KEY } from '@/lib/paystack';
+import { MOCK_ORDERS, MOCK_TRANSACTIONS } from '@/lib/mockData';
 import { CreditCard, Wallet, ChevronLeft, CheckCircle } from 'lucide-react';
 
 export default function PaymentPage() {
   const { deliveryId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { session, profile, refreshProfile } = useAuth();
+  const { profile, updateProfileLocally } = useAuth();
 
   const delivery = location.state?.delivery;
   const [method, setMethod] = useState('paystack');
@@ -20,82 +19,39 @@ export default function PaymentPage() {
   const walletBalance = profile?.wallet_balance || 0;
   const canUseWallet = walletBalance >= total;
 
-  async function payWithWallet() {
-    setLoading(true);
-    setError('');
-
-    const { error: rpcError } = await supabase.rpc('pay_delivery_with_wallet', {
-      p_delivery_id: deliveryId,
-      p_user_id: session.user.id,
-      p_amount: total,
-    });
-
-    if (rpcError) {
-      setError(rpcError.message || 'Wallet payment failed.');
-      setLoading(false);
-      return;
-    }
-
-    await refreshProfile();
-    await dispatchOrder();
-    navigate(`/track/${deliveryId}`);
-    setLoading(false);
-  }
-
-  async function payWithPaystack() {
-    setLoading(true);
-    setError('');
-
-    try {
-      const PaystackPop = await ensurePaystack();
-      const handler = PaystackPop.setup({
-        key: PAYSTACK_PUBLIC_KEY,
-        email: session.user.email,
-        amount: Math.round(total * 100),
-        currency: 'NGN',
-        ref: `CRUN-${deliveryId.slice(0, 8)}-${Date.now()}`,
-        onSuccess: async (response) => {
-          await supabase
-            .from('deliveries')
-            .update({
-              payment_method: 'paystack',
-              payment_reference: response.reference,
-              payment_verified: true,
-            })
-            .eq('id', deliveryId);
-
-          await dispatchOrder();
-          navigate(`/track/${deliveryId}`);
-          setLoading(false);
-        },
-        onCancel: () => {
-          setError('Payment was cancelled.');
-          setLoading(false);
-        },
-      });
-      handler.openIframe();
-    } catch {
-      setError('Could not load payment. Please try again.');
-      setLoading(false);
-    }
-  }
-
-  async function dispatchOrder() {
-    try {
-      await fetch('/api/dispatch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deliveryId }),
-      });
-    } catch {}
-  }
-
   async function handlePay() {
+    setLoading(true);
+    setError('');
+
+    await new Promise(r => setTimeout(r, 1200));
+
     if (method === 'wallet') {
-      await payWithWallet();
-    } else {
-      await payWithPaystack();
+      if (!canUseWallet) {
+        setError('Insufficient wallet balance.');
+        setLoading(false);
+        return;
+      }
+      const newBalance = walletBalance - total;
+      updateProfileLocally({ wallet_balance: newBalance });
+      MOCK_TRANSACTIONS.unshift({
+        id: `tx-${Date.now()}`,
+        user_id: 'user-1',
+        type: 'payment',
+        amount: total,
+        balance_after: newBalance,
+        description: `Delivery payment — ${delivery?.pickup_location}`,
+        created_at: new Date().toISOString(),
+      });
     }
+
+    const order = MOCK_ORDERS.find(o => o.id === deliveryId);
+    if (order) {
+      order.payment_verified = true;
+      order.payment_method = method;
+    }
+
+    setLoading(false);
+    navigate(`/track/${deliveryId}`);
   }
 
   if (!delivery) {
@@ -192,6 +148,11 @@ export default function PaymentPage() {
               {method === 'wallet' && <CheckCircle className="w-5 h-5 text-green-400" />}
             </button>
           </div>
+        </div>
+
+        {/* Demo notice */}
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+          <p className="text-xs text-amber-400">Demo mode — no real payment will be charged. Tap Pay to simulate a successful payment.</p>
         </div>
 
         {error && (

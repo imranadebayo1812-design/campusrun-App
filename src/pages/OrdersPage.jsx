@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/api/supabaseClient';
-import { useAuth } from '@/context/AuthContext';
-import { Package, ChevronRight, Plus } from 'lucide-react';
+import { MOCK_ORDERS } from '@/lib/mockData';
+import { Package, Plus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 const STATUS_DOT = {
@@ -26,34 +24,45 @@ const STATUS_LABEL = {
 
 const ACTIVE_STATUSES = ['placed', 'bought', 'on_the_way', 'arrived'];
 
+function OrderCard({ order }) {
+  const navigate = useNavigate();
+  const isActive = ACTIVE_STATUSES.includes(order.status);
+  return (
+    <button
+      onClick={() => navigate(`/track/${order.id}`)}
+      className="w-full bg-surface-900 border border-white/[0.08] rounded-2xl p-4 text-left flex items-center gap-3 active:scale-[0.98] transition-transform"
+    >
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isActive ? 'bg-brand-500/15' : 'bg-surface-800'}`}>
+        <Package className={`w-5 h-5 ${isActive ? 'text-brand-400' : 'text-gray-500'}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-white truncate">{order.pickup_location}</p>
+        <p className="text-xs text-gray-500">→ {order.dropoff_location}</p>
+        <p className="text-xs text-gray-600 mt-0.5">
+          {formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}
+        </p>
+      </div>
+      <div className="text-right shrink-0 flex flex-col items-end gap-1.5">
+        <div className="flex items-center gap-1.5">
+          <div className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[order.status]}`} />
+          <span className="text-xs font-medium text-gray-400">{STATUS_LABEL[order.status]}</span>
+        </div>
+        <p className="text-sm font-bold text-white">₦{order.total_amount?.toLocaleString()}</p>
+      </div>
+    </button>
+  );
+}
+
 export default function OrdersPage() {
   const navigate = useNavigate();
-  const { session } = useAuth();
   const [filter, setFilter] = useState('all');
 
-  const { data: orders = [], isLoading } = useQuery({
-    queryKey: ['orders', session?.user.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('deliveries')
-        .select('*')
-        .eq('buyer_id', session.user.id)
-        .order('created_at', { ascending: false });
-      return data || [];
-    },
-    refetchInterval: 12_000,
-  });
-
+  const orders = [...MOCK_ORDERS];
   const active = orders.filter(o => ACTIVE_STATUSES.includes(o.status));
   const inProgress = orders.filter(o => ['on_the_way', 'arrived'].includes(o.status));
   const completed = orders.filter(o => o.status === 'delivered');
 
-  const filtered = {
-    all: orders,
-    active: active,
-    in_progress: inProgress,
-    completed: completed,
-  }[filter] || orders;
+  const filtered = { all: orders, active, in_progress: inProgress, completed }[filter] || orders;
 
   const tabs = [
     { key: 'all', label: 'All', count: orders.length },
@@ -61,42 +70,6 @@ export default function OrdersPage() {
     { key: 'in_progress', label: 'In Progress', count: inProgress.length },
     { key: 'completed', label: 'Completed', count: completed.length },
   ];
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="w-8 h-8 border-4 border-brand-800 border-t-brand-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  function OrderCard({ order }) {
-    const isActive = ACTIVE_STATUSES.includes(order.status);
-    return (
-      <button
-        onClick={() => navigate(`/track/${order.id}`)}
-        className="w-full bg-surface-900 border border-white/[0.08] rounded-2xl p-4 text-left flex items-center gap-3 active:scale-[0.98] transition-transform"
-      >
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isActive ? 'bg-brand-500/15' : 'bg-surface-800'}`}>
-          <Package className={`w-5 h-5 ${isActive ? 'text-brand-400' : 'text-gray-500'}`} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white truncate">{order.pickup_location}</p>
-          <p className="text-xs text-gray-500">→ {order.dropoff_location}</p>
-          <p className="text-xs text-gray-600 mt-0.5">
-            {formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}
-          </p>
-        </div>
-        <div className="text-right shrink-0 flex flex-col items-end gap-1.5">
-          <div className="flex items-center gap-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[order.status]}`} />
-            <span className="text-xs font-medium text-gray-400">{STATUS_LABEL[order.status]}</span>
-          </div>
-          <p className="text-sm font-bold text-white">₦{order.total_amount?.toLocaleString()}</p>
-        </div>
-      </button>
-    );
-  }
 
   return (
     <div className="bg-surface-950 min-h-full">

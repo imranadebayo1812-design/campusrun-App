@@ -1,8 +1,6 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
+import { MOCK_ORDERS } from '@/lib/mockData';
 import { isOrderingOpen, orderingClosedMessage } from '@/lib/restaurantHours';
 import { Plus, ChevronRight, Clock, Package, ShoppingBag, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -28,24 +26,11 @@ const STATUS_COLOR = {
 export default function HomePage() {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { session } = useAuth();
   const open = isOrderingOpen();
 
-  const { data: activeOrders = [] } = useQuery({
-    queryKey: ['active-orders-home', session?.user.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('deliveries')
-        .select('*')
-        .eq('buyer_id', session.user.id)
-        .in('status', ['placed', 'bought', 'on_the_way', 'arrived'])
-        .order('created_at', { ascending: false })
-        .limit(3);
-      return data || [];
-    },
-    refetchInterval: 12_000,
-    enabled: !!session,
-  });
+  const activeOrders = MOCK_ORDERS
+    .filter(o => ['placed', 'bought', 'on_the_way', 'arrived'].includes(o.status))
+    .slice(0, 3);
 
   const firstName = (profile?.full_name || 'Student').split(' ')[0];
 
@@ -72,10 +57,8 @@ export default function HomePage() {
           style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 60%, #2563eb 100%)' }}
           onClick={() => navigate('/create-order')}
         >
-          {/* Decorative circles */}
           <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-white/10" />
           <div className="absolute -right-2 -bottom-8 w-20 h-20 rounded-full bg-white/[0.07]" />
-
           <div className="relative z-10 flex items-center justify-between">
             <div>
               <p className="text-white/70 text-xs font-medium uppercase tracking-wider mb-1">Quick Action</p>
@@ -116,9 +99,7 @@ export default function HomePage() {
       {/* Active orders section */}
       <div className="px-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-white text-base uppercase tracking-wide text-sm">
-            Active Orders
-          </h3>
+          <h3 className="font-bold text-white uppercase tracking-wide text-sm">Active Orders</h3>
           {activeOrders.length > 0 && (
             <button
               onClick={() => navigate('/orders')}

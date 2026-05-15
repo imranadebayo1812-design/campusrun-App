@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/api/supabaseClient';
 import { User, Phone, BookOpen, Home, LogOut, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function ProfilePage() {
-  const { profile, session, refreshProfile, signOut } = useAuth();
+  const { profile, session, updateProfileLocally } = useAuth();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -17,14 +16,13 @@ export default function ProfilePage() {
 
   async function saveProfile() {
     setSaving(true);
-    await supabase.from('profiles').update(form).eq('id', session.user.id);
-    await refreshProfile();
+    await new Promise(r => setTimeout(r, 600));
+    updateProfileLocally(form);
     setSaving(false);
     setEditing(false);
   }
 
-  async function handleSignOut() {
-    await signOut();
+  function handleSignOut() {
     navigate('/');
   }
 
@@ -117,10 +115,7 @@ export default function ProfilePage() {
           <p className="text-sm font-semibold text-green-400 mb-1">Earn as a Courier</p>
           <p className="text-xs text-gray-400 mb-3">Deliver for other students and earn money on your own schedule.</p>
           <button
-            onClick={async () => {
-              await supabase.from('profiles').update({ is_courier: true }).eq('id', session.user.id);
-              await refreshProfile();
-            }}
+            onClick={() => updateProfileLocally({ is_courier: true })}
             className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
           >
             Activate Courier Mode
@@ -140,6 +135,20 @@ export default function ProfilePage() {
           </button>
         </div>
       )}
+
+      {/* Wallet balance */}
+      <div className="mx-4 mb-4 bg-surface-900 border border-white/[0.08] rounded-2xl p-4 flex justify-between items-center">
+        <div>
+          <p className="text-xs text-gray-500">Wallet Balance</p>
+          <p className="text-lg font-bold text-white">₦{(profile?.wallet_balance || 0).toLocaleString()}</p>
+        </div>
+        <button
+          onClick={() => navigate('/wallet')}
+          className="text-xs font-semibold text-brand-400 bg-brand-500/10 px-3 py-1.5 rounded-lg"
+        >
+          Top Up
+        </button>
+      </div>
 
       {/* Sign out */}
       <div className="mx-4 mb-4">

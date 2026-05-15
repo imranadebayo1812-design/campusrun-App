@@ -1,106 +1,27 @@
-import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/api/supabaseClient';
+import { createContext, useContext, useState } from 'react';
+import { MOCK_USER, MOCK_PROFILE } from '@/lib/mockData';
 
 const AuthContext = createContext(null);
 
-const ADMIN_EMAILS = ['imranadebayo1812@gmail.com', 'okekejohnk8012@gmail.com'];
-
 export function AuthProvider({ children }) {
-  const [session, setSession] = useState(undefined);
-  const [profile, setProfile] = useState(null);
-  const [authError, setAuthError] = useState(false);
+  const [profile, setProfile] = useState(MOCK_PROFILE);
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setSession(null);
-      setAuthError(true);
-    }, 5000);
-
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        clearTimeout(timeout);
-        setAuthError(false);
-        setSession(session);
-        if (session) loadProfile(session.user);
-      })
-      .catch(() => { clearTimeout(timeout); setSession(null); });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) {
-        loadProfile(session.user);
-      } else {
-        setProfile(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  async function loadProfile(authUser) {
-    if (!authUser) return;
-    const meta = authUser.user_metadata || {};
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', authUser.id)
-      .maybeSingle();
-
-    if (data) {
-      setProfile({ ...data, terms_accepted: data.terms_accepted || meta.terms_accepted || false });
-    } else {
-      const newProfile = {
-        id: authUser.id,
-        email: authUser.email,
-        full_name: meta.full_name || '',
-        terms_accepted: meta.terms_accepted || false,
-        onboarding_complete: false,
-        is_admin: ADMIN_EMAILS.includes(authUser.email),
-        is_courier: false,
-        is_blacklisted: false,
-        wallet_balance: 0,
-        total_earnings: 0,
-        fraud_score: 0,
-      };
-      await supabase.from('profiles').upsert(newProfile, { onConflict: 'id' });
-      setProfile(newProfile);
-    }
-  }
+  const session = { user: MOCK_USER };
 
   function updateProfileLocally(updates) {
     setProfile(prev => prev ? { ...prev, ...updates } : updates);
   }
 
-  async function refreshProfile() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) await loadProfile(user);
-  }
-
-  async function signUp(email, password, fullName) {
-    const domain = email.split('@')[1];
-    const isAllowed = domain === 'nileuniversity.edu.ng' || ADMIN_EMAILS.includes(email);
-    if (!isAllowed) {
-      return { error: { message: 'Only Nile University email addresses are allowed to register.' } };
-    }
-    return supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
-  }
-
-  async function signIn(email, password) {
-    return supabase.auth.signInWithPassword({ email, password });
-  }
-
-  async function signOut() {
-    await supabase.auth.signOut();
-  }
-
-  const loading = session === undefined;
+  function signOut() {}
+  function signUp() { return Promise.resolve({ error: null }); }
+  function signIn() { return Promise.resolve({ error: null }); }
+  function refreshProfile() {}
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, authError, signUp, signIn, signOut, refreshProfile, updateProfileLocally }}>
+    <AuthContext.Provider value={{
+      session, profile, loading: false, authError: false,
+      signUp, signIn, signOut, refreshProfile, updateProfileLocally,
+    }}>
       {children}
     </AuthContext.Provider>
   );

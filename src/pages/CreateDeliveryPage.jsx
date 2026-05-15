@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
+import { MOCK_ORDERS } from '@/lib/mockData';
 import { calculateDeliveryFee, DEFAULT_SERVICE_FEE } from '@/lib/deliveryPricing';
 import { ChevronLeft, Plus, Minus, Trash2, MapPin, ShoppingBag, Package } from 'lucide-react';
 
@@ -40,7 +39,7 @@ function LocationInput({ label, value, onChange, placeholder, iconColor }) {
 export default function CreateDeliveryPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { session, profile } = useAuth();
+  const { profile } = useAuth();
 
   const initType = location.state?.type || 'purchase';
   const initVendor = location.state?.vendor || '';
@@ -54,20 +53,6 @@ export default function CreateDeliveryPage() {
   const [itemDescription, setItemDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const { data: menuItems = [] } = useQuery({
-    queryKey: ['menu-items', pickupLocation],
-    queryFn: async () => {
-      if (!pickupLocation) return [];
-      const { data } = await supabase
-        .from('menu_items')
-        .select('*')
-        .eq('vendor_name', pickupLocation)
-        .eq('is_available', true);
-      return data || [];
-    },
-    enabled: !!pickupLocation && orderType === 'purchase',
-  });
 
   function addItem() {
     setItems(prev => [...prev, { name: '', qty: 1, price: '' }]);
@@ -102,39 +87,35 @@ export default function CreateDeliveryPage() {
     setLoading(true);
     setError('');
 
+    await new Promise(r => setTimeout(r, 500));
+
     const { fee, isResidential } = calculateDeliveryFee(pickupLocation, dropoffLocation);
     const deliveryCode = generateDeliveryCode();
+    const newOrder = {
+      id: `order-${Date.now()}`,
+      buyer_id: 'user-1',
+      order_type: orderType,
+      pickup_location: pickupLocation,
+      dropoff_location: dropoffLocation,
+      is_residential: isResidential,
+      items: orderType === 'purchase' ? items : [],
+      item_description: orderType === 'errand' ? itemDescription : '',
+      package_value: orderType === 'errand' ? parseFloat(packageValue) || 0 : null,
+      special_instructions: specialInstructions,
+      food_cost: orderType === 'purchase' ? foodCost : 0,
+      delivery_fee: fee,
+      service_fee: serviceFee,
+      total_amount: (orderType === 'purchase' ? foodCost : 0) + fee + serviceFee,
+      delivery_code: deliveryCode,
+      status: 'placed',
+      courier_accepted: false,
+      courier_name: null,
+      created_at: new Date().toISOString(),
+    };
 
-    const { data, error: insertError } = await supabase
-      .from('deliveries')
-      .insert({
-        buyer_id: session.user.id,
-        order_type: orderType,
-        pickup_location: pickupLocation,
-        dropoff_location: dropoffLocation,
-        is_residential: isResidential,
-        items: orderType === 'purchase' ? items : [],
-        item_description: orderType === 'errand' ? itemDescription : '',
-        package_value: orderType === 'errand' ? parseFloat(packageValue) || 0 : null,
-        special_instructions: specialInstructions,
-        food_cost: orderType === 'purchase' ? foodCost : 0,
-        delivery_fee: fee,
-        service_fee: serviceFee,
-        total_amount: (orderType === 'purchase' ? foodCost : 0) + fee + serviceFee,
-        delivery_code: deliveryCode,
-        status: 'placed',
-      })
-      .select()
-      .single();
-
+    MOCK_ORDERS.unshift(newOrder);
     setLoading(false);
-
-    if (insertError) {
-      setError('Failed to create order. Please try again.');
-      return;
-    }
-
-    navigate(`/payment/${data.id}`, { state: { delivery: data } });
+    navigate(`/payment/${newOrder.id}`, { state: { delivery: newOrder } });
   }
 
   const inputClass = "w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50";
@@ -217,24 +198,6 @@ export default function CreateDeliveryPage() {
                 <Plus className="w-3 h-3" /> Add item
               </button>
             </div>
-
-            {menuItems.length > 0 && (
-              <div className="mb-3 p-3 bg-surface-900 border border-white/[0.08] rounded-xl">
-                <p className="text-xs font-semibold text-gray-400 mb-2">Quick add from menu:</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {menuItems.slice(0, 6).map(m => (
-                    <button
-                      key={m.id}
-                      onClick={() => setItems(prev => [...prev, { name: m.name, qty: 1, price: m.price }])}
-                      className="text-xs bg-surface-800 border border-white/[0.08] rounded-lg px-2.5 py-1 text-gray-300"
-                    >
-                      {m.name} — ₦{m.price}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div className="space-y-2">
               {items.map((item, i) => (
                 <div key={i} className="flex items-center gap-2 bg-surface-900 border border-white/[0.08] rounded-xl p-3">

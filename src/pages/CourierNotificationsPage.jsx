@@ -1,52 +1,19 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/api/supabaseClient';
-import { useAuth } from '@/context/AuthContext';
+import { useState } from 'react';
+import { MOCK_COURIER_NOTIFICATIONS } from '@/lib/mockData';
 import { Bell, MapPin, CheckCircle, XCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function CourierNotificationsPage() {
-  const { session, profile } = useAuth();
-  const queryClient = useQueryClient();
+  const [notifications, setNotifications] = useState(
+    MOCK_COURIER_NOTIFICATIONS.filter(n => !n.responded)
+  );
+  const [responding, setResponding] = useState(null);
 
-  const { data: notifications = [], isLoading } = useQuery({
-    queryKey: ['courier-notifications', session?.user.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('courier_notifications')
-        .select('*, deliveries(*)')
-        .eq('courier_id', session.user.id)
-        .eq('responded', false)
-        .order('created_at', { ascending: false });
-      return data || [];
-    },
-    refetchInterval: 12_000,
-  });
-
-  async function respond(notification, response) {
-    const { deliveries: delivery } = notification;
-
-    if (response === 'accepted') {
-      const gracePeriodEnds = new Date(Date.now() + 2 * 60 * 1000).toISOString();
-      await supabase
-        .from('deliveries')
-        .update({
-          courier_id: session.user.id,
-          courier_accepted: true,
-          courier_accepted_at: new Date().toISOString(),
-          grace_period_ends_at: gracePeriodEnds,
-          courier_name: profile?.full_name || '',
-        })
-        .eq('id', delivery.id)
-        .eq('courier_accepted', false);
-    }
-
-    await supabase
-      .from('courier_notifications')
-      .update({ responded: true, response })
-      .eq('id', notification.id);
-
-    queryClient.invalidateQueries(['courier-notifications', session.user.id]);
-    queryClient.invalidateQueries(['courier-active', session.user.id]);
+  async function respond(notifId, response) {
+    setResponding(notifId);
+    await new Promise(r => setTimeout(r, 600));
+    setNotifications(prev => prev.filter(n => n.id !== notifId));
+    setResponding(null);
   }
 
   return (
@@ -62,13 +29,7 @@ export default function CourierNotificationsPage() {
         )}
       </div>
 
-      {isLoading && (
-        <div className="flex justify-center py-8">
-          <div className="w-8 h-8 border-4 border-brand-800 border-t-brand-500 rounded-full animate-spin" />
-        </div>
-      )}
-
-      {!isLoading && notifications.length === 0 && (
+      {notifications.length === 0 && (
         <div className="text-center py-16 px-4">
           <div className="w-14 h-14 bg-surface-900 rounded-full flex items-center justify-center mx-auto mb-4">
             <Bell className="w-7 h-7 text-gray-600" />
@@ -139,14 +100,16 @@ export default function CourierNotificationsPage() {
 
                 <div className="flex gap-2">
                   <button
-                    onClick={() => respond(notif, 'rejected')}
-                    className="flex-1 bg-red-500/10 border border-red-500/30 text-red-400 font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-1.5"
+                    onClick={() => respond(notif.id, 'rejected')}
+                    disabled={responding === notif.id}
+                    className="flex-1 bg-red-500/10 border border-red-500/30 text-red-400 font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
                   >
                     <XCircle className="w-4 h-4" /> Decline
                   </button>
                   <button
-                    onClick={() => respond(notif, 'accepted')}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-1.5"
+                    onClick={() => respond(notif.id, 'accepted')}
+                    disabled={responding === notif.id}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
                   >
                     <CheckCircle className="w-4 h-4" /> Accept
                   </button>

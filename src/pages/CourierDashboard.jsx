@@ -1,11 +1,8 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
-import { Bike, MapPin, Package, Lock, MessageCircle, TrendingUp, Clock, CheckCircle } from 'lucide-react';
+import { MOCK_ACTIVE_DELIVERY, MOCK_EARNINGS } from '@/lib/mockData';
+import { Bike, MapPin, Package, Lock, TrendingUp, Clock, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import DeliveryCodeVerify from '@/components/courier/DeliveryCodeVerify';
-import ChatModal from '@/components/buyer/ChatModal';
 
 const STATUS_ACTIONS = {
   placed:     { label: 'Mark as Bought', next: 'bought', color: 'bg-blue-600' },
@@ -21,65 +18,68 @@ const STATUS_COLOR = {
   arrived:    'text-indigo-400 bg-indigo-400/10',
 };
 
-export default function CourierDashboard() {
-  const { session, profile } = useAuth();
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const [verifyDelivery, setVerifyDelivery] = useState(null);
-  const [chatDeliveryId, setChatDeliveryId] = useState(null);
-  const [updating, setUpdating] = useState(null);
-  const [isOnline, setIsOnline] = useState(true);
+function DeliveryCodeModal({ delivery, onSuccess, onClose }) {
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
 
-  const { data: activeOrders = [], isLoading } = useQuery({
-    queryKey: ['courier-active', session?.user.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('deliveries')
-        .select('*')
-        .eq('courier_id', session.user.id)
-        .in('status', ['placed', 'bought', 'on_the_way', 'arrived'])
-        .order('created_at', { ascending: false });
-      return data || [];
-    },
-    refetchInterval: activeOrders.length > 0 ? 10_000 : false,
-    enabled: !!session,
-  });
-
-  const { data: stats } = useQuery({
-    queryKey: ['courier-stats', session?.user.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('deliveries')
-        .select('delivery_fee, tip, delivered_at')
-        .eq('courier_id', session.user.id)
-        .eq('status', 'delivered');
-      const all = data || [];
-      const total = all.reduce((s, d) => s + (d.delivery_fee || 0), 0);
-      const tips = all.reduce((s, d) => s + (d.tip || 0), 0);
-      const days = [...new Set(all.map(d => d.delivered_at?.slice(0, 10)))].length || 1;
-      return {
-        totalDeliveries: all.length,
-        totalEarned: total,
-        dailyAvg: Math.round(total / days),
-        tipsReceived: tips,
-      };
-    },
-    enabled: !!session,
-  });
-
-  async function updateStatus(delivery, nextStatus) {
-    if (STATUS_ACTIONS[delivery.status]?.requiresCode) {
-      setVerifyDelivery(delivery);
+  function verify() {
+    if (code.length !== 4) { setError('Enter the 4-digit code'); return; }
+    if (code !== delivery.delivery_code) {
+      setError('Incorrect code. Ask the buyer for the correct 4-digit code.');
       return;
     }
-    setUpdating(delivery.id);
-    await supabase
-      .from('deliveries')
-      .update({ status: nextStatus })
-      .eq('id', delivery.id);
-    queryClient.invalidateQueries(['courier-active', session.user.id]);
-    setUpdating(null);
+    onSuccess();
   }
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}>
+      <div className="w-full max-w-sm rounded-2xl p-5 space-y-4 border border-white/10" style={{ backgroundColor: '#1a1a2e' }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Lock className="w-5 h-5 text-brand-400" />
+            <p className="font-semibold text-white">Enter Delivery Code</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 text-lg font-bold">×</button>
+        </div>
+        <p className="text-sm text-gray-400">Ask the buyer for their 4-digit code to confirm delivery.</p>
+        <input
+          type="number"
+          inputMode="numeric"
+          maxLength={4}
+          value={code}
+          onChange={e => { setCode(e.target.value.slice(0, 4)); setError(''); }}
+          placeholder="0000"
+          className="w-full text-center text-4xl font-bold tracking-[0.5em] bg-surface-800 border-2 border-white/[0.08] text-white rounded-xl py-4 focus:outline-none focus:border-brand-500"
+        />
+        {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+        <button
+          onClick={verify}
+          disabled={code.length !== 4}
+          className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors"
+        >
+          Confirm Delivery
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function CourierDashboard() {
+  const { profile } = useAuth();
+  const navigate = useNavigate();
+  const [isOnline, setIsOnline] = useState(true);
+  const [activeOrders, setActiveOrders] = useState(
+    MOCK_ACTIVE_DELIVERY ? [MOCK_ACTIVE_DELIVERY] : []
+  );
+  const [verifyDelivery, setVerifyDelivery] = useState(null);
+  const [updating, setUpdating] = useState(null);
+
+  const stats = {
+    totalDeliveries: MOCK_EARNINGS.deliveries_week,
+    totalEarned: MOCK_EARNINGS.this_week,
+    dailyAvg: Math.round(MOCK_EARNINGS.today / MOCK_EARNINGS.deliveries_today),
+    tipsReceived: 500,
+  };
 
   if (!profile?.is_courier) {
     return (
@@ -99,6 +99,19 @@ export default function CourierDashboard() {
     );
   }
 
+  async function updateStatus(delivery, nextStatus) {
+    if (STATUS_ACTIONS[delivery.status]?.requiresCode) {
+      setVerifyDelivery(delivery);
+      return;
+    }
+    setUpdating(delivery.id);
+    await new Promise(r => setTimeout(r, 600));
+    setActiveOrders(prev =>
+      prev.map(o => o.id === delivery.id ? { ...o, status: nextStatus } : o)
+    );
+    setUpdating(null);
+  }
+
   const openCount = activeOrders.filter(o => o.status === 'placed').length;
   const inProgressCount = activeOrders.filter(o => ['bought', 'on_the_way'].includes(o.status)).length;
   const arrivedCount = activeOrders.filter(o => o.status === 'arrived').length;
@@ -109,9 +122,8 @@ export default function CourierDashboard() {
       <div className="px-4 pt-5 pb-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">Deliveries</h1>
-          <p className="text-sm text-gray-500">{activeOrders.length} active</p>
+          <p className="text-sm text-gray-500">{activeOrders.filter(o => o.status !== 'delivered').length} active</p>
         </div>
-        {/* Online/Offline toggle */}
         <button
           onClick={() => setIsOnline(v => !v)}
           className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
@@ -126,26 +138,24 @@ export default function CourierDashboard() {
       </div>
 
       {/* Stats grid */}
-      {stats && (
-        <div className="px-4 mb-5">
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'Total Deliveries', value: stats.totalDeliveries, icon: Package, color: 'text-brand-400', bg: 'bg-brand-500/10' },
-              { label: 'Total Earned', value: `₦${stats.totalEarned.toLocaleString()}`, icon: TrendingUp, color: 'text-green-400', bg: 'bg-green-500/10' },
-              { label: 'Daily Avg', value: `₦${stats.dailyAvg.toLocaleString()}`, icon: Clock, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-              { label: 'Tips Received', value: `₦${stats.tipsReceived.toLocaleString()}`, icon: CheckCircle, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
-            ].map(({ label, value, icon: Icon, color, bg }) => (
-              <div key={label} className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4">
-                <div className={`w-9 h-9 ${bg} rounded-xl flex items-center justify-center mb-2`}>
-                  <Icon className={`w-5 h-5 ${color}`} />
-                </div>
-                <p className="text-gray-400 text-xs">{label}</p>
-                <p className="text-white font-bold text-lg mt-0.5">{value}</p>
+      <div className="px-4 mb-5">
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { label: 'Deliveries (week)', value: stats.totalDeliveries, icon: Package, color: 'text-brand-400', bg: 'bg-brand-500/10' },
+            { label: 'Earned (week)', value: `₦${stats.totalEarned.toLocaleString()}`, icon: TrendingUp, color: 'text-green-400', bg: 'bg-green-500/10' },
+            { label: 'Today Avg', value: `₦${stats.dailyAvg.toLocaleString()}`, icon: Clock, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+            { label: 'Tips Received', value: `₦${stats.tipsReceived.toLocaleString()}`, icon: CheckCircle, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
+          ].map(({ label, value, icon: Icon, color, bg }) => (
+            <div key={label} className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4">
+              <div className={`w-9 h-9 ${bg} rounded-xl flex items-center justify-center mb-2`}>
+                <Icon className={`w-5 h-5 ${color}`} />
               </div>
-            ))}
-          </div>
+              <p className="text-gray-400 text-xs">{label}</p>
+              <p className="text-white font-bold text-lg mt-0.5">{value}</p>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* Order count row */}
       <div className="px-4 mb-5">
@@ -165,13 +175,7 @@ export default function CourierDashboard() {
 
       {/* Active orders list */}
       <div className="px-4 space-y-3">
-        {isLoading && (
-          <div className="flex justify-center py-8">
-            <div className="w-8 h-8 border-4 border-brand-800 border-t-brand-500 rounded-full animate-spin" />
-          </div>
-        )}
-
-        {!isLoading && activeOrders.length === 0 && (
+        {activeOrders.filter(o => o.status !== 'delivered').length === 0 && (
           <div className="text-center py-12">
             <div className="w-14 h-14 bg-surface-900 rounded-full flex items-center justify-center mx-auto mb-4">
               <Bike className="w-7 h-7 text-gray-600" />
@@ -181,7 +185,7 @@ export default function CourierDashboard() {
           </div>
         )}
 
-        {activeOrders.map(delivery => {
+        {activeOrders.filter(o => o.status !== 'delivered').map(delivery => {
           const action = STATUS_ACTIONS[delivery.status];
           return (
             <div key={delivery.id} className="bg-surface-900 border border-white/[0.08] rounded-2xl overflow-hidden">
@@ -235,24 +239,16 @@ export default function CourierDashboard() {
                   </p>
                 )}
 
-                <div className="flex gap-2">
+                {action && (
                   <button
-                    onClick={() => setChatDeliveryId(delivery.id)}
-                    className="w-11 h-11 bg-surface-800 border border-white/[0.08] rounded-xl flex items-center justify-center shrink-0"
+                    onClick={() => updateStatus(delivery, action.next)}
+                    disabled={updating === delivery.id}
+                    className={`w-full ${action.color} text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-50`}
                   >
-                    <MessageCircle className="w-4 h-4 text-gray-400" />
+                    {action.requiresCode && <Lock className="w-4 h-4" />}
+                    {updating === delivery.id ? 'Updating…' : action.label}
                   </button>
-                  {action && (
-                    <button
-                      onClick={() => updateStatus(delivery, action.next)}
-                      disabled={updating === delivery.id}
-                      className={`flex-1 ${action.color} text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-50`}
-                    >
-                      {action.requiresCode && <Lock className="w-4 h-4" />}
-                      {updating === delivery.id ? 'Updating…' : action.label}
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           );
@@ -262,18 +258,16 @@ export default function CourierDashboard() {
       <div className="h-4" />
 
       {verifyDelivery && (
-        <DeliveryCodeVerify
+        <DeliveryCodeModal
           delivery={verifyDelivery}
           onSuccess={() => {
+            setActiveOrders(prev =>
+              prev.map(o => o.id === verifyDelivery.id ? { ...o, status: 'delivered' } : o)
+            );
             setVerifyDelivery(null);
-            queryClient.invalidateQueries(['courier-active', session.user.id]);
           }}
           onClose={() => setVerifyDelivery(null)}
         />
-      )}
-
-      {chatDeliveryId && (
-        <ChatModal deliveryId={chatDeliveryId} onClose={() => setChatDeliveryId(null)} />
       )}
     </div>
   );

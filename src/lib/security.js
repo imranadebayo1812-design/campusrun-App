@@ -4,8 +4,6 @@
  * See docs/SECURITY.md for full documentation.
  */
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
-
 export function generateFingerprint() {
   try {
     const parts = [
@@ -73,7 +71,7 @@ export function checkRateLimit(action) {
 
 export function logSecurityEvent({ userId, action, details = '', risk_level = 'low' }) {
   try {
-    fetch(`${BACKEND_URL}/api/security/event`, {
+    fetch('/api/security/event', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

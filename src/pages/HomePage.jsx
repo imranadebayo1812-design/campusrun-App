@@ -1,8 +1,6 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
+import { MOCK_ORDERS } from '@/lib/mockData';
 import { isOrderingOpen, orderingClosedMessage } from '@/lib/restaurantHours';
 import { Plus, ChevronRight, Clock, Package, ShoppingBag, AlertCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -31,31 +29,21 @@ export default function HomePage() {
   const { session } = useAuth();
   const open = isOrderingOpen();
 
-  const { data: activeOrders = [] } = useQuery({
-    queryKey: ['active-orders-home', session?.user.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('deliveries')
-        .select('*')
-        .eq('buyer_id', session.user.id)
-        .in('status', ['placed', 'bought', 'on_the_way', 'arrived'])
-        .order('created_at', { ascending: false })
-        .limit(3);
-      return data || [];
-    },
-    refetchInterval: 12_000,
-    enabled: !!session,
-  });
+  const activeOrders = MOCK_ORDERS
+    .filter(o => ['placed', 'bought', 'on_the_way', 'arrived'].includes(o.status))
+    .slice(0, 3);
 
   const firstName = (profile?.full_name || 'Student').split(' ')[0];
 
   return (
     <div className="bg-surface-950 min-h-full">
+      {/* Top greeting */}
       <div className="px-4 pt-5 pb-4">
         <p className="text-gray-400 text-sm">Hello,</p>
         <h2 className="text-2xl font-bold text-white">{firstName} 👋</h2>
       </div>
 
+      {/* Ordering hours warning */}
       {!open && (
         <div className="mx-4 mb-4 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-center gap-2 text-sm text-amber-400">
           <AlertCircle className="w-4 h-4 shrink-0" />
@@ -63,6 +51,7 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* New Delivery Hero Banner */}
       <div className="mx-4 mb-5">
         <div
           className="rounded-2xl p-5 relative overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
@@ -84,6 +73,7 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Quick action cards */}
       <div className="px-4 grid grid-cols-2 gap-3 mb-5">
         <button
           onClick={() => navigate('/create-order', { state: { type: 'purchase' } })}
@@ -107,11 +97,15 @@ export default function HomePage() {
         </button>
       </div>
 
+      {/* Active orders section */}
       <div className="px-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-white text-sm uppercase tracking-wide">Active Orders</h3>
+          <h3 className="font-bold text-white uppercase tracking-wide text-sm">Active Orders</h3>
           {activeOrders.length > 0 && (
-            <button onClick={() => navigate('/orders')} className="text-brand-400 text-xs font-semibold flex items-center gap-0.5">
+            <button
+              onClick={() => navigate('/orders')}
+              className="text-brand-400 text-xs font-semibold flex items-center gap-0.5"
+            >
               See all <ChevronRight className="w-3.5 h-3.5" />
             </button>
           )}
@@ -141,14 +135,19 @@ export default function HomePage() {
                   <p className="text-gray-500 text-xs">→ {order.dropoff_location}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className={`text-xs font-semibold ${STATUS_COLOR[order.status]}`}>{STATUS_LABEL[order.status]}</p>
-                  <p className="text-gray-500 text-xs mt-0.5">{formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}</p>
+                  <p className={`text-xs font-semibold ${STATUS_COLOR[order.status]}`}>
+                    {STATUS_LABEL[order.status]}
+                  </p>
+                  <p className="text-gray-500 text-xs mt-0.5">
+                    {formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}
+                  </p>
                 </div>
               </button>
             ))}
           </div>
         )}
       </div>
+
       <div className="h-4" />
     </div>
   );

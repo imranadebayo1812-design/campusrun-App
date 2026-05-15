@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
-import { ensurePaystack, PAYSTACK_PUBLIC_KEY } from '@/lib/paystack';
+import { MOCK_TRANSACTIONS } from '@/lib/mockData';
 import { Wallet, Plus, ArrowDownLeft, ArrowUpRight, TrendingUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -16,23 +14,12 @@ const TX_ICON = {
 };
 
 export default function WalletPage() {
-  const { session, profile, refreshProfile } = useAuth();
+  const { profile, updateProfileLocally } = useAuth();
   const [topupAmount, setTopupAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const { data: transactions = [] } = useQuery({
-    queryKey: ['wallet-transactions', session?.user.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('wallet_transactions')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false })
-        .limit(30);
-      return data || [];
-    },
-  });
+  const [success, setSuccess] = useState('');
+  const [transactions, setTransactions] = useState([...MOCK_TRANSACTIONS]);
 
   async function topUp() {
     const amount = parseFloat(topupAmount);
@@ -42,33 +29,26 @@ export default function WalletPage() {
     }
     setLoading(true);
     setError('');
+    setSuccess('');
 
-    try {
-      const PaystackPop = await ensurePaystack();
-      const ref = `WALLET-${session.user.id.slice(0, 8)}-${Date.now()}`;
-      const handler = PaystackPop.setup({
-        key: PAYSTACK_PUBLIC_KEY,
-        email: session.user.email,
-        amount: Math.round(amount * 100),
-        currency: 'NGN',
-        ref,
-        onSuccess: async () => {
-          await fetch('/api/wallet/topup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: session.user.id, amount, reference: ref }),
-          });
-          await refreshProfile();
-          setTopupAmount('');
-          setLoading(false);
-        },
-        onCancel: () => { setLoading(false); },
-      });
-      handler.openIframe();
-    } catch {
-      setError('Could not load payment.');
-      setLoading(false);
-    }
+    await new Promise(r => setTimeout(r, 800));
+
+    const newBalance = (profile?.wallet_balance || 0) + amount;
+    const newTx = {
+      id: `tx-${Date.now()}`,
+      user_id: 'user-1',
+      type: 'topup',
+      amount,
+      balance_after: newBalance,
+      description: 'Wallet top up',
+      created_at: new Date().toISOString(),
+    };
+
+    setTransactions(prev => [newTx, ...prev]);
+    updateProfileLocally({ wallet_balance: newBalance });
+    setTopupAmount('');
+    setSuccess(`₦${amount.toLocaleString()} added to your wallet!`);
+    setLoading(false);
   }
 
   const balance = profile?.wallet_balance || 0;
@@ -120,7 +100,7 @@ export default function WalletPage() {
           <input
             type="number"
             value={topupAmount}
-            onChange={e => setTopupAmount(e.target.value)}
+            onChange={e => { setTopupAmount(e.target.value); setError(''); setSuccess(''); }}
             placeholder="Custom amount"
             className="flex-1 bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
           />
@@ -134,6 +114,7 @@ export default function WalletPage() {
           </button>
         </div>
         {error && <p className="text-xs text-red-400">{error}</p>}
+        {success && <p className="text-xs text-green-400">{success}</p>}
       </div>
 
       {/* Transactions */}

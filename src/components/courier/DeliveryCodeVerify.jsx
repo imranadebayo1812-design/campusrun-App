@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { supabase } from '@/api/supabaseClient';
 import { X, Lock } from 'lucide-react';
 
 export default function DeliveryCodeVerify({ delivery, onSuccess, onClose }) {
@@ -13,27 +12,9 @@ export default function DeliveryCodeVerify({ delivery, onSuccess, onClose }) {
       setError('Incorrect code. Ask the buyer for the correct 4-digit code.');
       return;
     }
-
     setLoading(true);
-    const { error: updateError } = await supabase
-      .from('deliveries')
-      .update({ status: 'delivered', delivered_at: new Date().toISOString() })
-      .eq('id', delivery.id);
-
-    if (updateError) {
-      setError('Failed to mark as delivered. Try again.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      await fetch('/api/complete-delivery', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ deliveryId: delivery.id }),
-      });
-    } catch {}
-
+    await new Promise(r => setTimeout(r, 600));
+    setLoading(false);
     onSuccess();
   }
 

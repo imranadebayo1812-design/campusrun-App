@@ -47,7 +47,7 @@ export default function CreateDeliveryPage() {
 
   const [orderType, setOrderType] = useState(initType);
   const [pickupLocation, setPickupLocation] = useState(initVendor || '');
-  const [dropoffLocation, setDropoffLocation] = useState(''); // 'pickup' | 'dropoff'
+  const [dropoffLocation, setDropoffLocation] = useState('');
   const [items, setItems] = useState([{ name: '', qty: 1, price: '' }]);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [packageValue, setPackageValue] = useState('');

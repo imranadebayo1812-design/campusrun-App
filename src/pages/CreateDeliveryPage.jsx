@@ -66,8 +66,8 @@ export default function CreateDeliveryPage() {
 
   const foodCost = items.reduce((sum, it) => sum + (parseFloat(it.price) || 0) * (it.qty || 1), 0);
 
-  const { fee: deliveryFee } = (() => {
-    if (!pickupLocation || !dropoffLocation) return { fee: 500 };
+  const { delivery_fee: deliveryFee = 500 } = (() => {
+    if (!pickupLocation || !dropoffLocation) return { delivery_fee: 500 };
     return calculateDeliveryFee(pickupLocation, dropoffLocation);
   })();
 
@@ -89,7 +89,7 @@ export default function CreateDeliveryPage() {
 
     await new Promise(r => setTimeout(r, 500));
 
-    const { fee, isResidential } = calculateDeliveryFee(pickupLocation, dropoffLocation);
+    const { delivery_fee: fee } = calculateDeliveryFee(pickupLocation, dropoffLocation);
     const deliveryCode = generateDeliveryCode();
     const newOrder = {
       id: `order-${Date.now()}`,
@@ -97,15 +97,14 @@ export default function CreateDeliveryPage() {
       order_type: orderType,
       pickup_location: pickupLocation,
       dropoff_location: dropoffLocation,
-      is_residential: isResidential,
       items: orderType === 'purchase' ? items : [],
       item_description: orderType === 'errand' ? itemDescription : '',
       package_value: orderType === 'errand' ? parseFloat(packageValue) || 0 : null,
       special_instructions: specialInstructions,
       food_cost: orderType === 'purchase' ? foodCost : 0,
-      delivery_fee: fee,
+      delivery_fee: fee || deliveryFee,
       service_fee: serviceFee,
-      total_amount: (orderType === 'purchase' ? foodCost : 0) + fee + serviceFee,
+      total_amount: (orderType === 'purchase' ? foodCost : 0) + (fee || deliveryFee) + serviceFee,
       delivery_code: deliveryCode,
       status: 'placed',
       courier_accepted: false,

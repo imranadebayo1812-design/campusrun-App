@@ -45,15 +45,25 @@ function LocationPickerModal({ title, currentValue, onSelect, onClose }) {
   );
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-end"
-      style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
-      onClick={onClose}
-    >
+    <>
+      {/* backdrop */}
       <div
-        className="w-full max-w-md mx-auto rounded-t-2xl max-h-[70vh] flex flex-col"
-        style={{ backgroundColor: '#1a1a2e' }}
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 9998,
+          backgroundColor: 'rgba(0,0,0,0.75)',
+        }}
+      />
+      {/* bottom sheet */}
+      <div
         onClick={e => e.stopPropagation()}
+        style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
+          backgroundColor: '#1a1a2e',
+          borderTopLeftRadius: 16, borderTopRightRadius: 16,
+          maxHeight: '70vh',
+          display: 'flex', flexDirection: 'column',
+        }}
       >
         <div className="p-4 border-b border-white/[0.08]">
           <p className="text-white font-semibold text-center mb-3">{title}</p>
@@ -68,7 +78,7 @@ function LocationPickerModal({ title, currentValue, onSelect, onClose }) {
             />
           </div>
         </div>
-        <div className="overflow-y-auto flex-1">
+        <div style={{ overflowY: 'auto', flex: 1 }}>
           {filtered.map(zone => (
             <button
               key={zone}
@@ -93,7 +103,7 @@ function LocationPickerModal({ title, currentValue, onSelect, onClose }) {
           </button>
         </div>
       </div>
-    </div>,
+    </>,
     document.body
   );
 }
@@ -109,7 +119,7 @@ export default function CreateDeliveryPage() {
   const [orderType, setOrderType] = useState(initType);
   const [pickupLocation, setPickupLocation] = useState(initVendor || '');
   const [dropoffLocation, setDropoffLocation] = useState('');
-  const [activePicker, setActivePicker] = useState(null); // 'pickup' | 'dropoff'
+  const [activePicker, setActivePicker] = useState(null);
   const [items, setItems] = useState([{ name: '', qty: 1, price: '' }]);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [packageValue, setPackageValue] = useState('');

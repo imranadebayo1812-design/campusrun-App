@@ -8,13 +8,18 @@ const ADMIN_EMAILS = ['imranadebayo1812@gmail.com', 'okekejohnk8012@gmail.com'];
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined);
   const [profile, setProfile] = useState(null);
+  const [authError, setAuthError] = useState(false);
 
   useEffect(() => {
-    const timeout = setTimeout(() => setSession(null), 8000);
+    const timeout = setTimeout(() => {
+      setSession(null);
+      setAuthError(true);
+    }, 5000);
 
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         clearTimeout(timeout);
+        setAuthError(false);
         setSession(session);
         if (session) loadProfile(session.user);
       })
@@ -95,7 +100,7 @@ export function AuthProvider({ children }) {
   const loading = session === undefined;
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signUp, signIn, signOut, refreshProfile, updateProfileLocally }}>
+    <AuthContext.Provider value={{ session, profile, loading, authError, signUp, signIn, signOut, refreshProfile, updateProfileLocally }}>
       {children}
     </AuthContext.Provider>
   );

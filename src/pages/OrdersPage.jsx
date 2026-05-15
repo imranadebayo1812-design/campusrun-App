@@ -12,11 +12,6 @@ const STATUS_DOT = {
   delivered:  'bg-green-400',
   cancelled:  'bg-red-400',
 };
-const STATUS_LABEL = {
-  placed: 'Waiting', bought: 'Bought', on_the_way: 'On The Way',
-  arrived: 'Arrived', delivered: 'Delivered', cancelled: 'Cancelled',
-};
-const ACTIVE_STATUSES = ['placed', 'bought', 'on_the_way', 'arrived'];
 
 const STATUS_LABEL = {
   placed:     'Waiting',

@@ -1,25 +1,35 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import LoginPage from '@/components/auth/LoginPage';
 import TermsModal from '@/components/auth/TermsModal';
 import OnboardingForm from '@/components/auth/OnboardingForm';
 import MobileShell from '@/components/layout/MobileShell';
-import HomePage from '@/pages/HomePage';
-import OrdersPage from '@/pages/OrdersPage';
-import WalletPage from '@/pages/WalletPage';
-import ProfilePage from '@/pages/ProfilePage';
-import CreateDeliveryPage from '@/pages/CreateDeliveryPage';
-import PaymentPage from '@/pages/PaymentPage';
-import TrackingPage from '@/pages/TrackingPage';
-import CourierDashboard from '@/pages/CourierDashboard';
-import CourierNotificationsPage from '@/pages/CourierNotificationsPage';
-import CourierEarningsPage from '@/pages/CourierEarningsPage';
-import AdminPortal from '@/pages/AdminPortal';
+
+const HomePage                = lazy(() => import('@/pages/HomePage'));
+const OrdersPage              = lazy(() => import('@/pages/OrdersPage'));
+const WalletPage              = lazy(() => import('@/pages/WalletPage'));
+const ProfilePage             = lazy(() => import('@/pages/ProfilePage'));
+const CreateDeliveryPage      = lazy(() => import('@/pages/CreateDeliveryPage'));
+const PaymentPage             = lazy(() => import('@/pages/PaymentPage'));
+const TrackingPage            = lazy(() => import('@/pages/TrackingPage'));
+const CourierDashboard        = lazy(() => import('@/pages/CourierDashboard'));
+const CourierNotificationsPage = lazy(() => import('@/pages/CourierNotificationsPage'));
+const CourierEarningsPage     = lazy(() => import('@/pages/CourierEarningsPage'));
+const AdminPortal             = lazy(() => import('@/pages/AdminPortal'));
+
+function Spinner() {
+  return (
+    <div className="flex-1 flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-brand-800 border-t-brand-500 rounded-full animate-spin" />
+    </div>
+  );
+}
 
 function LoadingScreen() {
   return (
-    <div className="min-h-screen bg-brand-500 flex items-center justify-center">
-      <div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+    <div className="min-h-screen bg-surface-950 flex items-center justify-center">
+      <div className="w-10 h-10 border-4 border-brand-800 border-t-brand-500 rounded-full animate-spin" />
     </div>
   );
 }
@@ -33,9 +43,9 @@ export default function App() {
   if (!profile?.onboarding_complete) return <OnboardingForm />;
   if (profile?.is_blacklisted) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl p-6 text-center max-w-sm shadow">
-          <p className="text-red-600 font-bold text-lg mb-2">Account Suspended</p>
+      <div className="min-h-screen bg-surface-950 flex items-center justify-center p-4">
+        <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-6 text-center max-w-sm">
+          <p className="text-red-400 font-bold text-lg mb-2">Account Suspended</p>
           <p className="text-gray-500 text-sm">{profile.blacklist_reason || 'Your account has been suspended. Contact support.'}</p>
         </div>
       </div>
@@ -44,26 +54,28 @@ export default function App() {
 
   return (
     <MobileShell>
-      <Routes>
-        {/* Buyer */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/orders" element={<OrdersPage />} />
-        <Route path="/wallet" element={<WalletPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/create-order" element={<CreateDeliveryPage />} />
-        <Route path="/payment/:deliveryId" element={<PaymentPage />} />
-        <Route path="/track/:deliveryId" element={<TrackingPage />} />
+      <Suspense fallback={<Spinner />}>
+        <Routes>
+          {/* Buyer */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/wallet" element={<WalletPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/create-order" element={<CreateDeliveryPage />} />
+          <Route path="/payment/:deliveryId" element={<PaymentPage />} />
+          <Route path="/track/:deliveryId" element={<TrackingPage />} />
 
-        {/* Courier */}
-        <Route path="/courier" element={<CourierDashboard />} />
-        <Route path="/courier/notifications" element={<CourierNotificationsPage />} />
-        <Route path="/courier/earnings" element={<CourierEarningsPage />} />
+          {/* Courier */}
+          <Route path="/courier" element={<CourierDashboard />} />
+          <Route path="/courier/notifications" element={<CourierNotificationsPage />} />
+          <Route path="/courier/earnings" element={<CourierEarningsPage />} />
 
-        {/* Admin */}
-        {profile?.is_admin && <Route path="/admin/*" element={<AdminPortal />} />}
+          {/* Admin */}
+          {profile?.is_admin && <Route path="/admin/*" element={<AdminPortal />} />}
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </MobileShell>
   );
 }

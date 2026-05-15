@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { MOCK_EARNINGS } from '@/lib/mockData';
-import { ShoppingBag, Banknote } from 'lucide-react';
+import { MOCK_EARNINGS, MOCK_EARNING_HISTORY } from '@/lib/mockData';
+import { ShoppingBag, Banknote, MapPin } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
 function WithdrawModal({ title, maxAmount, onClose }) {
   const [form, setForm] = useState({ bank_name: '', account_number: '', account_name: '' });
@@ -76,10 +77,27 @@ function WithdrawModal({ title, maxAmount, onClose }) {
   );
 }
 
+const PERIOD_FILTERS = [
+  { key: 'today', label: 'Today' },
+  { key: 'week', label: 'This Week' },
+  { key: 'all', label: 'All Time' },
+];
+
+function withinHours(dateStr, hours) {
+  return Date.now() - new Date(dateStr).getTime() < hours * 60 * 60 * 1000;
+}
+
 export default function CourierEarningsPage() {
   const [modal, setModal] = useState(null); // 'reimbursement' | 'earnings' | null
+  const [period, setPeriod] = useState('today');
 
   const e = MOCK_EARNINGS;
+
+  const filteredHistory = MOCK_EARNING_HISTORY.filter(entry => {
+    if (period === 'today') return withinHours(entry.created_at, 24);
+    if (period === 'week') return withinHours(entry.created_at, 24 * 7);
+    return true;
+  });
 
   return (
     <div className="bg-surface-950 min-h-full">
@@ -140,6 +158,65 @@ export default function CourierEarningsPage() {
             Withdraw Earnings
           </button>
         </div>
+      </div>
+
+      {/* Earnings breakdown */}
+      <div className="px-4 mt-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-semibold text-white">Delivery History</p>
+          <div className="flex bg-surface-800 border border-white/[0.08] rounded-xl p-0.5 gap-0.5">
+            {PERIOD_FILTERS.map(f => (
+              <button
+                key={f.key}
+                onClick={() => setPeriod(f.key)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  period === f.key ? 'bg-brand-500 text-white' : 'text-gray-400'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {filteredHistory.length === 0 ? (
+          <div className="text-center py-10">
+            <div className="w-12 h-12 bg-surface-900 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Banknote className="w-6 h-6 text-gray-600" />
+            </div>
+            <p className="text-sm text-gray-500">No deliveries in this period</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredHistory.map(entry => (
+              <div key={entry.id} className="bg-surface-900 border border-white/[0.08] rounded-xl p-3 flex items-center gap-3">
+                <div className="w-9 h-9 bg-brand-500/15 rounded-xl flex items-center justify-center shrink-0">
+                  <MapPin className="w-4 h-4 text-brand-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">
+                    {entry.pickup_location} → {entry.dropoff_location}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-bold text-green-400">+₦{entry.delivery_fee.toLocaleString()}</p>
+                  {entry.food_cost > 0 && (
+                    <p className="text-xs text-gray-500">+₦{entry.food_cost.toLocaleString()} reimb.</p>
+                  )}
+                </div>
+              </div>
+            ))}
+            <div className="flex justify-between items-center pt-2 pb-1 border-t border-white/[0.06] px-1">
+              <p className="text-xs text-gray-500 font-semibold">{filteredHistory.length} deliveries</p>
+              <p className="text-sm font-bold text-white">
+                ₦{filteredHistory.reduce((s, e) => s + e.delivery_fee, 0).toLocaleString()} total
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="h-6" />

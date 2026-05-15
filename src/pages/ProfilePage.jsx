@@ -7,7 +7,7 @@ export default function ProfilePage() {
   const { profile, session, updateProfileLocally } = useAuth();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ full_name: profile?.full_name || '', phone_number: profile?.phone_number || '', course: profile?.course || '' });
+  const [form, setForm] = useState({ full_name: profile?.full_name || '', phone_number: profile?.phone_number || '', course: profile?.course || '', hostel: profile?.hostel || '' });
   const [saving, setSaving] = useState(false);
 
   async function saveProfile() {
@@ -76,6 +76,7 @@ export default function ProfilePage() {
           { icon: User, label: 'Full Name', field: 'full_name' },
           { icon: Phone, label: 'Phone', field: 'phone_number' },
           { icon: BookOpen, label: 'Course', field: 'course' },
+          { icon: Home, label: 'Hostel / Room', field: 'hostel' },
         ].map(({ icon: Icon, label, field }) => (
           <div key={field} className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.05]">
             <Icon className="w-4 h-4 text-gray-500 shrink-0" />
@@ -98,7 +99,7 @@ export default function ProfilePage() {
           <div>
             <p className="text-xs text-gray-500">Campus Status</p>
             <p className="text-sm font-medium text-white capitalize">
-              {profile?.campus_status || '—'}{profile?.hostel ? ` — ${profile.hostel}` : ''}
+              {profile?.campus_status || '—'}
             </p>
           </div>
         </div>

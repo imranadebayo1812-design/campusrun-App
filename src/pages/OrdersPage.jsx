@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MOCK_ORDERS } from '@/lib/mockData';
-import { Package, Plus } from 'lucide-react';
+import { calculateDeliveryFee } from '@/lib/deliveryPricing';
+import { Package, Plus, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 const STATUS_DOT = {
@@ -27,6 +28,15 @@ const ACTIVE_STATUSES = ['placed', 'bought', 'on_the_way', 'arrived'];
 function OrderCard({ order }) {
   const navigate = useNavigate();
   const isActive = ACTIVE_STATUSES.includes(order.status);
+
+  let etaText = null;
+  try {
+    const { distance_m } = calculateDeliveryFee(order.pickup_location, order.dropoff_location);
+    if (distance_m && isActive) {
+      etaText = `~${Math.max(2, Math.round(distance_m / 80))} min`;
+    }
+  } catch {}
+
   return (
     <button
       onClick={() => navigate(`/track/${order.id}`)}
@@ -38,9 +48,16 @@ function OrderCard({ order }) {
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-white truncate">{order.pickup_location}</p>
         <p className="text-xs text-gray-500">→ {order.dropoff_location}</p>
-        <p className="text-xs text-gray-600 mt-0.5">
-          {formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}
-        </p>
+        <div className="flex items-center gap-2 mt-0.5">
+          {etaText && (
+            <span className="flex items-center gap-1 text-xs text-amber-400 font-medium">
+              <Clock className="w-3 h-3" />{etaText}
+            </span>
+          )}
+          <p className="text-xs text-gray-600">
+            {formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}
+          </p>
+        </div>
       </div>
       <div className="text-right shrink-0 flex flex-col items-end gap-1.5">
         <div className="flex items-center gap-1.5">

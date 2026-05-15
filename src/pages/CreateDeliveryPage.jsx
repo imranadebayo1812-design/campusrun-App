@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { MOCK_ORDERS, MOCK_VENDORS } from '@/lib/mockData';
 import { calculateDeliveryFee, DEFAULT_SERVICE_FEE } from '@/lib/deliveryPricing';
-import { ChevronLeft, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, Search, Navigation, Upload } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, Search, Navigation, Upload, Bookmark } from 'lucide-react';
 
 const CAMPUS_ZONES = [
   'Food Court',
@@ -30,15 +30,17 @@ function generateDeliveryCode() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
-function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor }) {
+function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor, savedAddresses = [] }) {
   const [query, setQuery] = useState('');
   const filtered = query
     ? CAMPUS_ZONES.filter(z => z.toLowerCase().includes(query.toLowerCase()))
     : CAMPUS_ZONES;
 
+  const pinnedSaved = savedAddresses.filter(a => !query || a.toLowerCase().includes(query.toLowerCase()));
+
   return (
     <div>
-      <label className={`flex items-center gap-2 text-sm font-semibold text-white mb-2`}>
+      <label className="flex items-center gap-2 text-sm font-semibold text-white mb-2">
         <Icon className={`w-4 h-4 ${iconColor}`} /> {label}
       </label>
       <div className="bg-surface-900 border border-white/[0.08] rounded-2xl overflow-hidden">
@@ -48,11 +50,35 @@ function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor })
             type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Search or type custom location..."
+            placeholder="Search location…"
             className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 outline-none"
           />
         </div>
         <div className="max-h-52 overflow-y-auto">
+          {pinnedSaved.length > 0 && (
+            <>
+              {pinnedSaved.map(addr => (
+                <button
+                  key={`saved-${addr}`}
+                  type="button"
+                  onClick={() => onChange(addr)}
+                  className={`w-full text-left px-4 py-3 border-b border-white/[0.05] text-sm flex items-center gap-2 transition-colors ${
+                    value === addr
+                      ? 'text-brand-400 bg-brand-500/10 font-medium'
+                      : 'text-gray-300 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <Bookmark className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                  {addr}
+                </button>
+              ))}
+              {!query && (
+                <div className="px-4 py-1.5 bg-surface-800/60">
+                  <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider">All Locations</p>
+                </div>
+              )}
+            </>
+          )}
           {filtered.length === 0 ? (
             <p className="text-xs text-gray-500 text-center py-4">No match</p>
           ) : (
@@ -97,6 +123,20 @@ export default function CreateDeliveryPage() {
   const [itemDescription, setItemDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [savedAddresses, setSavedAddresses] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('campusrun_saved_addresses') || '[]'); }
+    catch { return []; }
+  });
+
+  function saveAddressToHistory(location) {
+    if (!location) return;
+    setSavedAddresses(prev => {
+      const filtered = prev.filter(a => a !== location);
+      const updated = [location, ...filtered].slice(0, 3);
+      localStorage.setItem('campusrun_saved_addresses', JSON.stringify(updated));
+      return updated;
+    });
+  }
 
   function addItem() {
     setItems(prev => [...prev, { name: '', qty: 1, price: '' }]);
@@ -174,6 +214,7 @@ export default function CreateDeliveryPage() {
     };
 
     MOCK_ORDERS.unshift(newOrder);
+    saveAddressToHistory(dropoffLocation);
     setLoading(false);
     navigate(`/payment/${newOrder.id}`, { state: { delivery: newOrder } });
   }
@@ -262,6 +303,7 @@ export default function CreateDeliveryPage() {
                 onChange={setPickupLocation}
                 icon={MapPin}
                 iconColor="text-green-400"
+                savedAddresses={savedAddresses}
               />
             )}
             <InlineLocationSelect
@@ -270,6 +312,7 @@ export default function CreateDeliveryPage() {
               onChange={setDropoffLocation}
               icon={Navigation}
               iconColor="text-brand-400"
+              savedAddresses={savedAddresses}
             />
           </div>
         </div>

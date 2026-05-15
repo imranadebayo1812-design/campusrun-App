@@ -280,27 +280,37 @@ export default function CreateDeliveryPage() {
             <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">Menu — Tap to add</p>
             <div className="space-y-1.5">
               {vendor.items.map(menuItem => {
-                const inCart = items.find(it => it.name === menuItem.name);
+                const isAvailable = menuItem.available !== false;
+                const inCart = isAvailable ? items.find(it => it.name === menuItem.name) : null;
                 return (
                   <button
                     key={menuItem.name}
                     type="button"
-                    onClick={() => addMenuItemToCart(menuItem)}
-                    className="w-full flex items-center justify-between bg-surface-900 border border-white/[0.08] rounded-xl px-4 py-3 text-left active:scale-[0.98] transition-all hover:border-brand-500/30"
+                    onClick={() => isAvailable && addMenuItemToCart(menuItem)}
+                    disabled={!isAvailable}
+                    className={`w-full flex items-center justify-between bg-surface-900 border rounded-xl px-4 py-3 text-left transition-all ${
+                      isAvailable
+                        ? 'border-white/[0.08] active:scale-[0.98] hover:border-brand-500/30 cursor-pointer'
+                        : 'border-white/[0.05] opacity-50 cursor-not-allowed'
+                    }`}
                   >
                     <div>
-                      <p className="text-sm font-medium text-white">{menuItem.name}</p>
+                      <p className={`text-sm font-medium ${isAvailable ? 'text-white' : 'text-gray-500'}`}>{menuItem.name}</p>
                       <p className="text-xs text-gray-500">₦{menuItem.price.toLocaleString()}</p>
                     </div>
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                      inCart ? 'bg-brand-500 text-white' : 'bg-surface-800 border border-white/[0.08] text-gray-400'
-                    }`}>
-                      {inCart ? (
-                        <span className="text-xs font-bold">{inCart.qty}</span>
-                      ) : (
-                        <Plus className="w-3.5 h-3.5" />
-                      )}
-                    </div>
+                    {isAvailable ? (
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                        inCart ? 'bg-brand-500 text-white' : 'bg-surface-800 border border-white/[0.08] text-gray-400'
+                      }`}>
+                        {inCart ? (
+                          <span className="text-xs font-bold">{inCart.qty}</span>
+                        ) : (
+                          <Plus className="w-3.5 h-3.5" />
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-600 shrink-0">Unavailable</span>
+                    )}
                   </button>
                 );
               })}

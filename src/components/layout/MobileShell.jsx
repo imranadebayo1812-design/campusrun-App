@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMode } from '@/context/ModeContext';
 import { useAuth } from '@/context/AuthContext';
 import BottomNav from './BottomNav';
@@ -7,9 +8,15 @@ import Logo from '@/components/ui/Logo';
 export default function MobileShell({ children }) {
   const { mode, toggleMode } = useMode();
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const contentRef = useRef(null);
 
   const isCourier = mode === 'courier';
+
+  function handleToggle() {
+    toggleMode();
+    navigate(isCourier ? '/' : '/courier');
+  }
 
   return (
     <div className="app-shell flex flex-col max-w-md mx-auto bg-surface-950 shadow-2xl relative">
@@ -21,7 +28,7 @@ export default function MobileShell({ children }) {
 
         {profile && (
           <button
-            onClick={toggleMode}
+            onClick={handleToggle}
             className="flex items-center bg-surface-800 border border-white/[0.06] rounded-full p-0.5 relative"
           >
             <span

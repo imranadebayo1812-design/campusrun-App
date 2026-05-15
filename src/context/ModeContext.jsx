@@ -5,9 +5,10 @@ const ModeContext = createContext();
 export function ModeProvider({ children }) {
   const [mode, setMode] = useState(() => localStorage.getItem('campusrun_mode') || 'buyer');
 
-  const toggleMode = (newMode) => {
-    setMode(newMode);
-    localStorage.setItem('campusrun_mode', newMode);
+  const toggleMode = () => {
+    const next = mode === 'buyer' ? 'courier' : 'buyer';
+    setMode(next);
+    localStorage.setItem('campusrun_mode', next);
   };
 
   return (

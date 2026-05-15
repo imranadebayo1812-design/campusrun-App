@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { ensurePaystack, PAYSTACK_PUBLIC_KEY } from '@/lib/paystack';
 import { useAuth } from '@/context/AuthContext';
@@ -44,8 +45,8 @@ export default function TipModal({ delivery, onClose }) {
     }
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-end">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 z-[200] flex items-end">
       <div className="bg-surface-900 border border-white/[0.08] rounded-t-2xl w-full max-w-md mx-auto p-5 space-y-4">
         <div className="flex items-center justify-between">
           <p className="font-semibold text-white">Add a Tip</p>
@@ -87,6 +88,7 @@ export default function TipModal({ delivery, onClose }) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

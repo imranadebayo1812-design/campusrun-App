@@ -20,28 +20,22 @@ export default function MobileShell({ children }) {
         </div>
 
         {profile && (
-          <div className="flex bg-surface-800 rounded-full p-0.5 gap-0.5">
-            <button
-              onClick={() => !isCourier || toggleMode()}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                !isCourier
-                  ? 'bg-brand-500 text-white shadow'
-                  : 'text-gray-400'
+          <button
+            onClick={toggleMode}
+            className="flex items-center bg-surface-800 border border-white/[0.06] rounded-full p-0.5 relative"
+          >
+            <span
+              className={`absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-full bg-brand-500 shadow transition-transform duration-200 ease-in-out ${
+                isCourier ? 'translate-x-[calc(100%+4px)]' : 'translate-x-0.5'
               }`}
-            >
+            />
+            <span className={`relative z-10 px-3.5 py-1.5 text-xs font-semibold transition-colors duration-150 ${!isCourier ? 'text-white' : 'text-gray-500'}`}>
               Buyer
-            </button>
-            <button
-              onClick={() => isCourier || toggleMode()}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                isCourier
-                  ? 'bg-brand-500 text-white shadow'
-                  : 'text-gray-400'
-              }`}
-            >
+            </span>
+            <span className={`relative z-10 px-3.5 py-1.5 text-xs font-semibold transition-colors duration-150 ${isCourier ? 'text-white' : 'text-gray-500'}`}>
               Courier
-            </button>
-          </div>
+            </span>
+          </button>
         )}
       </header>
 

@@ -35,9 +35,20 @@ function LoadingScreen() {
 }
 
 export default function App() {
-  const { session, profile, loading } = useAuth();
+  const { session, profile, loading, authError } = useAuth();
 
   if (loading) return <LoadingScreen />;
+  if (authError) return (
+    <div className="min-h-screen bg-surface-950 flex items-center justify-center p-4">
+      <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-6 text-center max-w-sm">
+        <p className="text-red-400 font-bold text-lg mb-2">Connection Error</p>
+        <p className="text-gray-400 text-sm mb-4">Could not reach the server. Check your internet and try again.</p>
+        <button onClick={() => window.location.reload()} className="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-6 py-2.5 rounded-xl text-sm">
+          Retry
+        </button>
+      </div>
+    </div>
+  );
   if (!session) return <LoginPage />;
   if (!profile?.terms_accepted) return <TermsModal />;
   if (!profile?.onboarding_complete) return <OnboardingForm />;

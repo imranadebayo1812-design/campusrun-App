@@ -23,7 +23,10 @@ const LOCATION_GROUPS = [
   { label: 'Limpopo',                 subItems: null },
   { label: 'Mosque',                  subItems: null },
   { label: 'Volta',                   subItems: null },
-  { label: 'Victoria Falls',          subItems: null },
+  {
+    label: 'Victoria Falls',
+    subItems: ['Mississippi', 'White Nile', 'Lake Tana', 'Shebelle', 'Nile Delta', 'Lake Victoria', 'Victoria Falls Cafeteria'],
+  },
   { label: 'Nile Clinic',             subItems: null },
   { label: 'Nile Laboratory',         subItems: null },
   { label: 'OpenTech',                subItems: null },
@@ -36,7 +39,10 @@ const LOCATION_GROUPS = [
     subItems: ['Male Bridan', '11:29 Restaurant', 'Smoked Restaurant', 'Printing Press'],
   },
   { label: 'Turkish Restaurant',      subItems: null },
-  { label: 'Moat Heaven',             subItems: null },
+  {
+    label: 'Moat Heaven',
+    subItems: ['Zambezi', 'Moat Orange', 'Black Volta', 'Red Volta', 'Blue Nile', 'Lake Chad', 'Moat Heaven Cafeteria'],
+  },
 ];
 
 function generateDeliveryCode() {

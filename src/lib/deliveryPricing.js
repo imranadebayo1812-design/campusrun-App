@@ -67,7 +67,8 @@ export function getZoneKey(location) {
       l.includes('dot cafe') || l.includes('freenys') || l.includes('pizza 360') ||
       l.includes('street food nile') || l.includes('suya 17') || l.includes('yammy')) return 'food_court';
   if (l.includes('zambezi') || l.includes('black volta') || l.includes('red volta') ||
-      l.includes('lake chad') || l.startsWith('moat heaven') || l.includes('moat heaven')) return 'moat_heaven';
+      l.includes('lake chad') || l.includes('blue nile') || l.includes('moat orange') ||
+      l.startsWith('moat heaven') || l.includes('moat heaven')) return 'moat_heaven';
   if (l.includes('mississippi'))   return 'vf_mississippi';
   if (l.includes('white nile'))    return 'vf_white_nile';
   if (l.includes('lake tana'))     return 'vf_lake_tana';

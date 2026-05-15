@@ -63,9 +63,9 @@ export function getZoneKey(location) {
   const l = location.toLowerCase();
   if (l.includes('food court') || l.includes("b's chops") || l.includes('zulkys') || l.includes('jaj plate') ||
       l.includes('trayblazers') || l.includes('quintavi') || l.includes('cherries') ||
-      l.includes('papa rims') || l.includes('w sauce') || l.includes('dot cafe') ||
-      l.includes('freenys') || l.includes('pizza 360') || l.includes('street food nile') ||
-      l.includes('suya 17') || l.includes('yammys')) return 'food_court';
+      l.includes('papa rims') || l.includes('papa rimz') || l.includes('w sauce') ||
+      l.includes('dot cafe') || l.includes('freenys') || l.includes('pizza 360') ||
+      l.includes('street food nile') || l.includes('suya 17') || l.includes('yammy')) return 'food_court';
   if (l.includes('zambezi') || l.includes('black volta') || l.includes('red volta') ||
       l.includes('lake chad') || l.startsWith('moat heaven') || l.includes('moat heaven')) return 'moat_heaven';
   if (l.includes('mississippi'))   return 'vf_mississippi';

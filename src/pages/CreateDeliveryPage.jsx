@@ -5,25 +5,38 @@ import { MOCK_ORDERS, MOCK_VENDORS } from '@/lib/mockData';
 import { calculateDeliveryFee, DEFAULT_SERVICE_FEE } from '@/lib/deliveryPricing';
 import { ChevronLeft, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, Search, Navigation, Upload, Bookmark } from 'lucide-react';
 
-const CAMPUS_ZONES = [
-  'Food Court',
-  'Nile House',
-  'Student Center',
-  'Congo',
-  'Car Park',
-  'Ubangi',
-  'Niger',
-  'Limpopo',
-  'Mosque',
-  'Volta',
-  'Victoria Falls',
-  'Nile Clinic',
-  'Nile Laboratory',
-  'OpenTech',
-  'Female Shopping Complex',
-  'Male Shopping Complex',
-  'Turkish Restaurant',
-  'Moat Heaven',
+const LOCATION_GROUPS = [
+  {
+    label: 'Food Court',
+    subItems: [
+      "B's Chops", 'Zulkys', 'JAJ Plate', 'Trayblazers',
+      'Pizza 360', 'Cherries', 'Dot Cafe', 'Papa Rimz',
+      'W Sauce', 'Freenys', 'Suya 17', 'Yammy',
+    ],
+  },
+  { label: 'Nile House',              subItems: null },
+  { label: 'Student Center',          subItems: null },
+  { label: 'Congo',                   subItems: null },
+  { label: 'Car Park',                subItems: null },
+  { label: 'Ubangi',                  subItems: null },
+  { label: 'Niger',                   subItems: null },
+  { label: 'Limpopo',                 subItems: null },
+  { label: 'Mosque',                  subItems: null },
+  { label: 'Volta',                   subItems: null },
+  { label: 'Victoria Falls',          subItems: null },
+  { label: 'Nile Clinic',             subItems: null },
+  { label: 'Nile Laboratory',         subItems: null },
+  { label: 'OpenTech',                subItems: null },
+  {
+    label: 'Female Shopping Complex',
+    subItems: ['Mini Mart', 'Delicias', 'Female Bridan', 'Hat Lab', 'Quick Fix'],
+  },
+  {
+    label: 'Male Shopping Complex',
+    subItems: ['Male Bridan', '11:29 Restaurant', 'Smoked Restaurant', 'Printing Press'],
+  },
+  { label: 'Turkish Restaurant',      subItems: null },
+  { label: 'Moat Heaven',             subItems: null },
 ];
 
 function generateDeliveryCode() {
@@ -32,11 +45,22 @@ function generateDeliveryCode() {
 
 function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor, savedAddresses = [] }) {
   const [query, setQuery] = useState('');
-  const filtered = query
-    ? CAMPUS_ZONES.filter(z => z.toLowerCase().includes(query.toLowerCase()))
-    : CAMPUS_ZONES;
 
   const pinnedSaved = savedAddresses.filter(a => !query || a.toLowerCase().includes(query.toLowerCase()));
+
+  const visibleGroups = LOCATION_GROUPS
+    .map(group => {
+      if (!query) return group;
+      const q = query.toLowerCase();
+      const headerMatches = group.label.toLowerCase().includes(q);
+      if (!group.subItems) return headerMatches ? group : null;
+      const matchedSubs = group.subItems.filter(s => s.toLowerCase().includes(q));
+      if (headerMatches || matchedSubs.length > 0) {
+        return { ...group, subItems: headerMatches ? group.subItems : matchedSubs };
+      }
+      return null;
+    })
+    .filter(Boolean);
 
   return (
     <div>
@@ -79,22 +103,58 @@ function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor, s
               )}
             </>
           )}
-          {filtered.length === 0 ? (
+
+          {visibleGroups.length === 0 ? (
             <p className="text-xs text-gray-500 text-center py-4">No match</p>
           ) : (
-            filtered.map(zone => (
-              <button
-                key={zone}
-                type="button"
-                onClick={() => onChange(zone)}
-                className={`w-full text-left px-4 py-3 border-b border-white/[0.05] text-sm transition-colors last:border-0 ${
-                  value === zone
-                    ? 'text-brand-400 bg-brand-500/10 font-medium'
-                    : 'text-gray-300 hover:bg-white/[0.04]'
-                }`}
-              >
-                {zone}
-              </button>
+            visibleGroups.map(group => (
+              <div key={group.label}>
+                {/* Group header or flat zone row */}
+                <button
+                  type="button"
+                  onClick={() => onChange(group.label)}
+                  className={`w-full text-left px-4 py-3 border-b border-white/[0.05] text-sm flex items-center gap-2 transition-colors ${
+                    group.subItems ? 'font-semibold' : 'last:border-0'
+                  } ${
+                    value === group.label
+                      ? 'text-brand-400 bg-brand-500/10 font-medium'
+                      : group.subItems
+                        ? 'text-white hover:bg-white/[0.04]'
+                        : 'text-gray-300 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  {savedAddresses.includes(group.label) && (
+                    <Bookmark className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                  )}
+                  {group.label}
+                  {group.subItems && (
+                    <span className="ml-auto text-xs text-gray-600 font-normal shrink-0">
+                      {group.subItems.length} venues
+                    </span>
+                  )}
+                </button>
+
+                {/* Indented sub-items */}
+                {group.subItems?.map((sub, idx) => (
+                  <button
+                    key={sub}
+                    type="button"
+                    onClick={() => onChange(sub)}
+                    className={`w-full text-left pl-8 pr-4 py-2.5 border-b border-white/[0.04] text-sm flex items-center gap-2 transition-colors ${
+                      idx === group.subItems.length - 1 ? 'border-b-0' : ''
+                    } ${
+                      value === sub
+                        ? 'text-brand-400 bg-brand-500/10 font-medium'
+                        : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
+                    }`}
+                  >
+                    {savedAddresses.includes(sub) && (
+                      <Bookmark className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                    )}
+                    {sub}
+                  </button>
+                ))}
+              </div>
             ))
           )}
         </div>

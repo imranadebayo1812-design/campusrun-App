@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, Component } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import LoginPage from '@/components/auth/LoginPage';
@@ -17,6 +17,23 @@ const CourierDashboard        = lazy(() => import('@/pages/CourierDashboard'));
 const CourierNotificationsPage = lazy(() => import('@/pages/CourierNotificationsPage'));
 const CourierEarningsPage     = lazy(() => import('@/pages/CourierEarningsPage'));
 const AdminPortal             = lazy(() => import('@/pages/AdminPortal'));
+
+class ErrorBoundary extends Component {
+  state = { crashed: false };
+  static getDerivedStateFromError() { return { crashed: true }; }
+  render() {
+    if (this.state.crashed) return (
+      <div className="min-h-screen bg-surface-950 flex items-center justify-center p-4">
+        <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-6 text-center max-w-sm">
+          <p className="text-red-400 font-bold text-lg mb-2">Something went wrong</p>
+          <p className="text-gray-400 text-sm mb-4">The app ran into an error. Tap Reload to continue.</p>
+          <button onClick={() => window.location.reload()} className="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-6 py-2.5 rounded-xl text-sm">Reload</button>
+        </div>
+      </div>
+    );
+    return this.props.children;
+  }
+}
 
 function Spinner() {
   return (
@@ -65,6 +82,7 @@ export default function App() {
 
   return (
     <MobileShell>
+      <ErrorBoundary>
       <Suspense fallback={<Spinner />}>
         <Routes>
           {/* Buyer */}
@@ -87,6 +105,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+      </ErrorBoundary>
     </MobileShell>
   );
 }

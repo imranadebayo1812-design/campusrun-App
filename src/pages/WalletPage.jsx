@@ -53,7 +53,7 @@ export default function WalletPage() {
         currency: 'NGN',
         ref,
         onSuccess: async () => {
-          await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/api/wallet/topup`, {
+          await fetch('/api/wallet/topup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: session.user.id, amount, reference: ref }),

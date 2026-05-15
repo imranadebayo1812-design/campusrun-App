@@ -82,7 +82,7 @@ export default function PaymentPage() {
 
   async function dispatchOrder() {
     try {
-      await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/api/dispatch`, {
+      await fetch('/api/dispatch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ deliveryId }),

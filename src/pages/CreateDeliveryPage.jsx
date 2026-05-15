@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { MOCK_ORDERS, MOCK_VENDORS } from '@/lib/mockData';
 import { calculateDeliveryFee, DEFAULT_SERVICE_FEE } from '@/lib/deliveryPricing';
-import { ChevronLeft, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, Search, Navigation } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, Search, Navigation, Upload } from 'lucide-react';
 
 const CAMPUS_ZONES = [
   'Food Court', 'Female Shopping Complex', 'Student Center', 'Library',
@@ -357,52 +357,89 @@ export default function CreateDeliveryPage() {
           </div>
         )}
 
-        {/* Package info (errand) */}
+        {/* Package details (errand) */}
         {orderType === 'errand' && (
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">Package Details</p>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Description</label>
-                <input
-                  type="text"
-                  value={itemDescription}
-                  onChange={e => setItemDescription(e.target.value)}
-                  placeholder="e.g. Books, laptop bag"
-                  className={inputClass}
-                />
+          <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4 space-y-4">
+            <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Package Details</p>
+
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-white mb-1.5">
+                <Package className="w-4 h-4 text-gray-400" /> Package Description
+              </label>
+              <textarea
+                value={itemDescription}
+                onChange={e => setItemDescription(e.target.value)}
+                placeholder="e.g. Blue backpack, sealed envelope, printed documents"
+                rows={3}
+                className={`${inputClass} resize-none`}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-1.5">
+                Declared Package Value (₦) <span className="text-gray-500 font-normal">— max ₦10,000</span>
+              </label>
+              <input
+                type="number"
+                value={packageValue}
+                onChange={e => setPackageValue(Math.min(10000, e.target.value))}
+                placeholder="e.g. 5000"
+                max={10000}
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-1.5">
+                Package Photo <span className="text-gray-500 font-normal">(optional)</span>
+              </label>
+              <div className="h-24 border-2 border-dashed border-white/[0.12] rounded-xl flex flex-col items-center justify-center gap-1.5">
+                <Upload className="w-6 h-6 text-gray-500" />
+                <span className="text-xs text-gray-500">Tap to add package photo</span>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Value (max ₦10,000)</label>
-                <input
-                  type="number"
-                  value={packageValue}
-                  onChange={e => setPackageValue(Math.min(10000, e.target.value))}
-                  placeholder="0"
-                  max={10000}
-                  className={inputClass}
-                />
-              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-1.5">
+                Courier Instructions <span className="text-gray-500 font-normal">(optional)</span>
+              </label>
+              <textarea
+                value={specialInstructions}
+                onChange={e => setSpecialInstructions(e.target.value)}
+                placeholder="e.g. Please call when you arrive, handle with care"
+                rows={2}
+                className={`${inputClass} resize-none`}
+              />
             </div>
           </div>
         )}
 
-        {/* Special instructions */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1.5">Special Instructions (optional)</label>
-          <textarea
-            value={specialInstructions}
-            onChange={e => setSpecialInstructions(e.target.value)}
-            placeholder="Any special requests…"
-            rows={2}
-            className={`${inputClass} resize-none`}
-          />
-        </div>
+        {/* Special instructions — purchase only */}
+        {orderType === 'purchase' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1.5">Special Instructions (optional)</label>
+            <textarea
+              value={specialInstructions}
+              onChange={e => setSpecialInstructions(e.target.value)}
+              placeholder="Any special requests…"
+              rows={2}
+              className={`${inputClass} resize-none`}
+            />
+          </div>
+        )}
 
         {/* Cost Breakdown */}
         <div>
           <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">Cost Breakdown</p>
           <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4 space-y-3">
+            {orderType === 'errand' && (
+              <div className="flex items-start gap-2 bg-brand-500/10 border border-brand-500/20 rounded-xl px-3 py-2.5">
+                <Package className="w-4 h-4 text-brand-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-brand-300 leading-snug">
+                  Package/Errand: You only pay the delivery & service fee. No item purchase cost.
+                </p>
+              </div>
+            )}
             {orderType === 'purchase' && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Item Cost</span>

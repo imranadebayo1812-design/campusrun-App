@@ -1,37 +1,99 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { MOCK_ORDERS } from '@/lib/mockData';
 import { calculateDeliveryFee, DEFAULT_SERVICE_FEE } from '@/lib/deliveryPricing';
-import { ChevronLeft, Plus, Minus, Trash2, MapPin, ShoppingBag, Package } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, ChevronDown } from 'lucide-react';
 
 const CAMPUS_ZONES = [
-  'Food Court', 'Car Park', 'Moat Heaven', 'Victoria Falls',
-  'Female Shopping Complex', 'Student Center', 'Library', 'Main Gate',
-  'Back Gate', 'Nile Hall A', 'Nile Hall B', 'Nile Hall C', 'Nile Hall D',
-  'Sports Complex', 'Admin Block', 'Faculty of Engineering',
-  'Faculty of Sciences', 'Faculty of Law', 'Faculty of Social Sciences',
-  'Medical Center', 'Chapel', 'Mosque',
+  'Food Court', 'Female Shopping Complex', 'Student Center', 'Library',
+  'Main Gate', 'Back Gate', 'Car Park', 'Admin Block',
+  'Nile Hall A', 'Nile Hall B', 'Nile Hall C', 'Nile Hall D',
+  'Victoria Falls', 'Moat Heaven', 'Sports Complex',
+  'Faculty of Engineering', 'Faculty of Sciences', 'Faculty of Law',
+  'Faculty of Social Sciences', 'Medical Center', 'Chapel', 'Mosque',
 ];
 
 function generateDeliveryCode() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
-function LocationInput({ label, value, onChange, placeholder, iconColor }) {
+function LocationSelect({ label, value, onChange, placeholder, iconColor }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const ref = useRef(null);
+
+  const filtered = query.length > 0
+    ? CAMPUS_ZONES.filter(z => z.toLowerCase().includes(query.toLowerCase()))
+    : CAMPUS_ZONES;
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('touchstart', handleClick);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('touchstart', handleClick);
+    };
+  }, []);
+
+  function select(zone) {
+    onChange(zone);
+    setQuery('');
+    setOpen(false);
+  }
+
   return (
-    <div>
-      <label className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1.5">
+    <div ref={ref} className="relative">
+      <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-1.5">
         <MapPin className={`w-4 h-4 ${iconColor}`} /> {label}
       </label>
-      <input
-        type="text"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        list="campus-zones"
-        className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
-      />
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className={`w-full bg-surface-800 border rounded-xl px-4 py-3 text-sm text-left flex items-center justify-between gap-2 focus:outline-none transition-colors ${
+          open ? 'border-brand-500/50 ring-2 ring-brand-500/20' : 'border-white/[0.08]'
+        }`}
+      >
+        <span className={value ? 'text-white' : 'text-gray-500'}>{value || placeholder}</span>
+        <ChevronDown className={`w-4 h-4 text-gray-500 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-surface-800 border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden">
+          <div className="p-2 border-b border-white/[0.06]">
+            <input
+              autoFocus
+              type="text"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search location…"
+              className="w-full bg-surface-900 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 outline-none"
+            />
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <p className="text-xs text-gray-500 text-center py-3">No match</p>
+            ) : (
+              filtered.map(zone => (
+                <button
+                  key={zone}
+                  type="button"
+                  onMouseDown={e => { e.preventDefault(); select(zone); }}
+                  onTouchEnd={e => { e.preventDefault(); select(zone); }}
+                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                    value === zone ? 'text-brand-400 bg-brand-500/10' : 'text-gray-300 hover:bg-white/[0.05]'
+                  }`}
+                >
+                  {zone}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -66,10 +128,15 @@ export default function CreateDeliveryPage() {
 
   const foodCost = items.reduce((sum, it) => sum + (parseFloat(it.price) || 0) * (it.qty || 1), 0);
 
-  const { delivery_fee: deliveryFee = 500 } = (() => {
-    if (!pickupLocation || !dropoffLocation) return { delivery_fee: 500 };
-    return calculateDeliveryFee(pickupLocation, dropoffLocation);
-  })();
+  let deliveryFee = 500;
+  try {
+    if (pickupLocation && dropoffLocation) {
+      const result = calculateDeliveryFee(pickupLocation, dropoffLocation);
+      deliveryFee = result.delivery_fee || 500;
+    }
+  } catch {
+    deliveryFee = 500;
+  }
 
   const serviceFee = profile?.pro_subscriber ? 50 : DEFAULT_SERVICE_FEE;
   const totalAmount = (orderType === 'purchase' ? foodCost : 0) + deliveryFee + serviceFee;
@@ -89,7 +156,6 @@ export default function CreateDeliveryPage() {
 
     await new Promise(r => setTimeout(r, 500));
 
-    const { delivery_fee: fee } = calculateDeliveryFee(pickupLocation, dropoffLocation);
     const deliveryCode = generateDeliveryCode();
     const newOrder = {
       id: `order-${Date.now()}`,
@@ -102,9 +168,9 @@ export default function CreateDeliveryPage() {
       package_value: orderType === 'errand' ? parseFloat(packageValue) || 0 : null,
       special_instructions: specialInstructions,
       food_cost: orderType === 'purchase' ? foodCost : 0,
-      delivery_fee: fee || deliveryFee,
+      delivery_fee: deliveryFee,
       service_fee: serviceFee,
-      total_amount: (orderType === 'purchase' ? foodCost : 0) + (fee || deliveryFee) + serviceFee,
+      total_amount: totalAmount,
       delivery_code: deliveryCode,
       status: 'placed',
       courier_accepted: false,
@@ -138,6 +204,7 @@ export default function CreateDeliveryPage() {
           <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">What do you need?</p>
           <div className="grid grid-cols-2 gap-3">
             <button
+              type="button"
               onClick={() => setOrderType('purchase')}
               className={`p-4 rounded-2xl border-2 text-left transition-all ${
                 orderType === 'purchase'
@@ -150,6 +217,7 @@ export default function CreateDeliveryPage() {
               <p className="text-xs text-gray-500 mt-0.5">Food & vendors</p>
             </button>
             <button
+              type="button"
               onClick={() => setOrderType('errand')}
               className={`p-4 rounded-2xl border-2 text-left transition-all ${
                 orderType === 'errand'
@@ -167,22 +235,19 @@ export default function CreateDeliveryPage() {
         {/* Location Details */}
         <div>
           <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">Location Details</p>
-          <datalist id="campus-zones">
-            {CAMPUS_ZONES.map(z => <option key={z} value={z} />)}
-          </datalist>
           <div className="space-y-3">
-            <LocationInput
+            <LocationSelect
               label={orderType === 'purchase' ? 'Pickup (Vendor / Location)' : 'Pickup Location'}
               value={pickupLocation}
               onChange={setPickupLocation}
-              placeholder="e.g. Food Court"
+              placeholder="Select pickup location"
               iconColor="text-brand-400"
             />
-            <LocationInput
+            <LocationSelect
               label="Dropoff Location"
               value={dropoffLocation}
               onChange={setDropoffLocation}
-              placeholder="e.g. Nile Hall A"
+              placeholder="Select dropoff location"
               iconColor="text-green-400"
             />
           </div>
@@ -193,7 +258,7 @@ export default function CreateDeliveryPage() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Item Details</p>
-              <button onClick={addItem} className="text-brand-400 text-xs font-semibold flex items-center gap-1">
+              <button type="button" onClick={addItem} className="text-brand-400 text-xs font-semibold flex items-center gap-1">
                 <Plus className="w-3 h-3" /> Add item
               </button>
             </div>
@@ -209,6 +274,7 @@ export default function CreateDeliveryPage() {
                   />
                   <div className="flex items-center gap-1 shrink-0">
                     <button
+                      type="button"
                       onClick={() => updateItem(i, 'qty', Math.max(1, item.qty - 1))}
                       className="w-6 h-6 rounded-full bg-surface-800 border border-white/[0.08] flex items-center justify-center"
                     >
@@ -216,6 +282,7 @@ export default function CreateDeliveryPage() {
                     </button>
                     <span className="w-5 text-center text-sm font-medium text-white">{item.qty}</span>
                     <button
+                      type="button"
                       onClick={() => updateItem(i, 'qty', item.qty + 1)}
                       className="w-6 h-6 rounded-full bg-surface-800 border border-white/[0.08] flex items-center justify-center"
                     >
@@ -230,7 +297,7 @@ export default function CreateDeliveryPage() {
                     className="w-16 bg-transparent text-sm text-white border-b border-white/20 outline-none text-right placeholder-gray-600"
                   />
                   {items.length > 1 && (
-                    <button onClick={() => removeItem(i)} className="text-red-400 ml-1">
+                    <button type="button" onClick={() => removeItem(i)} className="text-red-400 ml-1">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   )}
@@ -314,6 +381,7 @@ export default function CreateDeliveryPage() {
         )}
 
         <button
+          type="button"
           onClick={submitOrder}
           disabled={loading}
           className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold py-4 rounded-2xl text-base shadow-lg shadow-brand-500/20"

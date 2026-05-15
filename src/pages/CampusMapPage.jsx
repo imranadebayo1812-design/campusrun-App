@@ -77,7 +77,7 @@ export default function CampusMapPage() {
               height="100%"
               frameBorder="0"
               scrolling="no"
-              src="https://www.openstreetmap.org/export/embed.html?bbox=7.3930%2C9.0100%2C7.4020%2C9.0220&layer=mapnik&marker=9.0158%2C7.3972"
+              src="https://www.openstreetmap.org/export/embed.html?bbox=7.3935%2C9.0110%2C7.4010%2C9.0210&layer=mapnik&marker=9.0155%2C7.3967"
               style={{ display: 'block' }}
             />
           </div>

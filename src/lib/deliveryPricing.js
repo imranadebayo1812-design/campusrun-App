@@ -8,14 +8,14 @@ const ZONE_COORDS = {
   food_court:             { lat: 9.015536922964838,  lng: 7.396716577036188  },
   student_center:         { lat: 9.01584359696767,   lng: 7.396116772255717  },
   congo:                  { lat: 9.015954574785841,  lng: 7.3945794810988525 },
-  ubangi:                 { lat: 9.016131956311884,  lng: 7.395744504548524  },
+  ubangi:                 { lat: 9.016235550935882,  lng: 7.395702273099158  },
   nile_house:             { lat: 9.015859060668914,  lng: 7.397644468340586  },
   niger:                  { lat: 9.014112307145439,  lng: 7.397342089292864  },
   limpopo:                { lat: 9.014636825222022,  lng: 7.395357254643089  },
   mosque:                 { lat: 9.014975907200785,  lng: 7.398393515185474  },
   volta:                  { lat: 9.013826125424105,  lng: 7.39613917931276   },
-  car_park:               { lat: 9.01461852566404,   lng: 7.399012792066656  },
-  nile_healthcare:        { lat: 9.012281318936747,  lng: 7.395577555463283  },
+  car_park:               { lat: 9.016235550935882,  lng: 7.395702273099158  },
+  nile_healthcare:        { lat: 9.011757450628213,  lng: 7.395362422266354  },
   nile_laboratory:        { lat: 9.011757450628213,  lng: 7.395362422266354  },
   opentech:               { lat: 9.012127155225496,  lng: 7.394694421194124  },
   female_shopping_complex:{ lat: 9.012656357522633,  lng: 7.396186328466161  },
@@ -87,7 +87,7 @@ export function getZoneKey(location) {
       l.includes('11:29') || l.includes('eleven') || l.includes('smoked restaurant')) return 'male_shopping_complex';
   if (l.includes('opentech'))      return 'opentech';
   if (l.includes('nile laboratory') || l.includes('nile lab')) return 'nile_laboratory';
-  if (l.includes('nile health') || l.includes('healthcare') || l.includes('clinic')) return 'nile_healthcare';
+  if (l.includes('nile health') || l.includes('healthcare') || l.includes('clinic') || l.includes('nile clinic')) return 'nile_healthcare';
   if (l.includes('turkish'))       return 'turkish';
   if (l.includes('congo'))         return 'congo';
   if (l.includes('ubangi'))        return 'ubangi';

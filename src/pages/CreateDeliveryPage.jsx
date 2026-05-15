@@ -6,12 +6,24 @@ import { calculateDeliveryFee, DEFAULT_SERVICE_FEE } from '@/lib/deliveryPricing
 import { ChevronLeft, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, Search, Navigation, Upload } from 'lucide-react';
 
 const CAMPUS_ZONES = [
-  'Food Court', 'Female Shopping Complex', 'Student Center', 'Library',
-  'Main Gate', 'Back Gate', 'Car Park', 'Admin Block',
-  'Nile Hall A', 'Nile Hall B', 'Nile Hall C', 'Nile Hall D',
-  'Victoria Falls', 'Moat Heaven', 'Sports Complex',
-  'Faculty of Engineering', 'Faculty of Sciences', 'Faculty of Law',
-  'Faculty of Social Sciences', 'Medical Center', 'Chapel', 'Mosque',
+  'Food Court',
+  'Nile House',
+  'Student Center',
+  'Congo',
+  'Car Park',
+  'Ubangi',
+  'Niger',
+  'Limpopo',
+  'Mosque',
+  'Volta',
+  'Victoria Falls',
+  'Nile Clinic',
+  'Nile Laboratory',
+  'OpenTech',
+  'Female Shopping Complex',
+  'Male Shopping Complex',
+  'Turkish Restaurant',
+  'Moat Heaven',
 ];
 
 function generateDeliveryCode() {

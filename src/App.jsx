@@ -14,8 +14,8 @@ const CreateDeliveryPage      = lazy(() => import('@/pages/CreateDeliveryPage'))
 const PaymentPage             = lazy(() => import('@/pages/PaymentPage'));
 const TrackingPage            = lazy(() => import('@/pages/TrackingPage'));
 const CourierDashboard        = lazy(() => import('@/pages/CourierDashboard'));
-const CourierNotificationsPage = lazy(() => import('@/pages/CourierNotificationsPage'));
 const CourierEarningsPage     = lazy(() => import('@/pages/CourierEarningsPage'));
+const CampusMapPage           = lazy(() => import('@/pages/CampusMapPage'));
 
 class ErrorBoundary extends Component {
   state = { crashed: false };
@@ -95,7 +95,7 @@ export default function App() {
 
           {/* Courier */}
           <Route path="/courier" element={<CourierDashboard />} />
-          <Route path="/courier/notifications" element={<CourierNotificationsPage />} />
+          <Route path="/courier/map" element={<CampusMapPage />} />
           <Route path="/courier/earnings" element={<CourierEarningsPage />} />
 
 <Route path="*" element={<Navigate to="/" replace />} />

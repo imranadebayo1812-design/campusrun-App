@@ -181,6 +181,9 @@ export const MOCK_EARNINGS = {
   total: 24500,
   deliveries_today: 3,
   deliveries_week: 14,
+  food_reimbursed: 4600,
+  tips: 500,
+  withdrawn: 0,
 };
 
 export const MOCK_EARNING_HISTORY = [

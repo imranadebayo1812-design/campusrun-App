@@ -16,7 +16,6 @@ const TrackingPage            = lazy(() => import('@/pages/TrackingPage'));
 const CourierDashboard        = lazy(() => import('@/pages/CourierDashboard'));
 const CourierNotificationsPage = lazy(() => import('@/pages/CourierNotificationsPage'));
 const CourierEarningsPage     = lazy(() => import('@/pages/CourierEarningsPage'));
-const AdminPortal             = lazy(() => import('@/pages/AdminPortal'));
 
 class ErrorBoundary extends Component {
   state = { crashed: false };
@@ -99,10 +98,7 @@ export default function App() {
           <Route path="/courier/notifications" element={<CourierNotificationsPage />} />
           <Route path="/courier/earnings" element={<CourierEarningsPage />} />
 
-          {/* Admin */}
-          {profile?.is_admin && <Route path="/admin/*" element={<AdminPortal />} />}
-
-          <Route path="*" element={<Navigate to="/" replace />} />
+<Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
       </ErrorBoundary>

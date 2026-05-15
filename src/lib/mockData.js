@@ -189,3 +189,71 @@ export const MOCK_EARNING_HISTORY = [
   { id: 'e-3', pickup_location: 'Student Center', dropoff_location: 'Nile Hall C', delivery_fee: 300, food_cost: 1500, created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() },
   { id: 'e-4', pickup_location: 'Main Gate', dropoff_location: 'Sports Complex', delivery_fee: 500, food_cost: 0, created_at: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString() },
 ];
+
+// ─── Admin mock data ──────────────────────────────────────────────────────────
+
+export const MOCK_ADMIN_STATS = {
+  active_orders: 12,
+  delivered_today: 47,
+  cancelled_today: 3,
+  total_users: 342,
+  online_users: 28,
+};
+
+export const MOCK_REVENUE = {
+  platform_total: 185400,
+  tips_paid: 24300,
+  pro_subscriptions: { count: 89, monthly_revenue: 22250 },
+  commission: 18540,
+  service_fee_income: 142110,
+};
+
+export const MOCK_ORDERS_CHART = [
+  { day: 'Mon', orders: 23 },
+  { day: 'Tue', orders: 31 },
+  { day: 'Wed', orders: 28 },
+  { day: 'Thu', orders: 45 },
+  { day: 'Fri', orders: 52 },
+  { day: 'Sat', orders: 38 },
+  { day: 'Sun', orders: 19 },
+];
+
+export const MOCK_REVENUE_CHART = [
+  { day: 'Mon', revenue: 15400 },
+  { day: 'Tue', revenue: 21300 },
+  { day: 'Wed', revenue: 18700 },
+  { day: 'Thu', revenue: 29500 },
+  { day: 'Fri', revenue: 34200 },
+  { day: 'Sat', revenue: 25100 },
+  { day: 'Sun', revenue: 12800 },
+];
+
+export const MOCK_ADMIN_ORDERS = [
+  { id: 'ao-1', buyer_name: 'Imran Adebayo', pickup_location: 'Food Court', dropoff_location: 'Nile Hall A', total_amount: 2700, status: 'on_the_way', order_type: 'purchase', created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString() },
+  { id: 'ao-2', buyer_name: 'Aisha Bello', pickup_location: 'Female Shopping Complex', dropoff_location: 'Victoria Falls', total_amount: 1800, status: 'placed', order_type: 'purchase', created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString() },
+  { id: 'ao-3', buyer_name: 'Chidi Okonkwo', pickup_location: 'Admin Block', dropoff_location: 'Nile Hall B', total_amount: 500, status: 'delivered', order_type: 'errand', created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() },
+  { id: 'ao-4', buyer_name: 'Fatima Usman', pickup_location: 'Student Center', dropoff_location: 'Moat Heaven', total_amount: 3200, status: 'bought', order_type: 'purchase', created_at: new Date(Date.now() - 25 * 60 * 1000).toISOString() },
+  { id: 'ao-5', buyer_name: 'Emeka Nwosu', pickup_location: 'Main Gate', dropoff_location: 'Library', total_amount: 700, status: 'cancelled', order_type: 'errand', created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() },
+  { id: 'ao-6', buyer_name: 'Zainab Abdullahi', pickup_location: 'Food Court', dropoff_location: 'Nile Hall C', total_amount: 1900, status: 'arrived', order_type: 'purchase', created_at: new Date(Date.now() - 40 * 60 * 1000).toISOString() },
+  { id: 'ao-7', buyer_name: 'Tunde Okafor', pickup_location: 'Female Shopping Complex', dropoff_location: 'Nile Hall D', total_amount: 2100, status: 'flagged', order_type: 'purchase', created_at: new Date(Date.now() - 90 * 60 * 1000).toISOString() },
+  { id: 'ao-8', buyer_name: 'Ngozi Eze', pickup_location: 'Car Park', dropoff_location: 'Victoria Falls', total_amount: 600, status: 'delivered', order_type: 'errand', created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() },
+];
+
+export const MOCK_ADMIN_USERS = [
+  { id: 'u-1', full_name: 'Imran Adebayo', email: 'imran@nileuniversity.edu.ng', campus_status: 'resident', hostel: 'Nile Hall A', orders_count: 12, wallet_balance: 15000, fraud_score: 0, is_blacklisted: false, is_courier: true, pro_subscriber: false },
+  { id: 'u-2', full_name: 'Aisha Bello', email: 'aisha@nileuniversity.edu.ng', campus_status: 'resident', hostel: 'Victoria Falls', orders_count: 8, wallet_balance: 8500, fraud_score: 0, is_blacklisted: false, is_courier: false, pro_subscriber: true },
+  { id: 'u-3', full_name: 'Chidi Okonkwo', email: 'chidi@nileuniversity.edu.ng', campus_status: 'day_student', hostel: null, orders_count: 5, wallet_balance: 3200, fraud_score: 1, is_blacklisted: false, is_courier: false, pro_subscriber: false },
+  { id: 'u-4', full_name: 'Fatima Usman', email: 'fatima@nileuniversity.edu.ng', campus_status: 'resident', hostel: 'Moat Heaven', orders_count: 21, wallet_balance: 22000, fraud_score: 0, is_blacklisted: false, is_courier: true, pro_subscriber: true },
+  { id: 'u-5', full_name: 'Emeka Nwosu', email: 'emeka@nileuniversity.edu.ng', campus_status: 'resident', hostel: 'Nile Hall B', orders_count: 3, wallet_balance: 500, fraud_score: 3, is_blacklisted: true, is_courier: false, pro_subscriber: false },
+  { id: 'u-6', full_name: 'Zainab Abdullahi', email: 'zainab@nileuniversity.edu.ng', campus_status: 'resident', hostel: 'Nile Hall C', orders_count: 15, wallet_balance: 11000, fraud_score: 0, is_blacklisted: false, is_courier: false, pro_subscriber: true },
+  { id: 'u-7', full_name: 'Tunde Okafor', email: 'tunde@nileuniversity.edu.ng', campus_status: 'day_student', hostel: null, orders_count: 7, wallet_balance: 4700, fraud_score: 2, is_blacklisted: false, is_courier: true, pro_subscriber: false },
+  { id: 'u-8', full_name: 'Ngozi Eze', email: 'ngozi@nileuniversity.edu.ng', campus_status: 'resident', hostel: 'Victoria Falls', orders_count: 19, wallet_balance: 18300, fraud_score: 0, is_blacklisted: false, is_courier: false, pro_subscriber: true },
+];
+
+export const MOCK_RUNNERS = [
+  { id: 'r-1', full_name: 'Ahmed Musa', phone: '08022334455', status: 'online', orders_today: 6, rating: 4.9, earnings_today: 2400, is_active: true },
+  { id: 'r-2', full_name: 'Halima Sani', phone: '08033445566', status: 'online', orders_today: 4, rating: 4.7, earnings_today: 1800, is_active: true },
+  { id: 'r-3', full_name: 'Daniel Obi', phone: '08044556677', status: 'offline', orders_today: 2, rating: 4.5, earnings_today: 700, is_active: true },
+  { id: 'r-4', full_name: 'Mariam Yusuf', phone: '08055667788', status: 'online', orders_today: 8, rating: 5.0, earnings_today: 3200, is_active: true },
+  { id: 'r-5', full_name: 'Biodun Adewale', phone: '08066778899', status: 'offline', orders_today: 0, rating: 4.2, earnings_today: 0, is_active: false },
+];

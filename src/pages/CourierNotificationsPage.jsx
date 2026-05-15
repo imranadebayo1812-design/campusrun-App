@@ -5,7 +5,7 @@ import { Bell, MapPin, CheckCircle, XCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function CourierNotificationsPage() {
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: notifications = [], isLoading } = useQuery({
@@ -34,7 +34,7 @@ export default function CourierNotificationsPage() {
           courier_accepted: true,
           courier_accepted_at: new Date().toISOString(),
           grace_period_ends_at: gracePeriodEnds,
-          courier_name: '',
+          courier_name: profile?.full_name || '',
         })
         .eq('id', delivery.id)
         .eq('courier_accepted', false);

@@ -26,7 +26,7 @@ export default function BottomNav() {
   const adminTab = profile?.is_admin ? { to: '/admin', icon: ShieldCheck, label: 'Admin' } : null;
 
   return (
-    <nav className="absolute bottom-0 left-0 right-0 bg-surface-900 border-t border-white/[0.08] safe-bottom z-10">
+    <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-surface-900 border-t border-white/[0.08] safe-bottom z-10">
       <div className="flex">
         {tabs.map(({ to, icon: Icon, label }) => (
           <NavLink

@@ -28,4 +28,5 @@
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
   .pb-nav { padding-bottom: calc(4rem + env(safe-area-inset-bottom)); }
   .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); }
+  .app-shell { height: 100vh; height: 100svh; }
 }

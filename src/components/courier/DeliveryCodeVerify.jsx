@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { supabase } from '@/api/supabaseClient';
 import { X, Lock } from 'lucide-react';
 
@@ -38,9 +37,9 @@ export default function DeliveryCodeVerify({ delivery, onSuccess, onClose }) {
     onSuccess();
   }
 
-  return createPortal(
-    <div className="fixed inset-0 bg-black/70 z-[200] flex items-center justify-center p-4">
-      <div className="bg-surface-900 border border-white/[0.08] rounded-2xl w-full max-w-sm p-5 space-y-4">
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}>
+      <div className="w-full max-w-sm rounded-2xl p-5 space-y-4 border border-white/10" style={{ backgroundColor: '#1a1a2e' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-brand-400" />
@@ -71,7 +70,6 @@ export default function DeliveryCodeVerify({ delivery, onSuccess, onClose }) {
           {loading ? 'Verifying…' : 'Confirm Delivery'}
         </button>
       </div>
-    </div>,
-    document.body
+    </div>
   );
 }

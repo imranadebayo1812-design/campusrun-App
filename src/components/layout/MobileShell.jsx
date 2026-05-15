@@ -12,7 +12,7 @@ export default function MobileShell({ children }) {
   const isCourier = mode === 'courier';
 
   return (
-    <div className="flex flex-col h-screen max-w-md mx-auto bg-surface-950 shadow-2xl overflow-hidden relative">
+    <div className="flex flex-col h-screen max-w-md mx-auto bg-surface-950 shadow-2xl overflow-x-hidden relative">
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 bg-surface-900 border-b border-white/[0.08] safe-top shrink-0 z-10">
         <div className="flex items-center gap-2.5">

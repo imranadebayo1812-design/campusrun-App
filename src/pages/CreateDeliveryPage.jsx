@@ -20,20 +20,7 @@ function generateDeliveryCode() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
-function LocationPicker({ label, value, onChange, placeholder, icon: Icon, iconColor }) {
-  const [search, setSearch] = useState('');
-  const [open, setOpen] = useState(false);
-
-  const filtered = CAMPUS_ZONES.filter(z =>
-    z.toLowerCase().includes(search.toLowerCase())
-  );
-
-  function select(zone) {
-    onChange(zone);
-    setOpen(false);
-    setSearch('');
-  }
-
+function LocationPickerButton({ label, value, onOpen, placeholder, icon: Icon, iconColor }) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1.5">
@@ -41,58 +28,73 @@ function LocationPicker({ label, value, onChange, placeholder, icon: Icon, iconC
       </label>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={onOpen}
         className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-left text-sm flex items-center justify-between"
       >
         <span className={value ? 'text-white' : 'text-gray-500'}>{value || placeholder}</span>
         <ChevronLeft className="w-4 h-4 text-gray-500 rotate-[-90deg]" />
       </button>
-
-      {open && createPortal(
-        <div className="fixed inset-0 bg-black/70 z-[200] flex items-end" onClick={() => { setOpen(false); setSearch(''); }}>
-          <div className="w-full max-w-md mx-auto bg-surface-900 rounded-t-2xl max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-white/[0.08]">
-              <p className="text-white font-semibold text-center mb-3">{label}</p>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input
-                  autoFocus
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Search location…"
-                  className="w-full bg-surface-800 border border-white/[0.08] rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
-                />
-              </div>
-            </div>
-            <div className="overflow-y-auto flex-1">
-              {filtered.map(zone => (
-                <button
-                  key={zone}
-                  type="button"
-                  onClick={() => select(zone)}
-                  className={`w-full px-4 py-3.5 text-left text-sm border-b border-white/[0.05] flex items-center gap-3 ${
-                    value === zone ? 'text-brand-400 bg-brand-500/10' : 'text-white'
-                  }`}
-                >
-                  <MapPin className={`w-4 h-4 shrink-0 ${value === zone ? 'text-brand-400' : 'text-gray-500'}`} />
-                  {zone}
-                </button>
-              ))}
-            </div>
-            <div className="p-4 border-t border-white/[0.08]">
-              <button
-                type="button"
-                onClick={() => { setOpen(false); setSearch(''); }}
-                className="w-full bg-surface-800 text-gray-400 font-semibold py-3 rounded-xl text-sm"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
     </div>
+  );
+}
+
+function LocationPickerModal({ title, currentValue, onSelect, onClose }) {
+  const [search, setSearch] = useState('');
+  const filtered = CAMPUS_ZONES.filter(z =>
+    z.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-end"
+      style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md mx-auto rounded-t-2xl max-h-[70vh] flex flex-col"
+        style={{ backgroundColor: '#1a1a2e' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-4 border-b border-white/[0.08]">
+          <p className="text-white font-semibold text-center mb-3">{title}</p>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <input
+              autoFocus
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search location…"
+              className="w-full bg-surface-800 border border-white/[0.08] rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+            />
+          </div>
+        </div>
+        <div className="overflow-y-auto flex-1">
+          {filtered.map(zone => (
+            <button
+              key={zone}
+              type="button"
+              onClick={() => onSelect(zone)}
+              className={`w-full px-4 py-3.5 text-left text-sm border-b border-white/[0.05] flex items-center gap-3 ${
+                currentValue === zone ? 'text-brand-400 bg-brand-500/10' : 'text-white'
+              }`}
+            >
+              <MapPin className={`w-4 h-4 shrink-0 ${currentValue === zone ? 'text-brand-400' : 'text-gray-500'}`} />
+              {zone}
+            </button>
+          ))}
+        </div>
+        <div className="p-4 border-t border-white/[0.08]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full bg-surface-800 text-gray-400 font-semibold py-3 rounded-xl text-sm"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -107,6 +109,7 @@ export default function CreateDeliveryPage() {
   const [orderType, setOrderType] = useState(initType);
   const [pickupLocation, setPickupLocation] = useState(initVendor || '');
   const [dropoffLocation, setDropoffLocation] = useState('');
+  const [activePicker, setActivePicker] = useState(null); // 'pickup' | 'dropoff'
   const [items, setItems] = useState([{ name: '', qty: 1, price: '' }]);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [packageValue, setPackageValue] = useState('');
@@ -226,7 +229,7 @@ export default function CreateDeliveryPage() {
             >
               <ShoppingBag className={`w-6 h-6 mb-2 ${orderType === 'purchase' ? 'text-brand-400' : 'text-gray-500'}`} />
               <p className={`font-semibold text-sm ${orderType === 'purchase' ? 'text-white' : 'text-gray-400'}`}>Item Purchase</p>
-              <p className="text-xs text-gray-500 mt-0.5">Food & vendors</p>
+              <p className="text-xs text-gray-500 mt-0.5">Food &amp; vendors</p>
             </button>
             <button
               onClick={() => setOrderType('errand')}
@@ -247,37 +250,18 @@ export default function CreateDeliveryPage() {
         <div>
           <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">Location Details</p>
           <div className="space-y-3">
-            {orderType === 'purchase' ? (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-brand-400" /> Pickup (Vendor / Location)
-                </label>
-                <input
-                  type="text"
-                  value={pickupLocation}
-                  onChange={e => setPickupLocation(e.target.value)}
-                  placeholder="e.g. Food Court"
-                  list="zone-list"
-                  className={inputClass}
-                />
-                <datalist id="zone-list">
-                  {CAMPUS_ZONES.map(z => <option key={z} value={z} />)}
-                </datalist>
-              </div>
-            ) : (
-              <LocationPicker
-                label="Pickup Location"
-                value={pickupLocation}
-                onChange={setPickupLocation}
-                placeholder="Select pickup location…"
-                icon={MapPin}
-                iconColor="text-brand-400"
-              />
-            )}
-            <LocationPicker
+            <LocationPickerButton
+              label={orderType === 'purchase' ? 'Pickup (Vendor / Location)' : 'Pickup Location'}
+              value={pickupLocation}
+              onOpen={() => setActivePicker('pickup')}
+              placeholder="Select pickup location…"
+              icon={MapPin}
+              iconColor="text-brand-400"
+            />
+            <LocationPickerButton
               label="Dropoff Location"
               value={dropoffLocation}
-              onChange={setDropoffLocation}
+              onOpen={() => setActivePicker('dropoff')}
               placeholder="Select dropoff location…"
               icon={MapPin}
               iconColor="text-green-400"
@@ -421,6 +405,19 @@ export default function CreateDeliveryPage() {
             </div>
           </div>
         </div>
+
+        {activePicker && (
+          <LocationPickerModal
+            title={activePicker === 'pickup' ? (orderType === 'purchase' ? 'Pickup (Vendor / Location)' : 'Pickup Location') : 'Dropoff Location'}
+            currentValue={activePicker === 'pickup' ? pickupLocation : dropoffLocation}
+            onSelect={zone => {
+              if (activePicker === 'pickup') setPickupLocation(zone);
+              else setDropoffLocation(zone);
+              setActivePicker(null);
+            }}
+            onClose={() => setActivePicker(null)}
+          />
+        )}
 
         {error && (
           <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3">

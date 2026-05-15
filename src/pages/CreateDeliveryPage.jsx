@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { MOCK_ORDERS, MOCK_VENDORS } from '@/lib/mockData';
 import { calculateDeliveryFee, DEFAULT_SERVICE_FEE } from '@/lib/deliveryPricing';
-import { ChevronLeft, Plus, Minus, Trash2, MapPin, ShoppingBag, Package } from 'lucide-react';
+import { ChevronLeft, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, Search, Navigation } from 'lucide-react';
 
 const CAMPUS_ZONES = [
   'Food Court', 'Female Shopping Complex', 'Student Center', 'Library',
@@ -18,7 +18,7 @@ function generateDeliveryCode() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
-function InlineLocationSelect({ label, value, onChange, iconColor }) {
+function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor }) {
   const [query, setQuery] = useState('');
   const filtered = query
     ? CAMPUS_ZONES.filter(z => z.toLowerCase().includes(query.toLowerCase()))
@@ -26,17 +26,18 @@ function InlineLocationSelect({ label, value, onChange, iconColor }) {
 
   return (
     <div>
-      <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-2">
-        <MapPin className={`w-4 h-4 ${iconColor}`} /> {label}
+      <label className={`flex items-center gap-2 text-sm font-semibold text-white mb-2`}>
+        <Icon className={`w-4 h-4 ${iconColor}`} /> {label}
       </label>
       <div className="bg-surface-900 border border-white/[0.08] rounded-2xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-white/[0.06]">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06]">
+          <Search className="w-4 h-4 text-gray-500 shrink-0" />
           <input
             type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Search or type custom location…"
-            className="w-full bg-transparent text-sm text-white placeholder-gray-500 outline-none"
+            placeholder="Search or type custom location..."
+            className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 outline-none"
           />
         </div>
         <div className="max-h-52 overflow-y-auto">
@@ -48,14 +49,13 @@ function InlineLocationSelect({ label, value, onChange, iconColor }) {
                 key={zone}
                 type="button"
                 onClick={() => onChange(zone)}
-                className={`w-full flex items-center justify-between px-4 py-3 border-b border-white/[0.05] text-sm transition-colors last:border-0 ${
+                className={`w-full text-left px-4 py-3 border-b border-white/[0.05] text-sm transition-colors last:border-0 ${
                   value === zone
-                    ? 'text-brand-400 bg-brand-500/10'
+                    ? 'text-brand-400 bg-brand-500/10 font-medium'
                     : 'text-gray-300 hover:bg-white/[0.04]'
                 }`}
               >
-                <span>{zone}</span>
-                <span className="text-gray-500">›</span>
+                {zone}
               </button>
             ))
           )}
@@ -191,8 +191,8 @@ export default function CreateDeliveryPage() {
       <div className="px-4 space-y-5 pb-6">
         {/* Order type — hidden when coming from a vendor */}
         {!vendor && (
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">What do you need?</p>
+          <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4">
+            <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-4">What do you need?</p>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -200,12 +200,14 @@ export default function CreateDeliveryPage() {
                 className={`p-5 rounded-2xl border-2 text-center transition-all ${
                   orderType === 'purchase'
                     ? 'border-brand-500 bg-brand-500/10'
-                    : 'border-white/[0.08] bg-surface-900'
+                    : 'border-white/[0.08] bg-surface-800'
                 }`}
               >
                 <ShoppingBag className={`w-8 h-8 mx-auto mb-3 ${orderType === 'purchase' ? 'text-brand-400' : 'text-gray-500'}`} />
                 <p className={`font-semibold text-sm ${orderType === 'purchase' ? 'text-white' : 'text-gray-400'}`}>Item Purchase</p>
-                <p className="text-xs text-gray-500 mt-1 leading-snug">Courier buys food/items for you</p>
+                <p className={`text-xs mt-1 leading-snug ${orderType === 'purchase' ? 'text-brand-300/70' : 'text-gray-600'}`}>
+                  Courier buys food/items for you
+                </p>
               </button>
               <button
                 type="button"
@@ -213,26 +215,28 @@ export default function CreateDeliveryPage() {
                 className={`p-5 rounded-2xl border-2 text-center transition-all ${
                   orderType === 'errand'
                     ? 'border-brand-500 bg-brand-500/10'
-                    : 'border-white/[0.08] bg-surface-900'
+                    : 'border-white/[0.08] bg-surface-800'
                 }`}
               >
                 <Package className={`w-8 h-8 mx-auto mb-3 ${orderType === 'errand' ? 'text-brand-400' : 'text-gray-500'}`} />
                 <p className={`font-semibold text-sm ${orderType === 'errand' ? 'text-white' : 'text-gray-400'}`}>Package / Errand</p>
-                <p className="text-xs text-gray-500 mt-1 leading-snug">Send an existing item/package</p>
+                <p className={`text-xs mt-1 leading-snug ${orderType === 'errand' ? 'text-brand-300/70' : 'text-gray-600'}`}>
+                  Send an existing item/package
+                </p>
               </button>
             </div>
           </div>
         )}
 
         {/* Location Details */}
-        <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">Location Details</p>
+        <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4">
+          <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-4">Location Details</p>
           <div className="space-y-4">
             {/* Pickup — locked chip if vendor pre-selected */}
             {vendor ? (
               <div>
-                <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-2">
-                  <MapPin className="w-4 h-4 text-brand-400" /> Pickup (Vendor Location)
+                <label className="flex items-center gap-2 text-sm font-semibold text-white mb-2">
+                  <MapPin className="w-4 h-4 text-green-400" /> Pickup Location
                 </label>
                 <div className="w-full bg-surface-800/60 border border-brand-500/30 rounded-xl px-4 py-3 text-sm text-brand-300 flex items-center gap-2">
                   <span>{vendor.emoji}</span>
@@ -241,17 +245,19 @@ export default function CreateDeliveryPage() {
               </div>
             ) : (
               <InlineLocationSelect
-                label={orderType === 'purchase' ? 'Pickup (Vendor / Location)' : 'Pickup Location'}
+                label="Pickup Location"
                 value={pickupLocation}
                 onChange={setPickupLocation}
-                iconColor="text-brand-400"
+                icon={MapPin}
+                iconColor="text-green-400"
               />
             )}
             <InlineLocationSelect
               label="Drop-off Location"
               value={dropoffLocation}
               onChange={setDropoffLocation}
-              iconColor="text-green-400"
+              icon={Navigation}
+              iconColor="text-brand-400"
             />
           </div>
         </div>

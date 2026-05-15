@@ -1,9 +1,8 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { MOCK_ORDERS, MOCK_VENDORS } from '@/lib/mockData';
 import { isOrderingOpen, orderingClosedMessage } from '@/lib/restaurantHours';
-import { Search, ChevronRight, Package, AlertCircle, Wallet } from 'lucide-react';
+import { ChevronRight, Package, AlertCircle, Wallet } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 const STATUS_LABEL = {
@@ -33,20 +32,10 @@ const STATUS_DOT = {
   cancelled: 'bg-red-400',
 };
 
-const CATEGORIES = [
-  { key: 'all', label: 'All' },
-  { key: 'food', label: '🍽️ Food' },
-  { key: 'snacks', label: '🍟 Snacks' },
-  { key: 'drinks', label: '☕ Drinks' },
-  { key: 'shopping', label: '🛒 Shopping' },
-];
-
 export default function HomePage() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const open = isOrderingOpen();
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('all');
 
   const activeOrders = MOCK_ORDERS
     .filter(o => ['placed', 'bought', 'on_the_way', 'arrived'].includes(o.status))
@@ -54,17 +43,6 @@ export default function HomePage() {
 
   const firstName = (profile?.full_name || 'Student').split(' ')[0];
   const balance = profile?.wallet_balance || 0;
-
-  const filteredVendors = MOCK_VENDORS.filter(v => {
-    const matchCategory = category === 'all' || v.category === category;
-    if (!search.trim()) return matchCategory;
-    const q = search.toLowerCase();
-    return matchCategory && (
-      v.name.toLowerCase().includes(q) ||
-      v.zone.toLowerCase().includes(q) ||
-      v.items.some(i => i.name.toLowerCase().includes(q))
-    );
-  });
 
   function openVendor(vendor) {
     navigate('/create-order', {
@@ -99,20 +77,6 @@ export default function HomePage() {
           <span>{orderingClosedMessage()}</span>
         </div>
       )}
-
-      {/* Search bar */}
-      <div className="px-4 mb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search vendors, food, items…"
-            className="w-full bg-surface-900 border border-white/[0.08] rounded-2xl pl-9 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
-          />
-        </div>
-      </div>
 
       {/* Active orders */}
       {activeOrders.length > 0 && (
@@ -157,59 +121,30 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Category chips */}
-      <div className="px-4 mb-4">
-        <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
-          {CATEGORIES.map(c => (
+      {/* All vendors */}
+      <div className="px-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">All Vendors</p>
+          <span className="text-xs text-gray-600">{MOCK_VENDORS.length} vendors</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {MOCK_VENDORS.map(vendor => (
             <button
-              key={c.key}
-              onClick={() => setCategory(c.key)}
-              className={`shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-all ${
-                category === c.key
-                  ? 'bg-brand-500 text-white'
-                  : 'bg-surface-900 text-gray-400 border border-white/[0.08]'
-              }`}
+              key={vendor.id}
+              onClick={() => openVendor(vendor)}
+              className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4 text-left active:scale-[0.97] transition-transform"
             >
-              {c.label}
+              <div className={`w-10 h-10 ${vendor.color} rounded-xl flex items-center justify-center mb-3 text-lg`}>
+                {vendor.emoji}
+              </div>
+              <p className="font-semibold text-white text-sm leading-tight">{vendor.name}</p>
+              <p className="text-xs text-gray-500 mt-0.5 truncate">{vendor.zone}</p>
+              <p className="text-xs text-gray-600 mt-2 truncate">
+                {vendor.items[0].name} · <span className="text-gray-500">₦{vendor.items[0].price.toLocaleString()}</span>
+              </p>
             </button>
           ))}
         </div>
-      </div>
-
-      {/* Vendor grid */}
-      <div className="px-4">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
-            {search ? `Results for "${search}"` : category === 'all' ? 'All Vendors' : CATEGORIES.find(c => c.key === category)?.label}
-          </p>
-          <span className="text-xs text-gray-600">{filteredVendors.length} vendors</span>
-        </div>
-
-        {filteredVendors.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-400 text-sm font-medium">No vendors found</p>
-            <p className="text-gray-600 text-xs mt-1">Try a different search or category</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {filteredVendors.map(vendor => (
-              <button
-                key={vendor.id}
-                onClick={() => openVendor(vendor)}
-                className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4 text-left active:scale-[0.97] transition-transform"
-              >
-                <div className={`w-10 h-10 ${vendor.color} rounded-xl flex items-center justify-center mb-3 text-lg`}>
-                  {vendor.emoji}
-                </div>
-                <p className="font-semibold text-white text-sm leading-tight">{vendor.name}</p>
-                <p className="text-xs text-gray-500 mt-0.5 truncate">{vendor.zone}</p>
-                <p className="text-xs text-gray-600 mt-2 truncate">
-                  {vendor.items[0].name} · <span className="text-gray-500">₦{vendor.items[0].price.toLocaleString()}</span>
-                </p>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="h-6" />

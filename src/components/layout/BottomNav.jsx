@@ -1,17 +1,11 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useMode } from '@/context/ModeContext';
-import { Home, Clock, Wallet, Bike, Map, User } from 'lucide-react';
+import { Home, Clock, Wallet, Bike, Map, User, Plus } from 'lucide-react';
 
 export default function BottomNav() {
   const { mode } = useMode();
+  const navigate = useNavigate();
   const isCourier = mode === 'courier';
-
-  const buyerTabs = [
-    { to: '/', icon: Home, label: 'Home' },
-    { to: '/orders', icon: Clock, label: 'Orders' },
-    { to: '/wallet', icon: Wallet, label: 'Wallet' },
-    { to: '/profile', icon: User, label: 'Profile' },
-  ];
 
   const courierTabs = [
     { to: '/courier', icon: Bike, label: 'Deliveries' },
@@ -20,26 +14,93 @@ export default function BottomNav() {
     { to: '/profile', icon: User, label: 'Profile' },
   ];
 
-  const tabs = isCourier ? courierTabs : buyerTabs;
+  if (isCourier) {
+    return (
+      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-surface-900 border-t border-white/[0.08] safe-bottom z-10">
+        <div className="flex">
+          {courierTabs.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/courier'}
+              className={({ isActive }) =>
+                `flex-1 flex flex-col items-center py-2.5 gap-0.5 text-xs font-medium transition-colors ${
+                  isActive ? 'text-brand-400' : 'text-gray-500'
+                }`
+              }
+            >
+              <Icon className="w-5 h-5" />
+              {label}
+            </NavLink>
+          ))}
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-surface-900 border-t border-white/[0.08] safe-bottom z-10">
-      <div className="flex">
-        {tabs.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/' || to === '/courier'}
-            className={({ isActive }) =>
-              `flex-1 flex flex-col items-center py-2.5 gap-0.5 text-xs font-medium transition-colors ${
-                isActive ? 'text-brand-400' : 'text-gray-500'
-              }`
-            }
+      <div className="flex items-end">
+        <NavLink
+          to="/"
+          end
+          className={({ isActive }) =>
+            `flex-1 flex flex-col items-center py-2.5 gap-0.5 text-xs font-medium transition-colors ${
+              isActive ? 'text-brand-400' : 'text-gray-500'
+            }`
+          }
+        >
+          <Home className="w-5 h-5" />
+          Home
+        </NavLink>
+
+        <NavLink
+          to="/orders"
+          className={({ isActive }) =>
+            `flex-1 flex flex-col items-center py-2.5 gap-0.5 text-xs font-medium transition-colors ${
+              isActive ? 'text-brand-400' : 'text-gray-500'
+            }`
+          }
+        >
+          <Clock className="w-5 h-5" />
+          Orders
+        </NavLink>
+
+        {/* Center floating New Delivery button */}
+        <div className="flex-1 flex flex-col items-center pb-1.5">
+          <button
+            onClick={() => navigate('/create-order')}
+            className="w-13 h-13 bg-brand-500 hover:bg-brand-600 active:scale-95 rounded-full flex items-center justify-center shadow-lg shadow-brand-500/40 transition-all -mt-6"
+            style={{ width: 52, height: 52 }}
           >
-            <Icon className="w-5 h-5" />
-            {label}
-          </NavLink>
-        ))}
+            <Plus className="w-6 h-6 text-white" strokeWidth={2.5} />
+          </button>
+          <span className="text-xs font-medium text-gray-500 mt-1">New</span>
+        </div>
+
+        <NavLink
+          to="/wallet"
+          className={({ isActive }) =>
+            `flex-1 flex flex-col items-center py-2.5 gap-0.5 text-xs font-medium transition-colors ${
+              isActive ? 'text-brand-400' : 'text-gray-500'
+            }`
+          }
+        >
+          <Wallet className="w-5 h-5" />
+          Wallet
+        </NavLink>
+
+        <NavLink
+          to="/profile"
+          className={({ isActive }) =>
+            `flex-1 flex flex-col items-center py-2.5 gap-0.5 text-xs font-medium transition-colors ${
+              isActive ? 'text-brand-400' : 'text-gray-500'
+            }`
+          }
+        >
+          <User className="w-5 h-5" />
+          Profile
+        </NavLink>
       </div>
     </nav>
   );

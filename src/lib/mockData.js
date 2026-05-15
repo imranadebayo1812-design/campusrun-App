@@ -189,3 +189,158 @@ export const MOCK_EARNING_HISTORY = [
   { id: 'e-3', pickup_location: 'Student Center', dropoff_location: 'Nile Hall C', delivery_fee: 300, food_cost: 1500, created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() },
   { id: 'e-4', pickup_location: 'Main Gate', dropoff_location: 'Sports Complex', delivery_fee: 500, food_cost: 0, created_at: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString() },
 ];
+
+export const MOCK_VENDORS = [
+  {
+    id: 'v-bs-chops', name: "B's Chops", zone: 'Food Court', category: 'food',
+    color: 'bg-orange-500', emoji: '🍗', popular: true,
+    items: [
+      { name: 'Jollof Rice + Chicken', price: 1500 },
+      { name: 'Fried Rice + Chicken', price: 1600 },
+      { name: 'White Rice + Stew', price: 1200 },
+      { name: 'Pasta + Chicken', price: 1400 },
+      { name: 'Rice + Fish', price: 1300 },
+    ],
+  },
+  {
+    id: 'v-zulkys', name: 'Zulkys', zone: 'Food Court', category: 'food',
+    color: 'bg-green-600', emoji: '🍽️', popular: true,
+    items: [
+      { name: 'Jollof Rice + Protein', price: 1700 },
+      { name: 'Basmati Rice + Chicken', price: 1800 },
+      { name: 'Ofada Rice + Sauce', price: 1500 },
+      { name: 'Egusi Soup + Swallow', price: 1600 },
+    ],
+  },
+  {
+    id: 'v-jaj', name: 'JAJ Plate', zone: 'Food Court', category: 'food',
+    color: 'bg-yellow-600', emoji: '🥘', popular: true,
+    items: [
+      { name: 'Rice + Chicken', price: 1400 },
+      { name: 'Beans + Plantain', price: 900 },
+      { name: 'Fried Plantain', price: 500 },
+      { name: 'Yam + Egg', price: 800 },
+    ],
+  },
+  {
+    id: 'v-trayblazers', name: 'Trayblazers', zone: 'Food Court', category: 'food',
+    color: 'bg-red-600', emoji: '🍱', popular: false,
+    items: [
+      { name: 'Rice + Chicken', price: 1500 },
+      { name: 'Spaghetti + Chicken', price: 1400 },
+      { name: 'Fried Rice + Fish', price: 1500 },
+      { name: 'Jollof + Beef', price: 1600 },
+    ],
+  },
+  {
+    id: 'v-pizza360', name: 'Pizza 360', zone: 'Food Court', category: 'snacks',
+    color: 'bg-red-500', emoji: '🍕', popular: true,
+    items: [
+      { name: 'Pepperoni Slice', price: 1200 },
+      { name: 'Chicken Pizza Slice', price: 1300 },
+      { name: 'Full Pepperoni Pizza', price: 4500 },
+      { name: 'Shawarma', price: 1500 },
+    ],
+  },
+  {
+    id: 'v-cherries', name: 'Cherries', zone: 'Food Court', category: 'snacks',
+    color: 'bg-pink-600', emoji: '🧁', popular: false,
+    items: [
+      { name: 'Chocolate Cake Slice', price: 800 },
+      { name: 'Shawarma', price: 1500 },
+      { name: 'Fruit Cocktail', price: 700 },
+      { name: 'Pastry', price: 600 },
+    ],
+  },
+  {
+    id: 'v-dotcafe', name: 'Dot Cafe', zone: 'Food Court', category: 'drinks',
+    color: 'bg-amber-700', emoji: '☕', popular: true,
+    items: [
+      { name: 'Cappuccino', price: 800 },
+      { name: 'Latte', price: 900 },
+      { name: 'Iced Coffee', price: 1000 },
+      { name: 'Green Tea', price: 600 },
+      { name: 'Smoothie', price: 1200 },
+    ],
+  },
+  {
+    id: 'v-paparims', name: 'Papa Rims', zone: 'Food Court', category: 'food',
+    color: 'bg-indigo-600', emoji: '🍔', popular: false,
+    items: [
+      { name: 'Beef Burger', price: 1800 },
+      { name: 'Chicken Burger', price: 1700 },
+      { name: 'Burger + Fries', price: 2200 },
+      { name: 'Hot Dog', price: 1200 },
+    ],
+  },
+  {
+    id: 'v-wsauce', name: 'W Sauce', zone: 'Food Court', category: 'food',
+    color: 'bg-teal-600', emoji: '🌯', popular: false,
+    items: [
+      { name: 'Chicken Wrap', price: 1400 },
+      { name: 'Beef Wrap', price: 1500 },
+      { name: 'Veggie Wrap', price: 1200 },
+      { name: 'Chips + Sauce', price: 800 },
+    ],
+  },
+  {
+    id: 'v-freenys', name: "Freenys", zone: 'Food Court', category: 'snacks',
+    color: 'bg-purple-600', emoji: '🍟', popular: false,
+    items: [
+      { name: 'Loaded Fries', price: 1000 },
+      { name: 'Chicken Strips', price: 1300 },
+      { name: 'Spring Rolls (5 pcs)', price: 900 },
+      { name: 'Samosa (3 pcs)', price: 600 },
+    ],
+  },
+  {
+    id: 'v-delicias', name: 'Delicias', zone: 'Female Shopping Complex', category: 'food',
+    color: 'bg-rose-600', emoji: '🥗', popular: true,
+    items: [
+      { name: 'Grilled Chicken', price: 2000 },
+      { name: 'Caesar Salad', price: 1500 },
+      { name: 'Pasta Carbonara', price: 1800 },
+      { name: 'Chicken Sandwich', price: 1400 },
+    ],
+  },
+  {
+    id: 'v-hatlab', name: 'Hat Lab', zone: 'Female Shopping Complex', category: 'snacks',
+    color: 'bg-fuchsia-600', emoji: '🧃', popular: false,
+    items: [
+      { name: 'Fresh Juice (large)', price: 700 },
+      { name: 'Smoothie Bowl', price: 1200 },
+      { name: 'Yogurt Parfait', price: 900 },
+      { name: 'Chin Chin', price: 400 },
+    ],
+  },
+  {
+    id: 'v-minimart', name: 'Mini Mart', zone: 'Female Shopping Complex', category: 'shopping',
+    color: 'bg-cyan-700', emoji: '🛒', popular: false,
+    items: [
+      { name: 'Water (sachet x20)', price: 300 },
+      { name: 'Indomie Noodles', price: 200 },
+      { name: 'Bread (loaf)', price: 800 },
+      { name: 'Malt Drink', price: 500 },
+    ],
+  },
+  {
+    id: 'v-bridan', name: 'Bridan', zone: 'Male Shopping Complex', category: 'shopping',
+    color: 'bg-slate-600', emoji: '🏪', popular: false,
+    items: [
+      { name: 'Bottled Water', price: 200 },
+      { name: 'Soft Drink (bottle)', price: 400 },
+      { name: 'Biscuits', price: 300 },
+      { name: 'Energy Drink', price: 700 },
+    ],
+  },
+  {
+    id: 'v-smoked', name: 'Smoked Restaurant', zone: 'Male Shopping Complex', category: 'food',
+    color: 'bg-stone-600', emoji: '🥩', popular: true,
+    items: [
+      { name: 'Smoked Chicken', price: 2500 },
+      { name: 'Smoked Fish + Rice', price: 2200 },
+      { name: 'Suya (per stick)', price: 400 },
+      { name: 'BBQ Ribs', price: 3000 },
+    ],
+  },
+];

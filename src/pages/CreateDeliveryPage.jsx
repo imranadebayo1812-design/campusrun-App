@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_ORDERS } from '@/lib/mockData';
+import { MOCK_ORDERS, MOCK_VENDORS } from '@/lib/mockData';
 import { calculateDeliveryFee, DEFAULT_SERVICE_FEE } from '@/lib/deliveryPricing';
 import { ChevronLeft, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, ChevronDown } from 'lucide-react';
 
@@ -105,6 +105,9 @@ export default function CreateDeliveryPage() {
 
   const initType = location.state?.type || 'purchase';
   const initVendor = location.state?.vendor || '';
+  const initVendorId = location.state?.vendorId || null;
+
+  const vendor = initVendorId ? MOCK_VENDORS.find(v => v.id === initVendorId) : null;
 
   const [orderType, setOrderType] = useState(initType);
   const [pickupLocation, setPickupLocation] = useState(initVendor || '');
@@ -124,6 +127,20 @@ export default function CreateDeliveryPage() {
   }
   function updateItem(i, field, value) {
     setItems(prev => prev.map((item, idx) => idx === i ? { ...item, [field]: value } : item));
+  }
+
+  function addMenuItemToCart(menuItem) {
+    setItems(prev => {
+      const existing = prev.findIndex(it => it.name === menuItem.name);
+      if (existing >= 0) {
+        return prev.map((it, i) => i === existing ? { ...it, qty: it.qty + 1 } : it);
+      }
+      // Replace the empty placeholder row if it's the only one and blank
+      if (prev.length === 1 && !prev[0].name && !prev[0].price) {
+        return [{ name: menuItem.name, qty: 1, price: String(menuItem.price) }];
+      }
+      return [...prev, { name: menuItem.name, qty: 1, price: String(menuItem.price) }];
+    });
   }
 
   const foodCost = items.reduce((sum, it) => sum + (parseFloat(it.price) || 0) * (it.qty || 1), 0);
@@ -195,54 +212,74 @@ export default function CreateDeliveryPage() {
         >
           <ChevronLeft className="w-5 h-5 text-gray-400" />
         </button>
-        <h1 className="text-lg font-bold text-white">New Delivery</h1>
+        <div>
+          <h1 className="text-lg font-bold text-white leading-tight">
+            {vendor ? vendor.name : 'New Delivery'}
+          </h1>
+          {vendor && <p className="text-xs text-gray-500">{vendor.zone}</p>}
+        </div>
       </div>
 
       <div className="px-4 space-y-5 pb-6">
-        {/* Order type */}
-        <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">What do you need?</p>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setOrderType('purchase')}
-              className={`p-4 rounded-2xl border-2 text-left transition-all ${
-                orderType === 'purchase'
-                  ? 'border-brand-500 bg-brand-500/10'
-                  : 'border-white/[0.08] bg-surface-900'
-              }`}
-            >
-              <ShoppingBag className={`w-6 h-6 mb-2 ${orderType === 'purchase' ? 'text-brand-400' : 'text-gray-500'}`} />
-              <p className={`font-semibold text-sm ${orderType === 'purchase' ? 'text-white' : 'text-gray-400'}`}>Item Purchase</p>
-              <p className="text-xs text-gray-500 mt-0.5">Food & vendors</p>
-            </button>
-            <button
-              type="button"
-              onClick={() => setOrderType('errand')}
-              className={`p-4 rounded-2xl border-2 text-left transition-all ${
-                orderType === 'errand'
-                  ? 'border-brand-500 bg-brand-500/10'
-                  : 'border-white/[0.08] bg-surface-900'
-              }`}
-            >
-              <Package className={`w-6 h-6 mb-2 ${orderType === 'errand' ? 'text-brand-400' : 'text-gray-500'}`} />
-              <p className={`font-semibold text-sm ${orderType === 'errand' ? 'text-white' : 'text-gray-400'}`}>Package / Errand</p>
-              <p className="text-xs text-gray-500 mt-0.5">Send items</p>
-            </button>
+        {/* Order type — hidden when coming from a vendor (always purchase) */}
+        {!vendor && (
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">What do you need?</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setOrderType('purchase')}
+                className={`p-4 rounded-2xl border-2 text-left transition-all ${
+                  orderType === 'purchase'
+                    ? 'border-brand-500 bg-brand-500/10'
+                    : 'border-white/[0.08] bg-surface-900'
+                }`}
+              >
+                <ShoppingBag className={`w-6 h-6 mb-2 ${orderType === 'purchase' ? 'text-brand-400' : 'text-gray-500'}`} />
+                <p className={`font-semibold text-sm ${orderType === 'purchase' ? 'text-white' : 'text-gray-400'}`}>Item Purchase</p>
+                <p className="text-xs text-gray-500 mt-0.5">Food & vendors</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setOrderType('errand')}
+                className={`p-4 rounded-2xl border-2 text-left transition-all ${
+                  orderType === 'errand'
+                    ? 'border-brand-500 bg-brand-500/10'
+                    : 'border-white/[0.08] bg-surface-900'
+                }`}
+              >
+                <Package className={`w-6 h-6 mb-2 ${orderType === 'errand' ? 'text-brand-400' : 'text-gray-500'}`} />
+                <p className={`font-semibold text-sm ${orderType === 'errand' ? 'text-white' : 'text-gray-400'}`}>Package / Errand</p>
+                <p className="text-xs text-gray-500 mt-0.5">Send items</p>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Location Details */}
         <div>
           <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">Location Details</p>
           <div className="space-y-3">
-            <LocationSelect
-              label={orderType === 'purchase' ? 'Pickup (Vendor / Location)' : 'Pickup Location'}
-              value={pickupLocation}
-              onChange={setPickupLocation}
-              placeholder="Select pickup location"
-              iconColor="text-brand-400"
-            />
+            {/* Pickup — locked chip if vendor pre-selected */}
+            {vendor ? (
+              <div>
+                <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-1.5">
+                  <MapPin className="w-4 h-4 text-brand-400" /> Pickup (Vendor Location)
+                </label>
+                <div className="w-full bg-surface-800/60 border border-brand-500/30 rounded-xl px-4 py-3 text-sm text-brand-300 flex items-center gap-2">
+                  <span>{vendor.emoji}</span>
+                  <span>{vendor.name} — {vendor.zone}</span>
+                </div>
+              </div>
+            ) : (
+              <LocationSelect
+                label={orderType === 'purchase' ? 'Pickup (Vendor / Location)' : 'Pickup Location'}
+                value={pickupLocation}
+                onChange={setPickupLocation}
+                placeholder="Select pickup location"
+                iconColor="text-brand-400"
+              />
+            )}
             <LocationSelect
               label="Dropoff Location"
               value={dropoffLocation}
@@ -253,13 +290,49 @@ export default function CreateDeliveryPage() {
           </div>
         </div>
 
-        {/* Items (purchase) */}
+        {/* Vendor menu quick-add */}
+        {vendor && orderType === 'purchase' && (
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">Menu — Tap to add</p>
+            <div className="space-y-1.5">
+              {vendor.items.map(menuItem => {
+                const inCart = items.find(it => it.name === menuItem.name);
+                return (
+                  <button
+                    key={menuItem.name}
+                    type="button"
+                    onClick={() => addMenuItemToCart(menuItem)}
+                    className="w-full flex items-center justify-between bg-surface-900 border border-white/[0.08] rounded-xl px-4 py-3 text-left active:scale-[0.98] transition-all hover:border-brand-500/30"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-white">{menuItem.name}</p>
+                      <p className="text-xs text-gray-500">₦{menuItem.price.toLocaleString()}</p>
+                    </div>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                      inCart ? 'bg-brand-500 text-white' : 'bg-surface-800 border border-white/[0.08] text-gray-400'
+                    }`}>
+                      {inCart ? (
+                        <span className="text-xs font-bold">{inCart.qty}</span>
+                      ) : (
+                        <Plus className="w-3.5 h-3.5" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Items list */}
         {orderType === 'purchase' && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Item Details</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
+                {vendor ? 'Your Order' : 'Item Details'}
+              </p>
               <button type="button" onClick={addItem} className="text-brand-400 text-xs font-semibold flex items-center gap-1">
-                <Plus className="w-3 h-3" /> Add item
+                <Plus className="w-3 h-3" /> {vendor ? 'Add custom item' : 'Add item'}
               </button>
             </div>
             <div className="space-y-2">
@@ -289,15 +362,20 @@ export default function CreateDeliveryPage() {
                       <Plus className="w-3 h-3 text-gray-400" />
                     </button>
                   </div>
-                  <input
-                    type="number"
-                    value={item.price}
-                    onChange={e => updateItem(i, 'price', e.target.value)}
-                    placeholder="₦"
-                    className="w-16 bg-transparent text-sm text-white border-b border-white/20 outline-none text-right placeholder-gray-600"
-                  />
+                  <div className="text-right shrink-0">
+                    <input
+                      type="number"
+                      value={item.price}
+                      onChange={e => updateItem(i, 'price', e.target.value)}
+                      placeholder="₦"
+                      className="w-16 bg-transparent text-sm text-white border-b border-white/20 outline-none text-right placeholder-gray-600"
+                    />
+                    {item.price && item.qty > 1 && (
+                      <p className="text-xs text-gray-600 mt-0.5">= ₦{((parseFloat(item.price) || 0) * item.qty).toLocaleString()}</p>
+                    )}
+                  </div>
                   {items.length > 1 && (
-                    <button type="button" onClick={() => removeItem(i)} className="text-red-400 ml-1">
+                    <button type="button" onClick={() => removeItem(i)} className="text-red-400 ml-1 shrink-0">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   )}
@@ -361,7 +439,9 @@ export default function CreateDeliveryPage() {
             )}
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Delivery Fee</span>
-              <span className="text-white font-medium">₦{deliveryFee.toLocaleString()}</span>
+              <span className="text-white font-medium">
+                {pickupLocation && dropoffLocation ? `₦${deliveryFee.toLocaleString()}` : '—'}
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-400">Service Fee</span>

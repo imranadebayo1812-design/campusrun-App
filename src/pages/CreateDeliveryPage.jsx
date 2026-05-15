@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/api/supabaseClient';
@@ -48,9 +47,9 @@ function LocationPicker({ label, value, onChange, placeholder, icon: Icon, iconC
         <ChevronLeft className="w-4 h-4 text-gray-500 rotate-[-90deg]" />
       </button>
 
-      {open && createPortal(
-        <div className="fixed inset-0 bg-black/70 z-[200] flex items-end" onClick={() => { setOpen(false); setSearch(''); }}>
-          <div className="w-full max-w-md mx-auto bg-surface-900 rounded-t-2xl max-h-[70vh] flex flex-col" onClick={e => e.stopPropagation()}>
+      {open && (
+        <div className="fixed inset-0 z-[200] flex items-end" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }} onClick={() => { setOpen(false); setSearch(''); }}>
+          <div className="w-full max-w-md mx-auto rounded-t-2xl max-h-[70vh] flex flex-col" style={{ backgroundColor: '#1a1a2e' }} onClick={e => e.stopPropagation()}>
             <div className="p-4 border-b border-white/[0.08]">
               <p className="text-white font-semibold text-center mb-3">{label}</p>
               <div className="relative">
@@ -89,8 +88,7 @@ function LocationPicker({ label, value, onChange, placeholder, icon: Icon, iconC
               </button>
             </div>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );

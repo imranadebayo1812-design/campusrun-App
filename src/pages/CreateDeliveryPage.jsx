@@ -319,10 +319,11 @@ export default function CreateDeliveryPage() {
       if (existing >= 0) {
         return prev.map((it, i) => i === existing ? { ...it, qty: it.qty + 1 } : it);
       }
+      const entry = { name: menuItem.name, qty: 1, price: String(menuItem.price), fromMenu: true };
       if (prev.length === 1 && !prev[0].name && !prev[0].price) {
-        return [{ name: menuItem.name, qty: 1, price: String(menuItem.price) }];
+        return [entry];
       }
-      return [...prev, { name: menuItem.name, qty: 1, price: String(menuItem.price) }];
+      return [...prev, entry];
     });
   }
 
@@ -637,13 +638,17 @@ export default function CreateDeliveryPage() {
             <div className="space-y-2">
               {items.map((item, i) => (
                 <div key={i} className="flex items-center gap-2 bg-surface-900 border border-white/[0.08] rounded-xl p-3">
-                  <input
-                    type="text"
-                    value={item.name}
-                    onChange={e => updateItem(i, 'name', e.target.value)}
-                    placeholder="Item name"
-                    className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 border-none outline-none"
-                  />
+                  {item.fromMenu ? (
+                    <p className="flex-1 text-sm text-white truncate">{item.name}</p>
+                  ) : (
+                    <input
+                      type="text"
+                      value={item.name}
+                      onChange={e => updateItem(i, 'name', e.target.value)}
+                      placeholder="Item name"
+                      className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 border-none outline-none"
+                    />
+                  )}
                   <div className="flex items-center gap-1 shrink-0">
                     <button
                       type="button"
@@ -662,14 +667,23 @@ export default function CreateDeliveryPage() {
                     </button>
                   </div>
                   <div className="text-right shrink-0">
-                    <input
-                      type="number"
-                      value={item.price}
-                      onChange={e => updateItem(i, 'price', e.target.value)}
-                      placeholder="₦"
-                      className="w-16 bg-transparent text-sm text-white border-b border-white/20 outline-none text-right placeholder-gray-600"
-                    />
-                    {item.price && item.qty > 1 && (
+                    {item.fromMenu ? (
+                      <p className="text-sm font-semibold text-white w-16 text-right">
+                        ₦{((parseFloat(item.price) || 0) * item.qty).toLocaleString()}
+                      </p>
+                    ) : (
+                      <input
+                        type="number"
+                        value={item.price}
+                        onChange={e => updateItem(i, 'price', e.target.value)}
+                        placeholder="₦"
+                        className="w-16 bg-transparent text-sm text-white border-b border-white/20 outline-none text-right placeholder-gray-600"
+                      />
+                    )}
+                    {item.fromMenu && item.qty > 1 && (
+                      <p className="text-xs text-gray-600 mt-0.5">₦{parseFloat(item.price).toLocaleString()} each</p>
+                    )}
+                    {!item.fromMenu && item.price && item.qty > 1 && (
                       <p className="text-xs text-gray-600 mt-0.5">= ₦{((parseFloat(item.price) || 0) * item.qty).toLocaleString()}</p>
                     )}
                   </div>

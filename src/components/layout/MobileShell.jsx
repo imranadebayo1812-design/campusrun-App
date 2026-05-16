@@ -28,16 +28,14 @@ export default function MobileShell({ children }) {
       </a>
 
       {/* Header */}
-      <header className="flex items-center px-4 py-3 bg-surface-900 border-b border-white/[0.08] safe-top shrink-0 z-10 gap-3">
-        <div className="flex-1 min-w-0 flex items-center">
-          <Logo size={38} />
-        </div>
+      <header className="relative flex items-center px-4 py-3 bg-surface-900 border-b border-white/[0.08] safe-top shrink-0 z-10 overflow-hidden">
+        <Logo size={38} />
 
         {profile && (
           <button
             onClick={handleToggle}
             aria-label={`Switch to ${isCourier ? 'buyer' : 'courier'} mode`}
-            className="flex items-center bg-surface-800 border border-white/[0.06] rounded-full p-0.5 relative shrink-0"
+            className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center bg-surface-800 border border-white/[0.06] rounded-full p-0.5"
           >
             <span
               aria-hidden="true"

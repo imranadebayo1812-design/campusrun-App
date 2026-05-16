@@ -192,6 +192,52 @@ function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor, s
   );
 }
 
+function ItemDetailSheet({ item, inCart, onAdd, onClose }) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={item.name}
+      className="fixed inset-0 z-[200] flex items-end justify-center"
+      style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <p className="font-bold text-white text-base leading-snug flex-1">{item.name}</p>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 text-xl font-bold leading-none mt-0.5">×</button>
+        </div>
+
+        <div className="bg-surface-800 border border-white/[0.06] rounded-xl px-4 py-3 flex items-center justify-between">
+          <span className="text-sm text-gray-400">Price</span>
+          <span className="text-lg font-bold text-white">₦{Number(item.price).toLocaleString()}</span>
+        </div>
+
+        {item.available === false ? (
+          <>
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+              <p className="text-sm text-red-400 font-medium">Currently unavailable</p>
+            </div>
+            <button onClick={onClose} className="w-full bg-surface-800 border border-white/[0.08] text-gray-400 font-medium py-3 rounded-xl text-sm">
+              Close
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => { onAdd(item); onClose(); }}
+            className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-brand-500/20"
+          >
+            {inCart ? 'Add One More' : 'Add to Order'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function CreateDeliveryPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -230,6 +276,7 @@ export default function CreateDeliveryPage() {
   const [roomNumber, setRoomNumber] = useState('');
   const [documentFile, setDocumentFile] = useState(null);
   const [expandedMenuGroups, setExpandedMenuGroups] = useState(new Set());
+  const [selectedItem, setSelectedItem] = useState(null);
 
   function toggleMenuGroup(label) {
     setExpandedMenuGroups(prev => {
@@ -482,7 +529,7 @@ export default function CreateDeliveryPage() {
                           <button
                             key={menuItem.name}
                             type="button"
-                            onClick={() => addMenuItemToCart(menuItem)}
+                            onClick={() => setSelectedItem(menuItem)}
                             className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors hover:bg-white/[0.03] active:scale-[0.99] ${
                               idx < groupItems.length - 1 ? 'border-b border-white/[0.05]' : ''
                             }`}
@@ -523,8 +570,8 @@ export default function CreateDeliveryPage() {
                         <button
                           key={menuItem.name}
                           type="button"
-                          disabled
-                          className={`w-full flex items-center justify-between px-4 py-3 opacity-50 cursor-not-allowed text-left border-t border-white/[0.05] ${
+                          onClick={() => setSelectedItem(menuItem)}
+                          className={`w-full flex items-center justify-between px-4 py-3 opacity-50 text-left border-t border-white/[0.05] hover:opacity-70 transition-opacity ${
                             idx < unavail.length - 1 ? 'border-b border-white/[0.05]' : ''
                           }`}
                         >
@@ -548,12 +595,11 @@ export default function CreateDeliveryPage() {
                     <button
                       key={menuItem.name}
                       type="button"
-                      onClick={() => isAvailable && addMenuItemToCart(menuItem)}
-                      disabled={!isAvailable}
+                      onClick={() => setSelectedItem(menuItem)}
                       className={`w-full flex items-center justify-between bg-surface-900 border rounded-xl px-4 py-3 text-left transition-all ${
                         isAvailable
                           ? 'border-white/[0.08] active:scale-[0.98] hover:border-brand-500/30 cursor-pointer'
-                          : 'border-white/[0.05] opacity-50 cursor-not-allowed'
+                          : 'border-white/[0.05] opacity-50'
                       }`}
                     >
                       <div>
@@ -803,6 +849,15 @@ export default function CreateDeliveryPage() {
           {loading ? 'Creating order…' : `Continue to Payment — ₦${totalAmount.toLocaleString()}`}
         </button>
       </div>
+
+      {selectedItem && (
+        <ItemDetailSheet
+          item={selectedItem}
+          inCart={items.some(it => it.name === selectedItem.name)}
+          onAdd={addMenuItemToCart}
+          onClose={() => setSelectedItem(null)}
+        />
+      )}
     </div>
   );
 }

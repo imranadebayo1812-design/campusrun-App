@@ -29,7 +29,7 @@ export default function MobileShell({ children }) {
 
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3 bg-surface-900 border-b border-white/[0.08] safe-top shrink-0 z-10">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 min-w-0 overflow-hidden">
           <Logo size={38} />
         </div>
 
@@ -37,7 +37,7 @@ export default function MobileShell({ children }) {
           <button
             onClick={handleToggle}
             aria-label={`Switch to ${isCourier ? 'buyer' : 'courier'} mode`}
-            className="flex items-center bg-surface-800 border border-white/[0.06] rounded-full p-0.5 relative"
+            className="flex items-center bg-surface-800 border border-white/[0.06] rounded-full p-0.5 relative shrink-0"
           >
             <span
               aria-hidden="true"
@@ -45,10 +45,10 @@ export default function MobileShell({ children }) {
                 isCourier ? 'translate-x-[calc(100%+4px)]' : 'translate-x-0.5'
               }`}
             />
-            <span className={`relative z-10 px-3.5 py-1.5 text-xs font-semibold transition-colors duration-150 ${!isCourier ? 'text-white' : 'text-gray-500'}`}>
+            <span className={`relative z-10 px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${!isCourier ? 'text-white' : 'text-gray-500'}`}>
               Buyer
             </span>
-            <span className={`relative z-10 px-3.5 py-1.5 text-xs font-semibold transition-colors duration-150 ${isCourier ? 'text-white' : 'text-gray-500'}`}>
+            <span className={`relative z-10 px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${isCourier ? 'text-white' : 'text-gray-500'}`}>
               Courier
             </span>
           </button>

@@ -4,13 +4,16 @@ import { MOCK_EARNINGS, MOCK_EARNING_HISTORY } from '@/lib/mockData';
 import { ShoppingBag, Banknote, MapPin, Wallet } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-function WithdrawModal({ title, maxAmount, isEarnings, onAddToWallet, onClose }) {
+function WithdrawModal({ title, maxAmount, isEarnings, onSuccess, onClose }) {
   const [dest, setDest] = useState('wallet'); // 'wallet' | 'bank'
   const [form, setForm] = useState({ bank_name: '', account_number: '', account_name: '' });
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [finalAmt, setFinalAmt] = useState(0);
+  const [finalNet, setFinalNet] = useState(0);
+  const [finalDest, setFinalDest] = useState('wallet');
 
   const amt = parseFloat(amount) || 0;
   const commission = isEarnings ? Math.round(amt * 0.15) : 0;
@@ -26,9 +29,10 @@ function WithdrawModal({ title, maxAmount, isEarnings, onAddToWallet, onClose })
     setError('');
     setSubmitting(true);
     await new Promise(r => setTimeout(r, 800));
-    if (dest === 'wallet') {
-      onAddToWallet(net); // net after commission
-    }
+    setFinalAmt(amt);
+    setFinalNet(net);
+    setFinalDest(dest);
+    onSuccess({ amt, net, dest });
     setSubmitting(false);
     setDone(true);
   }
@@ -43,13 +47,16 @@ function WithdrawModal({ title, maxAmount, isEarnings, onAddToWallet, onClose })
 
         {done ? (
           <div className="text-center py-6">
-            {dest === 'wallet' ? (
+            {finalDest === 'wallet' ? (
               <>
                 <div className="w-12 h-12 bg-brand-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
                   <Wallet className="w-6 h-6 text-brand-400" />
                 </div>
                 <p className="text-green-400 font-semibold text-base">Added to wallet!</p>
-                <p className="text-gray-400 text-sm mt-1">₦{net.toLocaleString()} is now in your CampusRun wallet.</p>
+                <p className="text-gray-400 text-sm mt-1">
+                  ₦{finalNet.toLocaleString()} is now in your CampusRun wallet.
+                  {isEarnings && <span className="text-gray-500"> (₦{Math.round(finalAmt * 0.15).toLocaleString()} commission deducted)</span>}
+                </p>
               </>
             ) : (
               <>
@@ -91,11 +98,11 @@ function WithdrawModal({ title, maxAmount, isEarnings, onAddToWallet, onClose })
             {dest === 'wallet' && (
               <div className="bg-brand-500/10 border border-brand-500/20 rounded-xl px-4 py-3">
                 <p className="text-xs text-brand-400 font-semibold">No bank transfer charges · Instant</p>
-                <p className="text-xs text-brand-400/70 mt-0.5">Net amount added to your wallet — spend it on orders without retransferring.</p>
+                <p className="text-xs text-brand-400/70 mt-0.5">Net amount added to your wallet — spend it on orders without re-transferring.</p>
               </div>
             )}
 
-            {/* Bank fields — only shown when dest === 'bank' */}
+            {/* Bank fields */}
             {dest === 'bank' && [
               { label: 'Bank Name', field: 'bank_name', placeholder: 'e.g. GTBank' },
               { label: 'Account Number', field: 'account_number', placeholder: '0123456789' },
@@ -141,8 +148,8 @@ function WithdrawModal({ title, maxAmount, isEarnings, onAddToWallet, onClose })
               </div>
             )}
 
-            {/* No deduction note — reimbursement to bank */}
-            {!isEarnings && dest === 'bank' && (
+            {/* No deduction note — reimbursement */}
+            {!isEarnings && (
               <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
                 <p className="text-xs text-green-400 font-medium">No deductions — full amount paid out</p>
               </div>
@@ -173,11 +180,10 @@ function withinHours(dateStr, hours) {
 }
 
 export default function CourierEarningsPage() {
-  const { profile, updateProfileLocally } = useAuth();
+  const { profile, updateProfileLocally, addWalletTransaction } = useAuth();
   const [modal, setModal] = useState(null); // 'reimbursement' | 'earnings' | null
   const [period, setPeriod] = useState('today');
-
-  const e = MOCK_EARNINGS;
+  const [earnings, setEarnings] = useState({ ...MOCK_EARNINGS });
 
   const filteredHistory = MOCK_EARNING_HISTORY.filter(entry => {
     if (period === 'today') return withinHours(entry.created_at, 24);
@@ -185,47 +191,64 @@ export default function CourierEarningsPage() {
     return true;
   });
 
-  function handleAddToWallet(amount) {
-    updateProfileLocally({ wallet_balance: (profile?.wallet_balance || 0) + amount });
+  function handleWithdrawSuccess({ amt, net, dest }, type) {
+    // Decrease the relevant earnings balance
+    if (type === 'earnings') {
+      setEarnings(prev => ({ ...prev, this_week: Math.max(0, prev.this_week - amt), withdrawn: prev.withdrawn + amt }));
+    } else {
+      setEarnings(prev => ({ ...prev, food_reimbursed: Math.max(0, prev.food_reimbursed - amt) }));
+    }
+
+    // If going to wallet: credit wallet balance + add a transaction record
+    if (dest === 'wallet') {
+      const newBalance = (profile?.wallet_balance || 0) + net;
+      addWalletTransaction({
+        id: `tx-${Date.now()}`,
+        user_id: 'user-1',
+        type: 'earning',
+        amount: net,
+        balance_after: newBalance,
+        description: type === 'earnings' ? 'Earnings transfer to wallet' : 'Reimbursement transfer to wallet',
+        created_at: new Date().toISOString(),
+      });
+      updateProfileLocally({ wallet_balance: newBalance });
+    }
+
+    setModal(null);
   }
 
   return (
     <div className="bg-surface-950 min-h-full">
-      {/* Header */}
       <div className="px-4 pt-5 pb-5">
         <h1 className="text-xl font-bold text-white">My Earnings</h1>
         <p className="text-sm text-gray-500 mt-0.5">Your money, your pace.</p>
       </div>
 
       <div className="px-4 space-y-3">
-        {/* Purchase Reimbursement card (green) */}
+        {/* Purchase Reimbursement card */}
         <div className="rounded-2xl p-5 overflow-hidden shadow-lg shadow-black/30" style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }}>
           <div className="flex items-start justify-between mb-4">
             <p className="text-xs font-bold text-white/70 uppercase tracking-wider">Purchase Reimbursement</p>
-            <span className="text-xs bg-white/20 text-white font-semibold px-2.5 py-1 rounded-full">
-              NO COMMISSION
-            </span>
+            <span className="text-xs bg-white/20 text-white font-semibold px-2.5 py-1 rounded-full">NO COMMISSION</span>
           </div>
-          <p className="text-4xl font-bold text-white mb-3">₦{e.food_reimbursed.toLocaleString()}</p>
+          <p className="text-4xl font-bold text-white mb-3">₦{earnings.food_reimbursed.toLocaleString()}</p>
           <div className="flex gap-4 text-xs text-white/70">
-            <span>Total food spent: <strong className="text-white">₦{(e.food_reimbursed + 800).toLocaleString()}</strong></span>
-            <span>Reimbursed: <strong className="text-white">₦{e.food_reimbursed.toLocaleString()}</strong></span>
+            <span>Total food spent: <strong className="text-white">₦{(earnings.food_reimbursed + 800).toLocaleString()}</strong></span>
+            <span>Reimbursed: <strong className="text-white">₦{earnings.food_reimbursed.toLocaleString()}</strong></span>
           </div>
         </div>
 
-        {/* Delivery Earnings card (purple) */}
+        {/* Delivery Earnings card */}
         <div className="rounded-2xl p-5 overflow-hidden shadow-lg shadow-black/30" style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)' }}>
           <div className="flex items-start justify-between mb-4">
             <p className="text-xs font-bold text-white/70 uppercase tracking-wider">Delivery Earnings</p>
-            <span className="text-xs bg-white/20 text-white font-semibold px-2.5 py-1 rounded-full">
-              15% COMMISSION
-            </span>
+            <span className="text-xs bg-white/20 text-white font-semibold px-2.5 py-1 rounded-full">15% COMMISSION</span>
           </div>
-          <p className="text-4xl font-bold text-white mb-3">₦{e.this_week.toLocaleString()}</p>
+          <p className="text-4xl font-bold text-white mb-3">₦{earnings.this_week.toLocaleString()}</p>
           <div className="flex gap-4 text-xs text-white/70 flex-wrap">
-            <span>Earned: <strong className="text-white">₦{e.this_week.toLocaleString()}</strong></span>
-            <span>Tips: <strong className="text-white">₦{e.tips.toLocaleString()}</strong></span>
-            <span>Withdrawn: <strong className="text-white">₦{e.withdrawn.toLocaleString()}</strong></span>
+            <span>Earned: <strong className="text-white">₦{earnings.this_week.toLocaleString()}</strong></span>
+            <span>Tips: <strong className="text-white">₦{earnings.tips.toLocaleString()}</strong></span>
+            <span>Withdrawn: <strong className="text-white">₦{earnings.withdrawn.toLocaleString()}</strong></span>
           </div>
         </div>
 
@@ -233,7 +256,8 @@ export default function CourierEarningsPage() {
         <div className="grid grid-cols-2 gap-3 pt-1">
           <button
             onClick={() => setModal('reimbursement')}
-            className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold text-white transition-colors"
+            disabled={earnings.food_reimbursed === 0}
+            className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold text-white transition-colors disabled:opacity-40"
             style={{ background: 'linear-gradient(135deg, #047857 0%, #065f46 100%)' }}
           >
             <ShoppingBag className="w-4 h-4" />
@@ -241,7 +265,8 @@ export default function CourierEarningsPage() {
           </button>
           <button
             onClick={() => setModal('earnings')}
-            className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold text-white transition-colors"
+            disabled={earnings.this_week === 0}
+            className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold text-white transition-colors disabled:opacity-40"
             style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)' }}
           >
             <Banknote className="w-4 h-4" />
@@ -250,7 +275,7 @@ export default function CourierEarningsPage() {
         </div>
       </div>
 
-      {/* Earnings breakdown */}
+      {/* Delivery History */}
       <div className="px-4 mt-5">
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm font-semibold text-white">Delivery History</p>
@@ -314,18 +339,18 @@ export default function CourierEarningsPage() {
       {modal === 'reimbursement' && (
         <WithdrawModal
           title="Withdraw Reimbursement"
-          maxAmount={e.food_reimbursed}
+          maxAmount={earnings.food_reimbursed}
           isEarnings={false}
-          onAddToWallet={handleAddToWallet}
+          onSuccess={result => handleWithdrawSuccess(result, 'reimbursement')}
           onClose={() => setModal(null)}
         />
       )}
       {modal === 'earnings' && (
         <WithdrawModal
           title="Withdraw Earnings"
-          maxAmount={e.this_week}
+          maxAmount={earnings.this_week}
           isEarnings={true}
-          onAddToWallet={handleAddToWallet}
+          onSuccess={result => handleWithdrawSuccess(result, 'earnings')}
           onClose={() => setModal(null)}
         />
       )}

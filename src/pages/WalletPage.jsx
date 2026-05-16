@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_TRANSACTIONS } from '@/lib/mockData';
 import { Wallet, Plus, ArrowDownLeft, ArrowUpRight, TrendingUp, Banknote } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -50,7 +49,6 @@ function WithdrawToBankModal({ maxAmount, onSuccess, onClose }) {
           </div>
         ) : (
           <>
-            {/* No commission note */}
             <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
               <p className="text-xs text-green-400 font-semibold">No commission — full amount paid out</p>
               <p className="text-xs text-green-400/70 mt-0.5">Wallet withdrawals to bank are never charged a commission.</p>
@@ -98,28 +96,22 @@ function WithdrawToBankModal({ maxAmount, onSuccess, onClose }) {
 }
 
 export default function WalletPage() {
-  const { profile, updateProfileLocally } = useAuth();
+  const { profile, updateProfileLocally, walletTransactions, addWalletTransaction } = useAuth();
   const [topupAmount, setTopupAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [transactions, setTransactions] = useState([...MOCK_TRANSACTIONS]);
   const [showWithdraw, setShowWithdraw] = useState(false);
 
   async function topUp() {
     const amount = parseFloat(topupAmount);
-    if (!amount || amount < 100) {
-      setError('Minimum top-up is ₦100');
-      return;
-    }
+    if (!amount || amount < 100) { setError('Minimum top-up is ₦100'); return; }
     setLoading(true);
     setError('');
     setSuccess('');
-
     await new Promise(r => setTimeout(r, 800));
-
     const newBalance = (profile?.wallet_balance || 0) + amount;
-    const newTx = {
+    addWalletTransaction({
       id: `tx-${Date.now()}`,
       user_id: 'user-1',
       type: 'topup',
@@ -127,9 +119,7 @@ export default function WalletPage() {
       balance_after: newBalance,
       description: 'Wallet top up',
       created_at: new Date().toISOString(),
-    };
-
-    setTransactions(prev => [newTx, ...prev]);
+    });
     updateProfileLocally({ wallet_balance: newBalance });
     setTopupAmount('');
     setSuccess(`₦${amount.toLocaleString()} added to your wallet!`);
@@ -138,7 +128,7 @@ export default function WalletPage() {
 
   function handleWithdrawSuccess(amount) {
     const newBalance = Math.max(0, (profile?.wallet_balance || 0) - amount);
-    const newTx = {
+    addWalletTransaction({
       id: `tx-${Date.now()}`,
       user_id: 'user-1',
       type: 'withdrawal',
@@ -146,16 +136,15 @@ export default function WalletPage() {
       balance_after: newBalance,
       description: 'Withdrawal to bank',
       created_at: new Date().toISOString(),
-    };
-    setTransactions(prev => [newTx, ...prev]);
+    });
     updateProfileLocally({ wallet_balance: newBalance });
+    setShowWithdraw(false);
   }
 
   const balance = profile?.wallet_balance || 0;
 
   return (
     <div className="bg-surface-950 min-h-full">
-      {/* Header */}
       <div className="px-4 pt-5 pb-4">
         <h1 className="text-xl font-bold text-white">Wallet</h1>
       </div>
@@ -228,7 +217,7 @@ export default function WalletPage() {
       {/* Transactions */}
       <div className="px-4">
         <p className="text-sm font-semibold text-white mb-3">Transactions</p>
-        {transactions.length === 0 ? (
+        {walletTransactions.length === 0 ? (
           <div className="text-center py-8">
             <div className="w-12 h-12 bg-surface-900 rounded-full flex items-center justify-center mx-auto mb-3">
               <TrendingUp className="w-6 h-6 text-gray-600" />
@@ -237,7 +226,7 @@ export default function WalletPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {transactions.map(tx => {
+            {walletTransactions.map(tx => {
               const { icon: Icon, color, bg } = TX_ICON[tx.type] || TX_ICON.payment;
               const isCredit = ['topup', 'earning', 'tip', 'refund'].includes(tx.type);
               return (
@@ -255,7 +244,9 @@ export default function WalletPage() {
                     <p className={`text-sm font-bold ${isCredit ? 'text-green-400' : 'text-red-400'}`}>
                       {isCredit ? '+' : '-'}₦{Math.abs(tx.amount).toLocaleString()}
                     </p>
-                    <p className="text-xs text-gray-600">₦{tx.balance_after?.toLocaleString()}</p>
+                    {tx.balance_after != null && (
+                      <p className="text-xs text-gray-600">₦{tx.balance_after.toLocaleString()}</p>
+                    )}
                   </div>
                 </div>
               );

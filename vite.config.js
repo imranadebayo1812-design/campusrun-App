@@ -10,6 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       manifest: false,
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}'],
         // Injects the FCM background message handler into the generated SW
         importScripts: ['firebase-messaging-sw-handler.js'],

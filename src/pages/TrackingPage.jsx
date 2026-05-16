@@ -372,6 +372,34 @@ export default function TrackingPage() {
           </div>
         )}
 
+        {/* Cancelled + refund card */}
+        {isCancelled && (
+          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 bg-red-500/20 rounded-xl flex items-center justify-center shrink-0">
+                <Package className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-red-400">Order Cancelled</p>
+                <p className="text-xs text-red-400/70">This order has been cancelled</p>
+              </div>
+            </div>
+            <div className="bg-surface-900 border border-white/[0.06] rounded-xl p-3.5 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-400">Refund amount</span>
+                <span className="text-white font-bold">₦{delivery.total_amount?.toLocaleString() ?? '—'}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-400">Status</span>
+                <span className="text-amber-400 font-semibold flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5" aria-hidden="true" /> Processing
+                </span>
+              </div>
+              <p className="text-xs text-gray-600 pt-1 border-t border-white/[0.06]">Wallet refund typically processed within 5–10 minutes.</p>
+            </div>
+          </div>
+        )}
+
         {/* Delivery code */}
         {!isCancelled && (
           codeVisible ? (

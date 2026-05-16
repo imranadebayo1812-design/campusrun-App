@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { User, Phone, BookOpen, Home, LogOut, Bike, Trash2, Shield, Star, Gift, Mail, PhoneCall, ChevronRight } from 'lucide-react';
+import { User, Phone, BookOpen, Home, LogOut, Bike, Trash2, Shield, Star, Gift, Mail, PhoneCall, ChevronRight, Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 function DeleteAccountModal({ onClose }) {
@@ -104,8 +104,16 @@ export default function ProfilePage() {
           style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 60%, #2563eb 100%)' }}
         >
           <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/10" />
-          <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold text-white relative z-10">
-            {initial}
+          <div className="relative w-14 h-14 shrink-0">
+            <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold text-white relative z-10">
+              {initial}
+            </div>
+            <button
+              aria-label="Change profile photo"
+              className="absolute -bottom-0.5 -right-0.5 w-6 h-6 bg-brand-500 rounded-full flex items-center justify-center border-2 border-[#1a0a2e] z-20"
+            >
+              <Camera className="w-3 h-3 text-white" aria-hidden="true" />
+            </button>
           </div>
           <div className="relative z-10">
             <p className="font-bold text-lg text-white">{profile?.full_name || 'Student'}</p>

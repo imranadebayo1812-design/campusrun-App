@@ -1,11 +1,24 @@
 import { createContext, useContext, useState } from 'react';
-import { MOCK_USER, MOCK_PROFILE, MOCK_TRANSACTIONS } from '@/lib/mockData';
+import { MOCK_USER, MOCK_PROFILE, MOCK_TRANSACTIONS, MOCK_NOTIFICATIONS } from '@/lib/mockData';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(MOCK_PROFILE);
   const [walletTransactions, setWalletTransactions] = useState([...MOCK_TRANSACTIONS]);
+  const [notifications, setNotifications] = useState([...MOCK_NOTIFICATIONS]);
+
+  function addNotification(notif) {
+    setNotifications(prev => [{ ...notif, id: `notif-${Date.now()}`, read: false, created_at: new Date().toISOString() }, ...prev]);
+  }
+
+  function markAllRead() {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  }
+
+  function markRead(id) {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  }
 
   // Price edit state shared between CourierDashboard and TrackingPage
   const [priceEditState, setPriceEditState] = useState({
@@ -90,6 +103,7 @@ export function AuthProvider({ children }) {
       walletTransactions, addWalletTransaction,
       priceEditState,
       submitPriceEdits, buyerAcceptsPriceEdit, buyerRejectsPriceEdit, clearRejectedOrder,
+      notifications, addNotification, markAllRead, markRead,
     }}>
       {children}
     </AuthContext.Provider>

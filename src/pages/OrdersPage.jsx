@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MOCK_ORDERS } from '@/lib/mockData';
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
 import { Package, Plus, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { SkeletonCard } from '@/components/ui/SkeletonCard';
 
 const STATUS_DOT = {
   placed:     'bg-yellow-400',
@@ -73,19 +74,27 @@ function OrderCard({ order }) {
 export default function OrdersPage() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 300);
+    return () => clearTimeout(t);
+  }, []);
 
   const orders = [...MOCK_ORDERS];
   const active = orders.filter(o => ACTIVE_STATUSES.includes(o.status));
   const inProgress = orders.filter(o => ['on_the_way', 'arrived'].includes(o.status));
   const completed = orders.filter(o => o.status === 'delivered');
+  const cancelled = orders.filter(o => o.status === 'cancelled');
 
-  const filtered = { all: orders, active, in_progress: inProgress, completed }[filter] || orders;
+  const filtered = { all: orders, active, in_progress: inProgress, completed, cancelled }[filter] || orders;
 
   const tabs = [
     { key: 'all', label: 'All', count: orders.length },
     { key: 'active', label: 'Active', count: active.length },
     { key: 'in_progress', label: 'On The Way', count: inProgress.length },
     { key: 'completed', label: 'Completed', count: completed.length },
+    { key: 'cancelled', label: 'Cancelled', count: cancelled.length },
   ];
 
   return (
@@ -127,7 +136,13 @@ export default function OrdersPage() {
 
       {/* Order list */}
       <div className="px-4 space-y-2">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-14 h-14 bg-surface-900 rounded-full flex items-center justify-center mx-auto mb-4">
               <Package className="w-7 h-7 text-gray-600" />

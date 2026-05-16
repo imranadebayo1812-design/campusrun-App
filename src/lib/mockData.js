@@ -874,3 +874,51 @@ export const MOCK_VENDORS = [
     ],
   },
 ];
+
+export const MOCK_NOTIFICATIONS = [
+  {
+    id: 'notif-1',
+    type: 'order_accepted',
+    title: 'Order accepted',
+    body: 'Ahmed Musa accepted your order from Food Court.',
+    read: false,
+    created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    action: '/track/order-1',
+  },
+  {
+    id: 'notif-2',
+    type: 'status_update',
+    title: 'Order on the way',
+    body: 'Your runner is heading to Nile Hall A.',
+    read: false,
+    created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+    action: '/track/order-1',
+  },
+  {
+    id: 'notif-3',
+    type: 'wallet',
+    title: 'Wallet topped up',
+    body: '₦20,000 added to your wallet.',
+    read: true,
+    created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    action: '/wallet',
+  },
+  {
+    id: 'notif-4',
+    type: 'price_edit',
+    title: 'Price update from courier',
+    body: 'Your runner updated Coke price. Tap to review.',
+    read: true,
+    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    action: '/track/order-1',
+  },
+  {
+    id: 'notif-5',
+    type: 'delivered',
+    title: 'Order delivered!',
+    body: 'Your order from Admin Block was delivered successfully.',
+    read: true,
+    created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    action: '/orders',
+  },
+];

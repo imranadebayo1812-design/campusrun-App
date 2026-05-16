@@ -6,6 +6,7 @@ import TermsModal from '@/components/auth/TermsModal';
 import OnboardingForm from '@/components/auth/OnboardingForm';
 import MobileShell from '@/components/layout/MobileShell';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
+import { ToastProvider } from '@/context/ToastContext';
 
 const HomePage                = lazy(() => import('@/pages/HomePage'));
 const OrdersPage              = lazy(() => import('@/pages/OrdersPage'));
@@ -85,31 +86,33 @@ export default function App() {
   }
 
   return (
-    <MobileShell>
-      <ErrorBoundary>
-      <Suspense fallback={<Spinner />}>
-        <Routes>
-          {/* Buyer */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/orders" element={<OrdersPage />} />
-          <Route path="/wallet" element={<WalletPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/create-order" element={<CreateDeliveryPage />} />
-          <Route path="/payment/:deliveryId" element={<PaymentPage />} />
-          <Route path="/track/:deliveryId" element={<TrackingPage />} />
+    <ToastProvider>
+      <MobileShell>
+        <ErrorBoundary>
+        <Suspense fallback={<Spinner />}>
+          <Routes>
+            {/* Buyer */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/orders" element={<OrdersPage />} />
+            <Route path="/wallet" element={<WalletPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/create-order" element={<CreateDeliveryPage />} />
+            <Route path="/payment/:deliveryId" element={<PaymentPage />} />
+            <Route path="/track/:deliveryId" element={<TrackingPage />} />
 
-          {/* Courier */}
-          <Route path="/courier" element={<CourierDashboard />} />
-          <Route path="/courier/map" element={<CampusMapPage />} />
-          <Route path="/courier/earnings" element={<CourierEarningsPage />} />
+            {/* Courier */}
+            <Route path="/courier" element={<CourierDashboard />} />
+            <Route path="/courier/map" element={<CampusMapPage />} />
+            <Route path="/courier/earnings" element={<CourierEarningsPage />} />
 
-          {/* Referral */}
-          <Route path="/referral" element={<ReferralPage />} />
+            {/* Referral */}
+            <Route path="/referral" element={<ReferralPage />} />
 
-<Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
-      </ErrorBoundary>
-    </MobileShell>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+        </ErrorBoundary>
+      </MobileShell>
+    </ToastProvider>
   );
 }

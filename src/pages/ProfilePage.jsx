@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/api/supabaseClient';
 import { User, Phone, BookOpen, Home, LogOut, Bike, Trash2, Shield, Star, Gift, Mail, PhoneCall, ChevronRight, Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -77,10 +78,15 @@ export default function ProfilePage() {
 
   async function saveProfile() {
     setSaving(true);
-    await new Promise(r => setTimeout(r, 600));
-    updateProfileLocally(form);
+    const { error } = await supabase
+      .from('profiles')
+      .update(form)
+      .eq('id', session.user.id);
+    if (!error) {
+      updateProfileLocally(form);
+      setEditing(false);
+    }
     setSaving(false);
-    setEditing(false);
   }
 
   function handleSignOut() {
@@ -196,7 +202,11 @@ export default function ProfilePage() {
             </div>
           </div>
           <button
-            onClick={() => updateProfileLocally({ is_courier: !isCourier })}
+            onClick={async () => {
+              const next = !isCourier;
+              updateProfileLocally({ is_courier: next });
+              await supabase.from('profiles').update({ is_courier: next }).eq('id', session.user.id);
+            }}
             aria-checked={!!isCourier}
             role="switch"
             className={`relative w-12 h-6 rounded-full transition-colors duration-200 shrink-0 ${

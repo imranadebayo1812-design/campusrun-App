@@ -1,15 +1,116 @@
-import { createContext, useContext, useState } from 'react';
-import { MOCK_USER, MOCK_PROFILE, MOCK_TRANSACTIONS, MOCK_NOTIFICATIONS } from '@/lib/mockData';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/api/supabaseClient';
+import { MOCK_TRANSACTIONS, MOCK_NOTIFICATIONS } from '@/lib/mockData';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [profile, setProfile] = useState(MOCK_PROFILE);
+  const [session, setSession]     = useState(undefined); // undefined = initializing
+  const [profile, setProfile]     = useState(null);
+  const [loading, setLoading]     = useState(true);
+  const [authError, setAuthError] = useState(false);
+
+  // Still mock until Phase 2 (orders / wallet wired to DB)
   const [walletTransactions, setWalletTransactions] = useState([...MOCK_TRANSACTIONS]);
   const [notifications, setNotifications] = useState([...MOCK_NOTIFICATIONS]);
 
+  // Price-edit flow shared between CourierDashboard ↔ TrackingPage
+  const [priceEditState, setPriceEditState] = useState({
+    pendingApproval: false,
+    edits: [],
+    pendingVerificationAmount: 0,
+    adminQueue: [],
+    rejectedOrderId: null,
+  });
+
+  // ── Bootstrap auth on mount ────────────────────────────────
+  useEffect(() => {
+    let mounted = true;
+
+    async function bootstrap() {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (!mounted) return;
+        if (error) { setAuthError(true); setLoading(false); return; }
+        setSession(session ?? null);
+        if (session) await loadProfile(session.user.id);
+      } catch {
+        if (mounted) setAuthError(true);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    bootstrap();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (!mounted) return;
+      setSession(newSession ?? null);
+      if (newSession) {
+        loadProfile(newSession.user.id);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  async function loadProfile(userId) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    if (!error && data) setProfile(data);
+  }
+
+  async function refreshProfile() {
+    if (session?.user?.id) await loadProfile(session.user.id);
+  }
+
+  // ── Auth actions ───────────────────────────────────────────
+
+  async function signUp(email, password, fullName) {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName } },
+    });
+    return { error };
+  }
+
+  async function signIn(email, password) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error };
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+  }
+
+  // ── Profile helpers ────────────────────────────────────────
+
+  function updateProfileLocally(updates) {
+    setProfile(prev => prev ? { ...prev, ...updates } : updates);
+  }
+
+  // ── Wallet helpers (mock until Phase 2) ───────────────────
+
+  function addWalletTransaction(tx) {
+    setWalletTransactions(prev => [tx, ...prev]);
+  }
+
+  // ── Notification helpers ───────────────────────────────────
+
   function addNotification(notif) {
-    setNotifications(prev => [{ ...notif, id: `notif-${Date.now()}`, read: false, created_at: new Date().toISOString() }, ...prev]);
+    setNotifications(prev => [
+      { ...notif, id: `notif-${Date.now()}`, read: false, created_at: new Date().toISOString() },
+      ...prev,
+    ]);
   }
 
   function markAllRead() {
@@ -20,26 +121,8 @@ export function AuthProvider({ children }) {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   }
 
-  // Price edit state shared between CourierDashboard and TrackingPage
-  const [priceEditState, setPriceEditState] = useState({
-    pendingApproval: false,
-    edits: [],                      // [{orderId, itemIndex, itemName, originalPrice, newPrice, diff, qty}]
-    pendingVerificationAmount: 0,   // accumulated approved price diffs (shown in earnings)
-    adminQueue: [],                 // full edit history for admin panel
-    rejectedOrderId: null,          // set when buyer cancels → signals CourierDashboard
-  });
+  // ── Price-edit flow ────────────────────────────────────────
 
-  const session = { user: MOCK_USER };
-
-  function updateProfileLocally(updates) {
-    setProfile(prev => prev ? { ...prev, ...updates } : updates);
-  }
-
-  function addWalletTransaction(tx) {
-    setWalletTransactions(prev => [tx, ...prev]);
-  }
-
-  // Called by CourierDashboard when courier submits a price edit
   function submitPriceEdits(orderId, edits, courierName) {
     const auditEntries = edits.map((e, i) => ({
       id: `audit-${Date.now()}-${i}`,
@@ -61,7 +144,6 @@ export function AuthProvider({ children }) {
     }));
   }
 
-  // Called by TrackingPage (buyer) when they accept the price change
   function buyerAcceptsPriceEdit() {
     const extraAmount = priceEditState.edits.reduce(
       (sum, e) => sum + Math.max(0, e.diff) * (e.qty || 1),
@@ -75,7 +157,6 @@ export function AuthProvider({ children }) {
     }));
   }
 
-  // Called by TrackingPage (buyer) when they cancel due to price change
   function buyerRejectsPriceEdit(orderId) {
     setPriceEditState(prev => ({
       ...prev,
@@ -85,25 +166,32 @@ export function AuthProvider({ children }) {
     }));
   }
 
-  // Called by CourierDashboard after it handles the rejection
   function clearRejectedOrder() {
     setPriceEditState(prev => ({ ...prev, rejectedOrderId: null }));
   }
 
-  function signOut() {}
-  function signUp() { return Promise.resolve({ error: null }); }
-  function signIn() { return Promise.resolve({ error: null }); }
-  function refreshProfile() {}
-
   return (
     <AuthContext.Provider value={{
-      session, profile, loading: false, authError: false,
-      signUp, signIn, signOut, refreshProfile,
+      session: session ?? null,
+      profile,
+      loading,
+      authError,
+      signUp,
+      signIn,
+      signOut,
+      refreshProfile,
       updateProfileLocally,
-      walletTransactions, addWalletTransaction,
+      walletTransactions,
+      addWalletTransaction,
       priceEditState,
-      submitPriceEdits, buyerAcceptsPriceEdit, buyerRejectsPriceEdit, clearRejectedOrder,
-      notifications, addNotification, markAllRead, markRead,
+      submitPriceEdits,
+      buyerAcceptsPriceEdit,
+      buyerRejectsPriceEdit,
+      clearRejectedOrder,
+      notifications,
+      addNotification,
+      markAllRead,
+      markRead,
     }}>
       {children}
     </AuthContext.Provider>

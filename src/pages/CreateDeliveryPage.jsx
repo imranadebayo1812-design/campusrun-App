@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { MOCK_ORDERS, MOCK_VENDORS } from '@/lib/mockData';
-import { calculateDeliveryFee, DEFAULT_SERVICE_FEE } from '@/lib/deliveryPricing';
-import { ChevronLeft, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, Search, Navigation, Upload, Bookmark } from 'lucide-react';
+import { calculateDeliveryFee, DEFAULT_SERVICE_FEE, isResidentialZone, getZoneKey } from '@/lib/deliveryPricing';
+import { ChevronLeft, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, Search, Navigation, Upload, Bookmark, FileText, Hash } from 'lucide-react';
 
 const LOCATION_GROUPS = [
   {
@@ -193,6 +193,15 @@ export default function CreateDeliveryPage() {
     try { return JSON.parse(localStorage.getItem('campusrun_saved_addresses') || '[]'); }
     catch { return []; }
   });
+  const [roomNumber, setRoomNumber] = useState('');
+  const [documentFile, setDocumentFile] = useState(null);
+
+  const isDropoffHostel = Boolean(
+    dropoffLocation &&
+    isResidentialZone(getZoneKey(dropoffLocation)) &&
+    !dropoffLocation.toLowerCase().includes('cafeteria')
+  );
+  const isPrintingPress = pickupLocation === 'Printing Press' || dropoffLocation === 'Printing Press';
 
   function saveAddressToHistory(location) {
     if (!location) return;
@@ -263,7 +272,7 @@ export default function CreateDeliveryPage() {
       buyer_id: 'user-1',
       order_type: orderType,
       pickup_location: pickupLocation,
-      dropoff_location: dropoffLocation,
+      dropoff_location: roomNumber.trim() ? `${dropoffLocation} — Room ${roomNumber.trim()}` : dropoffLocation,
       items: orderType === 'purchase' ? items : [],
       item_description: orderType === 'errand' ? itemDescription : '',
       package_value: orderType === 'errand' ? parseFloat(packageValue) || 0 : null,
@@ -375,11 +384,28 @@ export default function CreateDeliveryPage() {
             <InlineLocationSelect
               label="Drop-off Location"
               value={dropoffLocation}
-              onChange={setDropoffLocation}
+              onChange={loc => { setDropoffLocation(loc); setRoomNumber(''); }}
               icon={Navigation}
               iconColor="text-brand-400"
               savedAddresses={savedAddresses}
             />
+
+            {/* Room number — shown for hostel sub-venues */}
+            {isDropoffHostel && (
+              <div>
+                <label className="flex items-center gap-2 text-sm font-semibold text-white mb-2">
+                  <Hash className="w-4 h-4 text-brand-400" /> Room Number
+                  <span className="text-gray-500 font-normal text-xs">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={roomNumber}
+                  onChange={e => setRoomNumber(e.target.value)}
+                  placeholder="e.g. 204"
+                  className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -520,15 +546,59 @@ export default function CreateDeliveryPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-white mb-1.5">
-                Package Photo <span className="text-gray-500 font-normal">(optional)</span>
-              </label>
-              <div className="h-24 border-2 border-dashed border-white/[0.12] rounded-xl flex flex-col items-center justify-center gap-1.5">
-                <Upload className="w-6 h-6 text-gray-500" />
-                <span className="text-xs text-gray-500">Tap to add package photo</span>
+            {isPrintingPress ? (
+              <div>
+                <label className="block text-sm font-medium text-white mb-1.5">
+                  Print Document <span className="text-gray-500 font-normal">(attach file to print)</span>
+                </label>
+                <label className="cursor-pointer block">
+                  <input
+                    type="file"
+                    accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf"
+                    className="hidden"
+                    onChange={e => setDocumentFile(e.target.files?.[0] || null)}
+                  />
+                  {documentFile ? (
+                    <div className="flex items-center gap-3 bg-surface-800 border border-brand-500/30 rounded-xl px-4 py-3">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-white text-xs font-bold ${
+                        documentFile.name.match(/\.(xls|xlsx)$/i) ? 'bg-green-600' :
+                        documentFile.name.match(/\.(ppt|pptx)$/i) ? 'bg-orange-600' :
+                        documentFile.name.match(/\.pdf$/i) ? 'bg-red-600' : 'bg-blue-600'
+                      }`}>
+                        {documentFile.name.match(/\.(xls|xlsx)$/i) ? 'XLS' :
+                         documentFile.name.match(/\.(ppt|pptx)$/i) ? 'PPT' :
+                         documentFile.name.match(/\.pdf$/i) ? 'PDF' : 'DOC'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white font-medium truncate">{documentFile.name}</p>
+                        <p className="text-xs text-gray-500">{(documentFile.size / 1024).toFixed(0)} KB</p>
+                      </div>
+                      <FileText className="w-4 h-4 text-brand-400 shrink-0" />
+                    </div>
+                  ) : (
+                    <div className="h-28 border-2 border-dashed border-brand-500/30 rounded-xl flex flex-col items-center justify-center gap-2">
+                      <div className="flex gap-2">
+                        {[['DOC','bg-blue-600'],['XLS','bg-green-600'],['PPT','bg-orange-600'],['PDF','bg-red-600']].map(([t,c]) => (
+                          <span key={t} className={`${c} text-white text-[10px] font-bold px-1.5 py-0.5 rounded`}>{t}</span>
+                        ))}
+                      </div>
+                      <span className="text-xs text-gray-400 font-medium">Tap to attach document</span>
+                      <span className="text-xs text-gray-600">.doc · .xls · .ppt · .pdf</span>
+                    </div>
+                  )}
+                </label>
               </div>
-            </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-white mb-1.5">
+                  Package Photo <span className="text-gray-500 font-normal">(optional)</span>
+                </label>
+                <div className="h-24 border-2 border-dashed border-white/[0.12] rounded-xl flex flex-col items-center justify-center gap-1.5">
+                  <Upload className="w-6 h-6 text-gray-500" />
+                  <span className="text-xs text-gray-500">Tap to add package photo</span>
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-white mb-1.5">

@@ -25,8 +25,17 @@ export default function OnboardingForm() {
   async function finish() {
     setLoading(true);
     setError('');
-    const { error } = await supabase.from('profiles').update({ ...data, onboarding_complete: true }).eq('id', session.user.id);
-    if (error) { setError('Could not save. Please try again.'); } else { await refreshProfile(); }
+    const { error: err } = await supabase.from('profiles').upsert({
+      id: session.user.id,
+      email: session.user.email,
+      ...data,
+      onboarding_complete: true,
+    });
+    if (err) {
+      setError(err.message || 'Could not save. Please try again.');
+    } else {
+      await refreshProfile();
+    }
     setLoading(false);
   }
 

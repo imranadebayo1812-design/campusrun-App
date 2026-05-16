@@ -1,45 +1,137 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MOCK_ORDERS } from '@/lib/mockData';
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
-import { ChevronLeft, Package, Clock, CheckCircle, MapPin, Star, MessageSquare, Send } from 'lucide-react';
+import {
+  ChevronLeft, Package, Clock, CheckCircle, MapPin, Star,
+  MessageSquare, Send, AlertTriangle, Phone, Lock, ShoppingBag, Truck,
+} from 'lucide-react';
 
-const STATUS_STEPS = [
-  { key: 'placed', label: 'Order placed', icon: Package },
-  { key: 'bought', label: 'Items bought', icon: CheckCircle },
-  { key: 'on_the_way', label: 'On the way', icon: MapPin },
-  { key: 'arrived', label: 'Arrived', icon: MapPin },
-  { key: 'delivered', label: 'Delivered', icon: CheckCircle },
+const STEPS = [
+  { key: 'placed',     label: 'Order Placed',  desc: 'Your order has been confirmed',  Icon: Package },
+  { key: 'bought',     label: 'Order Bought',  desc: 'Runner purchased your items',     Icon: ShoppingBag },
+  { key: 'on_the_way', label: 'On the Way',    desc: 'Your order is en route',          Icon: Truck },
+  { key: 'arrived',    label: 'Arrived',        desc: 'Runner is at your location',      Icon: MapPin },
+  { key: 'delivered',  label: 'Delivered',      desc: 'Order completed successfully',    Icon: CheckCircle },
 ];
+const STATUS_ORDER = STEPS.map(s => s.key);
 
-function StatusStep({ step, currentStatus }) {
-  const statuses = STATUS_STEPS.map(s => s.key);
-  const currentIndex = statuses.indexOf(currentStatus);
-  const stepIndex = statuses.indexOf(step.key);
-  const done = stepIndex <= currentIndex;
-  const active = stepIndex === currentIndex;
-  const Icon = step.icon;
+function fmt(secs) {
+  return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+}
+
+/* ── Report Issue Modal ─────────────────────────────────────────── */
+function ReportIssueModal({ onClose }) {
+  const [issueType, setIssueType] = useState('');
+  const [callsMade, setCallsMade] = useState(0);
+  const [details, setDetails] = useState('');
+  const [calling, setCalling] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const ISSUES = [
+    'Courier arrived at wrong location',
+    'Courier is unresponsive',
+    'Other',
+  ];
+
+  function handleCall() {
+    if (callsMade >= 3 || calling) return;
+    setCalling(true);
+    setTimeout(() => { setCallsMade(n => Math.min(n + 1, 3)); setCalling(false); }, 1500);
+  }
+
   return (
-    <div className="flex items-center gap-3">
-      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-        done ? 'bg-brand-500 text-white' : 'bg-surface-800 text-gray-600'
-      } ${active ? 'ring-4 ring-brand-500/20' : ''}`}>
-        <Icon className="w-4 h-4" />
+    <div role="dialog" aria-modal="true" aria-label="Report an issue"
+      className="fixed inset-0 z-[200] flex items-end justify-center"
+      style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}>
+      <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="font-bold text-white text-base">Report an Issue</p>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 text-xl font-bold leading-none">×</button>
+        </div>
+
+        {submitted ? (
+          <div className="text-center py-8">
+            <p className="text-green-400 font-semibold text-base">Report submitted!</p>
+            <p className="text-gray-400 text-sm mt-1">Our team will review and respond within 1 hour.</p>
+            <button onClick={onClose} className="mt-4 bg-brand-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">Done</button>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-2">
+              {ISSUES.map(issue => (
+                <button
+                  key={issue}
+                  onClick={() => setIssueType(issue)}
+                  className={`w-full text-left px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                    issueType === issue
+                      ? 'border-red-500/50 bg-red-500/10 text-red-400'
+                      : 'border-white/[0.08] bg-surface-800 text-gray-300'
+                  }`}
+                >
+                  {issue}
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3.5 space-y-3">
+              <p className="text-xs text-amber-400 font-semibold">
+                You must attempt to call the courier 3 times before submitting.
+              </p>
+              <div className="flex items-center gap-2">
+                {[1, 2, 3].map(n => (
+                  <div key={n} className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
+                    callsMade >= n
+                      ? 'bg-green-500/20 border-green-500 text-green-400'
+                      : 'bg-surface-800 border-white/[0.15] text-gray-500'
+                  }`}>{n}</div>
+                ))}
+                <span className="text-xs text-gray-500 ml-1">{callsMade}/3 calls made</span>
+              </div>
+              <button
+                onClick={handleCall}
+                disabled={callsMade >= 3 || calling}
+                className="w-full flex items-center justify-center gap-2 bg-amber-500/20 border border-amber-500/30 text-amber-400 font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50"
+              >
+                <Phone className="w-4 h-4" aria-hidden="true" />
+                {calling ? 'Calling…' : callsMade >= 3 ? 'All calls made ✓' : `Call Courier (Attempt ${callsMade + 1})`}
+              </button>
+            </div>
+
+            <textarea
+              value={details}
+              onChange={e => setDetails(e.target.value)}
+              placeholder="Add more details (optional)…"
+              rows={2}
+              className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 resize-none"
+            />
+
+            {callsMade < 3 && (
+              <p className="text-xs text-gray-500 text-center">Make all 3 call attempts to enable submission</p>
+            )}
+            <button
+              onClick={() => setSubmitted(true)}
+              disabled={callsMade < 3 || !issueType}
+              className="w-full bg-red-500 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm"
+            >
+              Submit Report
+            </button>
+          </>
+        )}
       </div>
-      <p className={`text-sm font-medium ${done ? 'text-white' : 'text-gray-500'}`}>{step.label}</p>
     </div>
   );
 }
 
+/* ── Rating Modal ───────────────────────────────────────────────── */
 function RatingModal({ onClose, onSubmit }) {
   const [stars, setStars] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
-
   const labels = ['', 'Poor', 'Fair', 'Good', 'Great!', 'Excellent!'];
 
   function submit() {
-    if (stars === 0) return;
+    if (!stars) return;
     setSubmitted(true);
     setTimeout(() => { onSubmit(stars, comment); onClose(); }, 900);
   }
@@ -51,27 +143,21 @@ function RatingModal({ onClose, onSubmit }) {
           <p className="font-bold text-white text-base">Rate your courier</p>
           <button onClick={onClose} className="text-gray-400 text-xl font-bold leading-none">×</button>
         </div>
-
         {submitted ? (
           <div className="text-center py-8">
             <p className="text-4xl mb-3">🎉</p>
             <p className="text-green-400 font-semibold text-base">Thanks for your feedback!</p>
-            <p className="text-gray-500 text-sm mt-1">Your rating helps improve the service</p>
           </div>
         ) : (
           <>
             <div className="flex justify-center gap-2 py-2">
               {[1, 2, 3, 4, 5].map(n => (
                 <button key={n} onClick={() => setStars(n)} className="transition-transform active:scale-90">
-                  <Star className={`w-11 h-11 transition-colors ${
-                    n <= stars ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'
-                  }`} />
+                  <Star className={`w-11 h-11 transition-colors ${n <= stars ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`} />
                 </button>
               ))}
             </div>
-            <p className="text-center text-sm font-medium text-gray-400 -mt-1">
-              {labels[stars] || 'Tap a star to rate'}
-            </p>
+            <p className="text-center text-sm font-medium text-gray-400 -mt-1">{labels[stars] || 'Tap a star to rate'}</p>
             <textarea
               value={comment}
               onChange={e => setComment(e.target.value)}
@@ -81,8 +167,8 @@ function RatingModal({ onClose, onSubmit }) {
             />
             <button
               onClick={submit}
-              disabled={stars === 0}
-              className="w-full bg-brand-500 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm transition-opacity"
+              disabled={!stars}
+              className="w-full bg-brand-500 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm"
             >
               Submit Rating
             </button>
@@ -93,37 +179,52 @@ function RatingModal({ onClose, onSubmit }) {
   );
 }
 
+/* ── Main Page ──────────────────────────────────────────────────── */
 export default function TrackingPage() {
   const { deliveryId } = useParams();
   const navigate = useNavigate();
-  const [cancelling, setCancelling] = useState(false);
   const [localStatus, setLocalStatus] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   const [chatMessages, setChatMessages] = useState([
     { from: 'courier', text: "I've picked up your order!", time: '15m ago' },
   ]);
   const [chatInput, setChatInput] = useState('');
+  const [graceLeft, setGraceLeft] = useState(120);
 
   const orderIndex = MOCK_ORDERS.findIndex(o => o.id === deliveryId);
   const baseOrder = MOCK_ORDERS[orderIndex];
+
+  useEffect(() => {
+    if (!baseOrder?.courier_accepted) return;
+    const ref = baseOrder.courier_accepted_at || baseOrder.created_at;
+    const elapsed = Math.floor((Date.now() - new Date(ref).getTime()) / 1000);
+    const initial = Math.max(0, 120 - elapsed);
+    setGraceLeft(initial);
+    if (initial <= 0) return;
+    const id = setInterval(() => setGraceLeft(n => { if (n <= 1) { clearInterval(id); return 0; } return n - 1; }), 1000);
+    return () => clearInterval(id);
+  }, [baseOrder?.courier_accepted, baseOrder?.courier_accepted_at, baseOrder?.created_at]);
 
   if (!baseOrder) {
     return <div className="p-4 text-center text-gray-500 pt-20">Order not found.</div>;
   }
 
   const delivery = localStatus ? { ...baseOrder, status: localStatus } : baseOrder;
-
+  const currentIdx = STATUS_ORDER.indexOf(delivery.status);
   const isCancelled = delivery.status === 'cancelled';
   const isDelivered = delivery.status === 'delivered';
-  const canCancel = !isCancelled && !isDelivered && !delivery.courier_accepted;
+  const isArrived = delivery.status === 'arrived';
+  const codeVisible = isArrived || isDelivered;
+  const gracePeriodActive = graceLeft > 0 && delivery.courier_accepted && delivery.status === 'placed';
 
   let etaText = null;
   try {
     const { distance_m } = calculateDeliveryFee(delivery.pickup_location, delivery.dropoff_location);
-    if (distance_m) {
-      const minutes = Math.max(2, Math.round(distance_m / 80));
-      etaText = `~${minutes} min · ${distance_m}m`;
+    if (distance_m && !isDelivered && !isCancelled) {
+      etaText = `~${Math.max(2, Math.round(distance_m / 80))} min`;
     }
   } catch {}
 
@@ -149,12 +250,13 @@ export default function TrackingPage() {
       <div className="flex items-center gap-3 px-4 pt-5 pb-4">
         <button
           onClick={() => navigate('/orders')}
+          aria-label="Go back"
           className="w-9 h-9 bg-surface-900 border border-white/[0.08] rounded-xl flex items-center justify-center"
         >
-          <ChevronLeft className="w-5 h-5 text-gray-400" />
+          <ChevronLeft className="w-5 h-5 text-gray-400" aria-hidden="true" />
         </button>
-        <h1 className="text-lg font-bold text-white">Track Order</h1>
-        <span className={`ml-auto text-xs font-semibold px-3 py-1 rounded-full ${
+        <h1 className="text-lg font-bold text-white flex-1">Track Order</h1>
+        <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
           isCancelled ? 'bg-red-500/15 text-red-400' :
           isDelivered ? 'bg-green-500/15 text-green-400' :
           'bg-brand-500/15 text-brand-400'
@@ -163,38 +265,76 @@ export default function TrackingPage() {
         </span>
       </div>
 
-      <div className="px-4 space-y-4 pb-6">
+      <div className="px-4 space-y-4 pb-8">
         {/* Route + ETA */}
         <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4 space-y-3">
           <div className="flex items-start gap-2">
-            <MapPin className="w-4 h-4 text-brand-400 mt-0.5 shrink-0" />
+            <MapPin className="w-4 h-4 text-brand-400 mt-0.5 shrink-0" aria-hidden="true" />
             <div>
               <p className="text-xs text-gray-500">Pickup</p>
               <p className="text-sm font-medium text-white">{delivery.pickup_location}</p>
             </div>
           </div>
           <div className="flex items-start gap-2">
-            <MapPin className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
+            <MapPin className="w-4 h-4 text-green-400 mt-0.5 shrink-0" aria-hidden="true" />
             <div>
               <p className="text-xs text-gray-500">Dropoff</p>
               <p className="text-sm font-medium text-white">{delivery.dropoff_location}</p>
             </div>
           </div>
-          {etaText && !isDelivered && !isCancelled && (
+          {etaText && (
             <div className="flex items-center gap-2 pt-1 border-t border-white/[0.06]">
-              <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
               <p className="text-xs text-amber-400 font-medium">{etaText} estimated</p>
             </div>
           )}
         </div>
 
+        {/* Grace period / cancellation window */}
+        {delivery.courier_accepted && !isCancelled && !isDelivered && (
+          gracePeriodActive ? (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-amber-400">Grace period: {fmt(graceLeft)}</p>
+                <p className="text-xs text-amber-400/70 mt-0.5">Both sides can cancel freely</p>
+              </div>
+              <button
+                onClick={cancelOrder}
+                disabled={cancelling}
+                className="shrink-0 text-xs font-semibold bg-amber-500/20 border border-amber-500/30 text-amber-400 px-3 py-1.5 rounded-lg disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-gray-500 text-xs font-medium px-1">
+              <span className="w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center text-gray-600 text-[10px]">⊗</span>
+              Cancellation window closed
+            </div>
+          )
+        )}
+
         {/* Delivery code */}
-        {!isDelivered && !isCancelled && (
-          <div className="bg-brand-500/10 border border-brand-500/20 rounded-2xl p-4 text-center">
-            <p className="text-xs text-brand-400 font-medium mb-2">Your Delivery Code</p>
-            <p className="text-5xl font-bold tracking-[0.3em] text-white">{delivery.delivery_code}</p>
-            <p className="text-xs text-gray-500 mt-2">Show this to your courier when they arrive</p>
-          </div>
+        {!isCancelled && (
+          codeVisible ? (
+            <div className="bg-brand-500/10 border border-brand-500/20 rounded-2xl p-5 text-center">
+              <p className="text-xs text-brand-400 font-semibold mb-3 uppercase tracking-wider">Your Delivery Code</p>
+              <div className="flex justify-center gap-3">
+                {String(delivery.delivery_code).split('').map((d, i) => (
+                  <div key={i} className="w-14 h-16 bg-surface-800 border-2 border-brand-500/30 rounded-xl flex items-center justify-center text-3xl font-bold text-white">
+                    {d}
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-3">Show this to your runner to confirm handoff</p>
+            </div>
+          ) : (
+            <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-5 text-center">
+              <Lock className="w-6 h-6 text-gray-600 mx-auto mb-2" aria-hidden="true" />
+              <p className="text-sm font-semibold text-gray-400">Your Delivery Code</p>
+              <p className="text-xs text-gray-600 mt-1">Available once your runner marks Arrived</p>
+            </div>
+          )
         )}
 
         {/* Courier info */}
@@ -205,17 +345,61 @@ export default function TrackingPage() {
             </div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-white">{delivery.courier_name}</p>
-              <p className="text-xs text-gray-500">Your courier</p>
+              <p className="text-xs text-gray-500">Your runner</p>
             </div>
           </div>
         )}
 
         {!delivery.courier_accepted && !isCancelled && (
           <div className="flex items-center gap-2 text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-xl p-3">
-            <Clock className="w-4 h-4 animate-pulse" />
-            <p className="text-sm">Finding a courier for you…</p>
+            <Clock className="w-4 h-4 animate-pulse" aria-hidden="true" />
+            <p className="text-sm">Finding a runner for you…</p>
           </div>
         )}
+
+        {/* Delivery Progress stepper */}
+        <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-5">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-5">Delivery Progress</p>
+          <div className="space-y-0">
+            {STEPS.map((step, idx) => {
+              const stepIdx = STATUS_ORDER.indexOf(step.key);
+              const done = stepIdx < currentIdx;
+              const active = stepIdx === currentIdx && !isCancelled;
+              const future = stepIdx > currentIdx || isCancelled;
+              const isLast = idx === STEPS.length - 1;
+              const Icon = step.Icon;
+              return (
+                <div key={step.key} className="flex gap-4">
+                  {/* Circle + connector */}
+                  <div className="flex flex-col items-center">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                      done ? 'bg-brand-500 text-white' :
+                      active ? 'bg-brand-500 text-white ring-4 ring-brand-500/20' :
+                      'bg-surface-800 text-gray-600 border border-white/[0.08]'
+                    }`}>
+                      <Icon className="w-5 h-5" aria-hidden="true" />
+                    </div>
+                    {!isLast && (
+                      <div className={`w-0.5 flex-1 my-1 min-h-[24px] ${done ? 'bg-brand-500' : 'bg-white/[0.08]'}`} />
+                    )}
+                  </div>
+                  {/* Label */}
+                  <div className="pb-6 pt-2 flex-1">
+                    <p className={`text-sm font-semibold leading-tight ${future ? 'text-gray-500' : 'text-white'}`}>
+                      {step.label}
+                    </p>
+                    <p className={`text-xs mt-0.5 ${future ? 'text-gray-600' : 'text-gray-400'}`}>{step.desc}</p>
+                    {active && (
+                      <span className="inline-block mt-1.5 text-[10px] font-semibold bg-brand-500/20 text-brand-400 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        In progress
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Items */}
         {delivery.order_type === 'purchase' && delivery.items?.length > 0 && (
@@ -230,24 +414,20 @@ export default function TrackingPage() {
           </div>
         )}
 
-        {/* Status timeline */}
-        <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4">
-          <p className="text-sm font-semibold text-white mb-4">Order Status</p>
-          <div className="space-y-4">
-            {STATUS_STEPS.map(step => (
-              <StatusStep key={step.key} step={step} currentStatus={delivery.status} />
-            ))}
-          </div>
-        </div>
-
         {/* In-app chat */}
         {delivery.courier_accepted && !isCancelled && (
           <div className="bg-surface-900 border border-white/[0.08] rounded-2xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/[0.06] flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-brand-400" />
-              <p className="text-sm font-semibold text-white">Chat with Courier</p>
+            <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-brand-400" aria-hidden="true" />
+                <p className="text-sm font-semibold text-white">Chat with Runner</p>
+              </div>
+              <span className="text-xs text-gray-500 bg-surface-800 px-2 py-0.5 rounded-full">Call (masked)</span>
             </div>
             <div className="p-4 space-y-3 max-h-52 overflow-y-auto">
+              {chatMessages.length === 0 && (
+                <p className="text-center text-sm text-gray-500 py-4">No messages yet. Start the conversation!</p>
+              )}
               {chatMessages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.from === 'buyer' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
@@ -267,42 +447,51 @@ export default function TrackingPage() {
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && sendChat()}
-                placeholder="Message your courier…"
+                placeholder="Type a message…"
                 className="flex-1 bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
               />
               <button
                 onClick={sendChat}
+                aria-label="Send message"
                 className="w-9 h-9 bg-brand-500 rounded-xl flex items-center justify-center shrink-0 active:scale-95 transition-transform"
               >
-                <Send className="w-4 h-4 text-white" />
+                <Send className="w-4 h-4 text-white" aria-hidden="true" />
               </button>
             </div>
           </div>
         )}
 
+        {/* Report Issue */}
+        {delivery.courier_accepted && !isCancelled && !isDelivered && (
+          <button
+            onClick={() => setShowReportModal(true)}
+            className="w-full flex items-center justify-center gap-2 bg-surface-900 border border-white/[0.08] text-gray-400 font-medium py-3 rounded-2xl text-sm"
+          >
+            <AlertTriangle className="w-4 h-4" aria-hidden="true" />
+            Report an Issue
+          </button>
+        )}
+
         {/* Post-delivery actions */}
         {isDelivered && (
           <div className="space-y-2">
-            <button className="w-full bg-brand-500/10 border border-brand-500/20 text-brand-400 font-semibold py-3 rounded-xl text-sm">
-              Add a tip for your courier
-            </button>
             {ratingSubmitted ? (
               <div className="w-full flex items-center justify-center gap-2 bg-green-500/10 border border-green-500/20 text-green-400 font-semibold py-3 rounded-xl text-sm">
-                <Star className="w-4 h-4 fill-green-400" /> Rating submitted — thanks!
+                <Star className="w-4 h-4 fill-green-400" aria-hidden="true" /> Rating submitted — thanks!
               </div>
             ) : (
               <button
                 onClick={() => setShowRatingModal(true)}
                 className="w-full flex items-center justify-center gap-2 bg-surface-900 border border-white/[0.08] text-gray-300 font-semibold py-3 rounded-xl text-sm"
               >
-                <Star className="w-4 h-4" /> Rate your courier
+                <Star className="w-4 h-4" aria-hidden="true" /> Rate your runner
               </button>
             )}
           </div>
         )}
 
-        {/* Cancel */}
-        {canCancel && (
+        {/* Cancel (pre-grace, before courier accepts) */}
+        {!delivery.courier_accepted && !isCancelled && !isDelivered && (
           <button
             onClick={cancelOrder}
             disabled={cancelling}
@@ -314,10 +503,10 @@ export default function TrackingPage() {
       </div>
 
       {showRatingModal && (
-        <RatingModal
-          onClose={() => setShowRatingModal(false)}
-          onSubmit={() => setRatingSubmitted(true)}
-        />
+        <RatingModal onClose={() => setShowRatingModal(false)} onSubmit={() => setRatingSubmitted(true)} />
+      )}
+      {showReportModal && (
+        <ReportIssueModal onClose={() => setShowReportModal(false)} />
       )}
     </div>
   );

@@ -3,15 +3,18 @@ import { MOCK_EARNINGS, MOCK_EARNING_HISTORY } from '@/lib/mockData';
 import { ShoppingBag, Banknote, MapPin } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-function WithdrawModal({ title, maxAmount, onClose }) {
+function WithdrawModal({ title, maxAmount, isEarnings, onClose }) {
   const [form, setForm] = useState({ bank_name: '', account_number: '', account_name: '' });
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
+  const amt = parseFloat(amount) || 0;
+  const tax = isEarnings ? Math.round(amt * 0.15) : 0;
+  const net = amt - tax;
+
   async function submit() {
-    const amt = parseFloat(amount);
     if (!amt || amt < 500) { setError('Minimum withdrawal is ₦500'); return; }
     if (amt > maxAmount) { setError(`Max withdrawable is ₦${maxAmount.toLocaleString()}`); return; }
     if (!form.bank_name || !form.account_number || !form.account_name) { setError('Fill in all bank details'); return; }
@@ -63,6 +66,29 @@ function WithdrawModal({ title, maxAmount, onClose }) {
                 className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
               />
             </div>
+
+            {/* Tax breakdown for earnings; no-deduction note for reimbursement */}
+            {isEarnings && amt > 0 ? (
+              <div className="bg-surface-800 border border-white/[0.08] rounded-xl p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Withdrawal</span>
+                  <span className="text-white font-medium">₦{amt.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Tax (15%)</span>
+                  <span className="text-red-400 font-medium">−₦{tax.toLocaleString()}</span>
+                </div>
+                <div className="border-t border-white/[0.08] pt-2 flex justify-between text-sm">
+                  <span className="text-white font-semibold">You receive</span>
+                  <span className="text-green-400 font-bold">₦{net.toLocaleString()}</span>
+                </div>
+              </div>
+            ) : !isEarnings ? (
+              <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
+                <p className="text-xs text-green-400 font-medium">No deductions — full amount paid out</p>
+              </div>
+            ) : null}
+
             {error && <p className="text-xs text-red-400">{error}</p>}
             <div className="flex gap-2 pt-1">
               <button onClick={onClose} className="flex-1 bg-surface-800 border border-white/[0.08] text-gray-400 font-medium py-3 rounded-xl text-sm">Cancel</button>
@@ -225,6 +251,7 @@ export default function CourierEarningsPage() {
         <WithdrawModal
           title="Withdraw Reimbursement"
           maxAmount={e.food_reimbursed}
+          isEarnings={false}
           onClose={() => setModal(null)}
         />
       )}
@@ -232,6 +259,7 @@ export default function CourierEarningsPage() {
         <WithdrawModal
           title="Withdraw Earnings"
           maxAmount={e.this_week}
+          isEarnings={true}
           onClose={() => setModal(null)}
         />
       )}

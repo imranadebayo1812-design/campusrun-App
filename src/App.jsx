@@ -17,6 +17,7 @@ const TrackingPage            = lazy(() => import('@/pages/TrackingPage'));
 const CourierDashboard        = lazy(() => import('@/pages/CourierDashboard'));
 const CourierEarningsPage     = lazy(() => import('@/pages/CourierEarningsPage'));
 const CampusMapPage           = lazy(() => import('@/pages/CampusMapPage'));
+const ReferralPage            = lazy(() => import('@/pages/ReferralPage'));
 
 class ErrorBoundary extends Component {
   state = { crashed: false };
@@ -101,6 +102,9 @@ export default function App() {
           <Route path="/courier" element={<CourierDashboard />} />
           <Route path="/courier/map" element={<CampusMapPage />} />
           <Route path="/courier/earnings" element={<CourierEarningsPage />} />
+
+          {/* Referral */}
+          <Route path="/referral" element={<ReferralPage />} />
 
 <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

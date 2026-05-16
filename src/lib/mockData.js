@@ -19,6 +19,7 @@ export const MOCK_PROFILE = {
   wallet_balance: 15000,
   total_earnings: 8500,
   pro_subscriber: false,
+  referral_code: '2420DYE8',
 };
 
 export const MOCK_ORDERS = [
@@ -157,22 +158,66 @@ export const MOCK_COURIER_NOTIFICATIONS = [
 ];
 
 export const MOCK_ACTIVE_DELIVERY = {
-  id: 'order-1',
+  id: 'courier-active-1',
   order_type: 'purchase',
-  pickup_location: 'Food Court',
+  pickup_location: "B's Chops",
   dropoff_location: 'Nile Hall A',
-  status: 'on_the_way',
-  items: [{ name: 'Jollof Rice', qty: 1, price: '1500' }, { name: 'Chicken', qty: 1, price: '800' }],
-  food_cost: 2300,
-  delivery_fee: 300,
+  status: 'placed',
+  items: [
+    { name: 'Chinese Basmati Rice', qty: 1, price: '2600' },
+    { name: 'Extra Sausage (Shawarma)', qty: 1, price: '300' },
+  ],
+  food_cost: 2900,
+  delivery_fee: 350,
   service_fee: 100,
-  total_amount: 2700,
-  delivery_code: '4782',
+  total_amount: 3350,
+  delivery_code: '2508',
   buyer_id: 'buyer-2',
   courier_id: 'user-1',
   special_instructions: null,
   payment_verified: true,
-  created_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+  accepted_at: new Date(Date.now() - 60 * 1000).toISOString(),
+  created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+};
+
+export const MOCK_AVAILABLE_ORDERS = [
+  {
+    id: 'avail-1',
+    order_type: 'purchase',
+    pickup_location: "B's Chops",
+    dropoff_location: 'Nile Hall B',
+    items: [
+      { name: 'Jollof Rice', qty: 1, price: '2100' },
+      { name: 'Peppered Grilled Chicken', qty: 1, price: '2000' },
+    ],
+    food_cost: 4100,
+    delivery_fee: 300,
+    service_fee: 100,
+    total_amount: 4500,
+    special_instructions: 'Extra pepper please',
+    created_at: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'avail-2',
+    order_type: 'errand',
+    pickup_location: 'Admin Block',
+    dropoff_location: 'Victoria Falls',
+    items: [],
+    item_description: 'Course registration form from Mrs. Fatima',
+    food_cost: 0,
+    delivery_fee: 400,
+    service_fee: 100,
+    total_amount: 500,
+    special_instructions: 'Collect from Mrs. Fatima, Office 12',
+    created_at: new Date(Date.now() - 7 * 60 * 1000).toISOString(),
+  },
+];
+
+export const MOCK_REFERRAL = {
+  code: '2420DYE8',
+  referrals: 0,
+  total_earned: 0,
+  available: 0,
 };
 
 export const MOCK_EARNINGS = {

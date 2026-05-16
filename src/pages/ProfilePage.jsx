@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { User, Phone, BookOpen, Home, LogOut, Bike, Trash2, Shield } from 'lucide-react';
+import { User, Phone, BookOpen, Home, LogOut, Bike, Trash2, Shield, Star, Gift, Mail, PhoneCall, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 function DeleteAccountModal({ onClose }) {
@@ -216,6 +216,47 @@ export default function ProfilePage() {
         </button>
       </div>
 
+      {/* Campus Run Pro card */}
+      <div className="mx-4 mb-4">
+        <div
+          className="rounded-2xl p-4 relative overflow-hidden flex items-center gap-3"
+          style={{ background: 'linear-gradient(135deg, #6d28d9 0%, #4338ca 100%)' }}
+        >
+          <div className="absolute -right-3 -bottom-3 w-20 h-20 rounded-full bg-white/10" />
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+            <Star className="w-5 h-5 text-yellow-300" aria-hidden="true" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-bold text-white">Campus Run Pro</p>
+              <span className="text-xs bg-white/20 text-white/80 px-2 py-0.5 rounded-full font-medium">INACTIVE</span>
+            </div>
+            <p className="text-xs text-white/60 mt-0.5">50% off service fee on every order</p>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="text-xs text-white/60 font-medium">Coming Soon</span>
+            <ChevronRight className="w-4 h-4 text-white/40" aria-hidden="true" />
+          </div>
+        </div>
+      </div>
+
+      {/* Referral Programme */}
+      <div className="mx-4 mb-4 bg-surface-900 border border-white/[0.08] rounded-2xl overflow-hidden">
+        <button
+          onClick={() => navigate('/referral')}
+          className="w-full flex items-center gap-3 px-4 py-4"
+        >
+          <div className="w-9 h-9 rounded-xl bg-brand-500/15 flex items-center justify-center shrink-0">
+            <Gift className="w-4 h-4 text-brand-400" aria-hidden="true" />
+          </div>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-medium text-white">Referral Programme</p>
+            <p className="text-xs text-gray-500 mt-0.5">Earn ₦100 per friend who joins</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-500 shrink-0" aria-hidden="true" />
+        </button>
+      </div>
+
       {/* Sign out */}
       <div className="mx-4 mb-3">
         <button
@@ -225,6 +266,29 @@ export default function ProfilePage() {
           <LogOut className="w-4 h-4" aria-hidden="true" />
           Sign Out
         </button>
+      </div>
+
+      {/* Contact Support */}
+      <div className="mx-4 mb-3 bg-surface-900 border border-white/[0.08] rounded-2xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-white/[0.05]">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact Support</p>
+        </div>
+        <a
+          href="mailto:support@campusrun.online"
+          className="flex items-center gap-3 px-4 py-3.5 border-b border-white/[0.05]"
+        >
+          <Mail className="w-4 h-4 text-gray-500 shrink-0" aria-hidden="true" />
+          <span className="text-sm font-medium text-white flex-1">support@campusrun.online</span>
+          <ChevronRight className="w-4 h-4 text-gray-600 shrink-0" aria-hidden="true" />
+        </a>
+        <a
+          href="tel:08144009370"
+          className="flex items-center gap-3 px-4 py-3.5"
+        >
+          <PhoneCall className="w-4 h-4 text-gray-500 shrink-0" aria-hidden="true" />
+          <span className="text-sm font-medium text-white flex-1">08144009370</span>
+          <ChevronRight className="w-4 h-4 text-gray-600 shrink-0" aria-hidden="true" />
+        </a>
       </div>
 
       {/* Legal */}

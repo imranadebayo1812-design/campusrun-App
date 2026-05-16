@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MOCK_ORDERS } from '@/lib/mockData';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/api/supabaseClient';
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
 import { Package, Plus, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -73,15 +74,40 @@ function OrderCard({ order }) {
 
 export default function OrdersPage() {
   const navigate = useNavigate();
+  const { session } = useAuth();
   const [filter, setFilter] = useState('all');
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 300);
-    return () => clearTimeout(t);
-  }, []);
+    if (!session?.user?.id) return;
+    const userId = session.user.id;
+    let channel;
 
-  const orders = [...MOCK_ORDERS];
+    async function load() {
+      const { data } = await supabase
+        .from('deliveries')
+        .select('*')
+        .eq('buyer_id', userId)
+        .order('created_at', { ascending: false });
+      setOrders(data || []);
+      setLoading(false);
+
+      channel = supabase.channel(`orders:${userId}`)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'deliveries',
+          filter: `buyer_id=eq.${userId}`,
+        }, payload => setOrders(prev => [payload.new, ...prev]))
+        .on('postgres_changes', {
+          event: 'UPDATE', schema: 'public', table: 'deliveries',
+          filter: `buyer_id=eq.${userId}`,
+        }, payload => setOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new : o)))
+        .subscribe();
+    }
+
+    load();
+    return () => { if (channel) supabase.removeChannel(channel); };
+  }, [session?.user?.id]);
   const active = orders.filter(o => ACTIVE_STATUSES.includes(o.status));
   const inProgress = orders.filter(o => ['on_the_way', 'arrived'].includes(o.status));
   const completed = orders.filter(o => o.status === 'delivered');

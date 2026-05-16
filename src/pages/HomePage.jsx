@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_ORDERS, MOCK_VENDORS } from '@/lib/mockData';
+import { supabase } from '@/api/supabaseClient';
+import { MOCK_VENDORS } from '@/lib/mockData';
 import { isOrderingOpen, orderingClosedMessage } from '@/lib/restaurantHours';
 import { ChevronRight, Package, AlertCircle, Wallet } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -39,14 +41,25 @@ function getGreeting() {
   return 'Good evening';
 }
 
+const ACTIVE_STATUSES = ['placed', 'bought', 'on_the_way', 'arrived'];
+
 export default function HomePage() {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
   const open = isOrderingOpen();
+  const [activeOrders, setActiveOrders] = useState([]);
 
-  const activeOrders = MOCK_ORDERS
-    .filter(o => ['placed', 'bought', 'on_the_way', 'arrived'].includes(o.status))
-    .slice(0, 3);
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    supabase
+      .from('deliveries')
+      .select('*')
+      .eq('buyer_id', session.user.id)
+      .in('status', ACTIVE_STATUSES)
+      .order('created_at', { ascending: false })
+      .limit(3)
+      .then(({ data }) => setActiveOrders(data || []));
+  }, [session?.user?.id]);
 
   const firstName = (profile?.full_name || 'Student').split(' ')[0];
   const balance = profile?.wallet_balance || 0;

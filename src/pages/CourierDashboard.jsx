@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_ACTIVE_DELIVERY, MOCK_AVAILABLE_ORDERS, MOCK_EARNINGS } from '@/lib/mockData';
+import { supabase } from '@/api/supabaseClient';
+import { MOCK_EARNINGS } from '@/lib/mockData';
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
 import {
   Bike, MapPin, Package, Lock, CheckCircle, Wallet, TrendingUp,
@@ -236,16 +237,14 @@ const STATUS_LABEL = {
 /* ── Main component ─────────────────────────────────────────────── */
 export default function CourierDashboard() {
   const {
-    profile,
+    profile, session,
     priceEditState, submitPriceEdits, clearRejectedOrder,
   } = useAuth();
   const navigate = useNavigate();
   const [isOnline, setIsOnline] = useState(false);
   const [tick, setTick] = useState(0);
-  const [activeOrders, setActiveOrders] = useState(
-    MOCK_ACTIVE_DELIVERY ? [{ ...MOCK_ACTIVE_DELIVERY }] : []
-  );
-  const [available, setAvailable] = useState([...MOCK_AVAILABLE_ORDERS]);
+  const [activeOrders, setActiveOrders] = useState([]);
+  const [available, setAvailable] = useState([]);
   const [verifyDelivery, setVerifyDelivery] = useState(null);
   const [updating, setUpdating] = useState(null);
   const [fraudWarningTarget, setFraudWarningTarget] = useState(null);
@@ -255,6 +254,71 @@ export default function CourierDashboard() {
     const id = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Load orders from DB + realtime subscriptions
+  useEffect(() => {
+    if (!session?.user?.id || !profile?.is_courier) return;
+    const userId = session.user.id;
+    let activeCh, availCh;
+
+    async function loadOrders() {
+      const [{ data: active }, { data: avail }] = await Promise.all([
+        supabase.from('deliveries').select('*')
+          .eq('courier_id', userId)
+          .not('status', 'in', '("delivered","cancelled")')
+          .order('accepted_at', { ascending: false }),
+        supabase.from('deliveries').select('*')
+          .is('courier_id', null)
+          .eq('status', 'placed')
+          .eq('payment_verified', true)
+          .order('created_at', { ascending: false }),
+      ]);
+      setActiveOrders(active || []);
+      setAvailable(avail || []);
+    }
+    loadOrders();
+
+    // Realtime: courier's own active orders updated
+    activeCh = supabase.channel(`courier-active:${userId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'deliveries',
+        filter: `courier_id=eq.${userId}`,
+      }, payload => {
+        const updated = payload.new;
+        if (updated.status === 'delivered' || updated.status === 'cancelled') {
+          setActiveOrders(prev => prev.filter(o => o.id !== updated.id));
+        } else {
+          setActiveOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+        }
+      })
+      .subscribe();
+
+    // Realtime: new available orders appear
+    availCh = supabase.channel('available-orders')
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'deliveries',
+      }, payload => {
+        const o = payload.new;
+        if (!o.courier_id && o.status === 'placed' && o.payment_verified) {
+          setAvailable(prev => [o, ...prev]);
+        }
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'deliveries',
+      }, payload => {
+        const o = payload.new;
+        // Remove from available if taken by someone else or status changed
+        if (o.courier_id || o.status !== 'placed') {
+          setAvailable(prev => prev.filter(a => a.id !== o.id));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      if (activeCh) supabase.removeChannel(activeCh);
+      if (availCh) supabase.removeChannel(availCh);
+    };
+  }, [session?.user?.id, profile?.is_courier]);
 
   // Handle buyer cancellation due to price rejection
   useEffect(() => {
@@ -279,22 +343,31 @@ export default function CourierDashboard() {
     );
   }
 
-  function acceptOrder(order) {
-    setAvailable(prev => prev.filter(o => o.id !== order.id));
-    setActiveOrders(prev => [
-      ...prev,
-      { ...order, status: 'placed', delivery_code: '2508', accepted_at: new Date().toISOString() },
-    ]);
+  async function acceptOrder(order) {
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('deliveries')
+      .update({ courier_id: session.user.id, courier_accepted: true, accepted_at: now })
+      .eq('id', order.id)
+      .is('courier_id', null) // ensure not already taken
+      .select()
+      .single();
+    if (!error && data) {
+      setAvailable(prev => prev.filter(o => o.id !== order.id));
+      setActiveOrders(prev => [...prev, data]);
+    }
   }
 
   async function updateStatus(delivery, nextStatus) {
     if (STATUS_NEXT[delivery.status]?.requiresCode) { setVerifyDelivery(delivery); return; }
     const gl = graceLeft(delivery);
     if (delivery.status === 'placed' && gl > 0) return;
-    if (priceEditState.pendingApproval) return; // blocked waiting for buyer
+    if (priceEditState.pendingApproval) return;
     setUpdating(delivery.id);
-    await new Promise(r => setTimeout(r, 500));
-    setActiveOrders(prev => prev.map(o => o.id === delivery.id ? { ...o, status: nextStatus } : o));
+    const updates = { status: nextStatus };
+    if (nextStatus === 'delivered') updates.delivered_at = new Date().toISOString();
+    await supabase.from('deliveries').update(updates).eq('id', delivery.id);
+    setActiveOrders(prev => prev.map(o => o.id === delivery.id ? { ...o, ...updates } : o));
     setUpdating(null);
   }
 
@@ -650,10 +723,12 @@ export default function CourierDashboard() {
       {verifyDelivery && (
         <DeliveryCodeModal
           delivery={verifyDelivery}
-          onSuccess={() => {
-            setActiveOrders(prev => prev.map(o =>
-              o.id === verifyDelivery.id ? { ...o, status: 'delivered' } : o
-            ));
+          onSuccess={async () => {
+            const now = new Date().toISOString();
+            await supabase.from('deliveries')
+              .update({ status: 'delivered', delivered_at: now })
+              .eq('id', verifyDelivery.id);
+            setActiveOrders(prev => prev.filter(o => o.id !== verifyDelivery.id));
             setVerifyDelivery(null);
           }}
           onClose={() => setVerifyDelivery(null)}

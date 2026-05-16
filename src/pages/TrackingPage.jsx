@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_ORDERS } from '@/lib/mockData';
+import { supabase } from '@/api/supabaseClient';
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
 import {
   ChevronLeft, Package, Clock, CheckCircle, MapPin, Star,
@@ -185,7 +185,8 @@ export default function TrackingPage() {
   const { deliveryId } = useParams();
   const navigate = useNavigate();
   const { priceEditState, buyerAcceptsPriceEdit, buyerRejectsPriceEdit } = useAuth();
-  const [localStatus, setLocalStatus] = useState(null);
+  const [delivery, setDelivery] = useState(null);
+  const [notFound, setNotFound] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -194,27 +195,53 @@ export default function TrackingPage() {
     { from: 'courier', text: "I've picked up your order!", time: '15m ago' },
   ]);
   const [chatInput, setChatInput] = useState('');
-  const [graceLeft, setGraceLeft] = useState(120);
+  const [graceLeft, setGraceLeft] = useState(0);
 
-  const orderIndex = MOCK_ORDERS.findIndex(o => o.id === deliveryId);
-  const baseOrder = MOCK_ORDERS[orderIndex];
-
+  // Load delivery from DB + subscribe to realtime updates
   useEffect(() => {
-    if (!baseOrder?.courier_accepted) return;
-    const ref = baseOrder.courier_accepted_at || baseOrder.created_at;
+    if (!deliveryId) return;
+    let channel;
+
+    async function load() {
+      const { data, error } = await supabase
+        .from('deliveries').select('*').eq('id', deliveryId).single();
+      if (error || !data) { setNotFound(true); return; }
+      setDelivery(data);
+    }
+    load();
+
+    channel = supabase.channel(`delivery:${deliveryId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'deliveries',
+        filter: `id=eq.${deliveryId}`,
+      }, payload => setDelivery(payload.new))
+      .subscribe();
+
+    return () => { if (channel) supabase.removeChannel(channel); };
+  }, [deliveryId]);
+
+  // Grace period countdown timer
+  useEffect(() => {
+    if (!delivery?.courier_accepted) return;
+    const ref = delivery.accepted_at || delivery.created_at;
     const elapsed = Math.floor((Date.now() - new Date(ref).getTime()) / 1000);
     const initial = Math.max(0, 120 - elapsed);
     setGraceLeft(initial);
     if (initial <= 0) return;
     const id = setInterval(() => setGraceLeft(n => { if (n <= 1) { clearInterval(id); return 0; } return n - 1; }), 1000);
     return () => clearInterval(id);
-  }, [baseOrder?.courier_accepted, baseOrder?.courier_accepted_at, baseOrder?.created_at]);
+  }, [delivery?.courier_accepted, delivery?.accepted_at, delivery?.created_at]);
 
-  if (!baseOrder) {
+  if (notFound) {
     return <div className="p-4 text-center text-gray-500 pt-20">Order not found.</div>;
   }
-
-  const delivery = localStatus ? { ...baseOrder, status: localStatus } : baseOrder;
+  if (!delivery) {
+    return (
+      <div className="min-h-full bg-surface-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-brand-800 border-t-brand-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
   const currentIdx = STATUS_ORDER.indexOf(delivery.status);
   const isCancelled = delivery.status === 'cancelled';
   const isDelivered = delivery.status === 'delivered';
@@ -232,11 +259,9 @@ export default function TrackingPage() {
 
   function cancelOrder() {
     setCancelling(true);
-    setTimeout(() => {
-      if (orderIndex !== -1) MOCK_ORDERS[orderIndex].status = 'cancelled';
-      setLocalStatus('cancelled');
-      setCancelling(false);
-    }, 800);
+    setDelivery(prev => ({ ...prev, status: 'cancelled' })); // optimistic
+    supabase.from('deliveries').update({ status: 'cancelled' }).eq('id', deliveryId)
+      .then(() => setCancelling(false));
   }
 
   function sendChat() {

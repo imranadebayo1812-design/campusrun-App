@@ -1,10 +1,11 @@
 import { lazy, Suspense, Component } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import LoginPage from '@/components/auth/LoginPage';
 import TermsModal from '@/components/auth/TermsModal';
 import OnboardingForm from '@/components/auth/OnboardingForm';
 import MobileShell from '@/components/layout/MobileShell';
+import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 
 const HomePage                = lazy(() => import('@/pages/HomePage'));
 const OrdersPage              = lazy(() => import('@/pages/OrdersPage'));
@@ -52,6 +53,9 @@ function LoadingScreen() {
 
 export default function App() {
   const { session, profile, loading, authError } = useAuth();
+  const location = useLocation();
+
+  if (location.pathname === '/privacy') return <PrivacyPolicyPage />;
 
   if (loading) return <LoadingScreen />;
   if (authError) return (

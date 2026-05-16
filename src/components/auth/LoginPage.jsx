@@ -73,8 +73,9 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'signup' && (
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Full Name</label>
+                <label htmlFor="login-fullname" className="block text-sm font-medium text-gray-300 mb-1.5">Full Name</label>
                 <input
+                  id="login-fullname"
                   type="text"
                   required
                   value={fullName}
@@ -86,37 +87,41 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">Email</label>
+              <label htmlFor="login-email" className="block text-sm font-medium text-gray-300 mb-1.5">Email</label>
               <input
+                id="login-email"
                 type="email"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="you@nileuniversity.edu.ng"
+                aria-describedby={error ? 'login-error' : undefined}
                 className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
+              <label htmlFor="login-password" className="block text-sm font-medium text-gray-300 mb-1.5">Password</label>
               <input
+                id="login-password"
                 type="password"
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
                 minLength={6}
+                aria-describedby={error ? 'login-error' : undefined}
                 className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50"
               />
             </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3">
+              <div id="login-error" role="alert" className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3">
                 {error}
               </div>
             )}
             {success && (
-              <div className="bg-green-500/10 border border-green-500/30 text-green-400 text-sm rounded-xl px-4 py-3">
+              <div role="status" className="bg-green-500/10 border border-green-500/30 text-green-400 text-sm rounded-xl px-4 py-3">
                 {success}
               </div>
             )}

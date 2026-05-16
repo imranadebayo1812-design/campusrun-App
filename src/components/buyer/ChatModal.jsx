@@ -46,10 +46,15 @@ export default function ChatModal({ deliveryId, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-end">
-      <div className="bg-surface-900 border border-white/[0.08] rounded-t-2xl w-full max-w-md mx-auto h-[70vh] flex flex-col">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Chat with courier"
+        className="bg-surface-900 border border-white/[0.08] rounded-t-2xl w-full max-w-md mx-auto h-[70vh] flex flex-col"
+      >
         <div className="flex items-center justify-between p-4 border-b border-white/[0.08]">
           <p className="font-semibold text-white">Chat with Courier</p>
-          <button onClick={onClose}><X className="w-5 h-5 text-gray-400" /></button>
+          <button onClick={onClose} aria-label="Close chat"><X className="w-5 h-5 text-gray-400" aria-hidden="true" /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -84,9 +89,10 @@ export default function ChatModal({ deliveryId, onClose }) {
           <button
             type="submit"
             disabled={!message.trim() || sending}
+            aria-label="Send message"
             className="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center disabled:opacity-50"
           >
-            <Send className="w-4 h-4 text-white" />
+            <Send className="w-4 h-4 text-white" aria-hidden="true" />
           </button>
         </form>
       </div>

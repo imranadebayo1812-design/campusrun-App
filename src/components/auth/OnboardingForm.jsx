@@ -54,10 +54,11 @@ export default function OnboardingForm() {
           {step === 1 && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1">
-                  <User className="w-4 h-4" /> Full Name
+                <label htmlFor="ob-fullname" className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1">
+                  <User className="w-4 h-4" aria-hidden="true" /> Full Name
                 </label>
                 <input
+                  id="ob-fullname"
                   type="text"
                   value={data.full_name}
                   onChange={e => update('full_name', e.target.value)}
@@ -67,10 +68,11 @@ export default function OnboardingForm() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1">
-                  <Phone className="w-4 h-4" /> Phone Number
+                <label htmlFor="ob-phone" className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1">
+                  <Phone className="w-4 h-4" aria-hidden="true" /> Phone Number
                 </label>
                 <input
+                  id="ob-phone"
                   type="tel"
                   value={data.phone_number}
                   onChange={e => update('phone_number', e.target.value)}
@@ -80,10 +82,11 @@ export default function OnboardingForm() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1">
-                  <BookOpen className="w-4 h-4" /> Course
+                <label htmlFor="ob-course" className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1">
+                  <BookOpen className="w-4 h-4" aria-hidden="true" /> Course
                 </label>
                 <input
+                  id="ob-course"
                   type="text"
                   value={data.course}
                   onChange={e => update('course', e.target.value)}
@@ -123,10 +126,11 @@ export default function OnboardingForm() {
               </div>
               {data.campus_status === 'residential' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1">
-                    <Home className="w-4 h-4" /> Hostel
+                  <label htmlFor="ob-hostel" className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1">
+                    <Home className="w-4 h-4" aria-hidden="true" /> Hostel
                   </label>
                   <select
+                    id="ob-hostel"
                     value={data.hostel}
                     onChange={e => update('hostel', e.target.value)}
                     className={`${inputClass} bg-surface-800`}

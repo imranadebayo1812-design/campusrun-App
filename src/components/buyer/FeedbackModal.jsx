@@ -26,10 +26,15 @@ export default function FeedbackModal({ delivery, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-end">
-      <div className="bg-surface-900 border border-white/[0.08] rounded-t-2xl w-full max-w-md mx-auto p-5 space-y-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Rate your delivery"
+        className="bg-surface-900 border border-white/[0.08] rounded-t-2xl w-full max-w-md mx-auto p-5 space-y-4"
+      >
         <div className="flex items-center justify-between">
           <p className="font-semibold text-white">Rate your delivery</p>
-          <button onClick={onClose}><X className="w-5 h-5 text-gray-400" /></button>
+          <button onClick={onClose} aria-label="Close"><X className="w-5 h-5 text-gray-400" aria-hidden="true" /></button>
         </div>
 
         {done ? (
@@ -40,10 +45,10 @@ export default function FeedbackModal({ delivery, onClose }) {
           </div>
         ) : (
           <>
-            <div className="flex justify-center gap-2">
+            <div className="flex justify-center gap-2" role="group" aria-label="Rating">
               {[1, 2, 3, 4, 5].map(s => (
-                <button key={s} onClick={() => setRating(s)}>
-                  <Star className={`w-8 h-8 transition-colors ${s <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`} />
+                <button key={s} onClick={() => setRating(s)} aria-label={`${s} star${s !== 1 ? 's' : ''}`} aria-pressed={s <= rating}>
+                  <Star className={`w-8 h-8 transition-colors ${s <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`} aria-hidden="true" />
                 </button>
               ))}
             </div>

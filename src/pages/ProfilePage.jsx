@@ -1,7 +1,71 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { User, Phone, BookOpen, Home, LogOut, Bike } from 'lucide-react';
+import { User, Phone, BookOpen, Home, LogOut, Bike, Trash2, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+function DeleteAccountModal({ onClose }) {
+  const [confirm, setConfirm] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  function handleDelete() {
+    if (confirm !== 'DELETE') return;
+    setSubmitted(true);
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Delete account"
+      className="fixed inset-0 z-[200] flex items-end justify-center"
+      style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+    >
+      <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="font-bold text-white text-base">Delete your account?</p>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 text-xl font-bold leading-none">×</button>
+        </div>
+
+        {submitted ? (
+          <div className="text-center py-6">
+            <p className="text-green-400 font-semibold">Request submitted.</p>
+            <p className="text-gray-400 text-sm mt-1">Your account will be permanently deleted within 24 hours.</p>
+            <button onClick={onClose} className="mt-4 bg-brand-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">Done</button>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-gray-400">
+              This will permanently delete all your orders, wallet balance, and profile data.{' '}
+              <strong className="text-white">This cannot be undone.</strong>
+            </p>
+            <div>
+              <label htmlFor="delete-confirm" className="text-xs font-medium text-gray-400 block mb-1">
+                Type <strong className="text-white">DELETE</strong> to confirm
+              </label>
+              <input
+                id="delete-confirm"
+                value={confirm}
+                onChange={e => setConfirm(e.target.value)}
+                placeholder="DELETE"
+                className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/50"
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={onClose} className="flex-1 bg-surface-800 border border-white/[0.08] text-gray-400 font-medium py-3 rounded-xl text-sm">Cancel</button>
+              <button
+                onClick={handleDelete}
+                disabled={confirm !== 'DELETE'}
+                className="flex-1 bg-red-500 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm"
+              >
+                Delete Account
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function ProfilePage() {
   const { profile, session, updateProfileLocally } = useAuth();
@@ -9,6 +73,7 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ full_name: profile?.full_name || '', phone_number: profile?.phone_number || '', course: profile?.course || '', hostel: profile?.hostel || '' });
   const [saving, setSaving] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   async function saveProfile() {
     setSaving(true);
@@ -150,17 +215,37 @@ export default function ProfilePage() {
       </div>
 
       {/* Sign out */}
-      <div className="mx-4 mb-4">
+      <div className="mx-4 mb-3">
         <button
           onClick={handleSignOut}
           className="w-full flex items-center justify-center gap-2 bg-red-500/10 border border-red-500/20 text-red-400 font-semibold py-3 rounded-2xl text-sm"
         >
-          <LogOut className="w-4 h-4" />
+          <LogOut className="w-4 h-4" aria-hidden="true" />
           Sign Out
         </button>
       </div>
 
+      {/* Legal */}
+      <div className="mx-4 mb-3 flex flex-col gap-2">
+        <button
+          onClick={() => navigate('/privacy')}
+          className="w-full flex items-center justify-center gap-2 bg-surface-900 border border-white/[0.08] text-gray-500 font-medium py-3 rounded-2xl text-sm"
+        >
+          <Shield className="w-4 h-4" aria-hidden="true" />
+          Privacy Policy
+        </button>
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          className="w-full flex items-center justify-center gap-2 bg-surface-900 border border-white/[0.08] text-gray-600 font-medium py-3 rounded-2xl text-sm"
+        >
+          <Trash2 className="w-4 h-4" aria-hidden="true" />
+          Delete Account
+        </button>
+      </div>
+
       <div className="h-4" />
+
+      {showDeleteModal && <DeleteAccountModal onClose={() => setShowDeleteModal(false)} />}
     </div>
   );
 }

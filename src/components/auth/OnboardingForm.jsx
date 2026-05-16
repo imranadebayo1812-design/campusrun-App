@@ -6,7 +6,7 @@ import Logo from '@/components/ui/Logo';
 
 const HOSTELS = [
   'Nile Hall A', 'Nile Hall B', 'Nile Hall C', 'Nile Hall D',
-  'Victoria Falls', 'Moat Heaven', 'Other',
+  'Victoria Falls', 'Most Heaven', 'Other',
 ];
 
 export default function OnboardingForm() {
@@ -109,22 +109,25 @@ export default function OnboardingForm() {
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Campus Status</label>
                 <div className="grid grid-cols-2 gap-3">
-                  {['residential', 'commuter'].map(status => (
+                  {[
+                    { value: 'resident', label: 'Residential' },
+                    { value: 'day_student', label: 'Commuter' },
+                  ].map(({ value, label }) => (
                     <button
-                      key={status}
-                      onClick={() => update('campus_status', status)}
-                      className={`py-3 rounded-xl border-2 text-sm font-medium capitalize transition-all ${
-                        data.campus_status === status
+                      key={value}
+                      onClick={() => update('campus_status', value)}
+                      className={`py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                        data.campus_status === value
                           ? 'border-brand-500 bg-brand-500/10 text-white'
                           : 'border-white/[0.08] text-gray-400 bg-surface-800'
                       }`}
                     >
-                      {status}
+                      {label}
                     </button>
                   ))}
                 </div>
               </div>
-              {data.campus_status === 'residential' && (
+              {data.campus_status === 'resident' && (
                 <div>
                   <label htmlFor="ob-hostel" className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1">
                     <Home className="w-4 h-4" aria-hidden="true" /> Hostel

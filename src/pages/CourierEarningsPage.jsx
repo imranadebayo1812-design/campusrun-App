@@ -13,7 +13,7 @@ function WithdrawModal({ title, maxAmount, isEarnings, onAddToWallet, onClose })
   const [done, setDone] = useState(false);
 
   const amt = parseFloat(amount) || 0;
-  const commission = (isEarnings && dest === 'bank') ? Math.round(amt * 0.15) : 0;
+  const commission = isEarnings ? Math.round(amt * 0.15) : 0;
   const net = amt - commission;
 
   async function submit() {
@@ -27,7 +27,7 @@ function WithdrawModal({ title, maxAmount, isEarnings, onAddToWallet, onClose })
     setSubmitting(true);
     await new Promise(r => setTimeout(r, 800));
     if (dest === 'wallet') {
-      onAddToWallet(amt);
+      onAddToWallet(net); // net after commission
     }
     setSubmitting(false);
     setDone(true);
@@ -49,7 +49,7 @@ function WithdrawModal({ title, maxAmount, isEarnings, onAddToWallet, onClose })
                   <Wallet className="w-6 h-6 text-brand-400" />
                 </div>
                 <p className="text-green-400 font-semibold text-base">Added to wallet!</p>
-                <p className="text-gray-400 text-sm mt-1">₦{amt.toLocaleString()} is now in your CampusRun wallet.</p>
+                <p className="text-gray-400 text-sm mt-1">₦{net.toLocaleString()} is now in your CampusRun wallet.</p>
               </>
             ) : (
               <>
@@ -90,8 +90,8 @@ function WithdrawModal({ title, maxAmount, isEarnings, onAddToWallet, onClose })
             {/* Wallet benefit note */}
             {dest === 'wallet' && (
               <div className="bg-brand-500/10 border border-brand-500/20 rounded-xl px-4 py-3">
-                <p className="text-xs text-brand-400 font-semibold">No commission · No transfer charges</p>
-                <p className="text-xs text-brand-400/70 mt-0.5">Full amount added instantly — use it to pay for orders.</p>
+                <p className="text-xs text-brand-400 font-semibold">No bank transfer charges · Instant</p>
+                <p className="text-xs text-brand-400/70 mt-0.5">Net amount added to your wallet — spend it on orders without retransferring.</p>
               </div>
             )}
 
@@ -123,8 +123,8 @@ function WithdrawModal({ title, maxAmount, isEarnings, onAddToWallet, onClose })
               />
             </div>
 
-            {/* Commission breakdown — earnings to bank only */}
-            {isEarnings && dest === 'bank' && amt > 0 && (
+            {/* Commission breakdown — all earnings withdrawals */}
+            {isEarnings && amt > 0 && (
               <div className="bg-surface-800 border border-white/[0.08] rounded-xl p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Withdrawal</span>
@@ -218,7 +218,7 @@ export default function CourierEarningsPage() {
           <div className="flex items-start justify-between mb-4">
             <p className="text-xs font-bold text-white/70 uppercase tracking-wider">Delivery Earnings</p>
             <span className="text-xs bg-white/20 text-white font-semibold px-2.5 py-1 rounded-full">
-              15% COMMISSION TO BANK
+              15% COMMISSION
             </span>
           </div>
           <p className="text-4xl font-bold text-white mb-3">₦{e.this_week.toLocaleString()}</p>

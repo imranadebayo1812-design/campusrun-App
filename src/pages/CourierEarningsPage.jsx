@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { MOCK_EARNINGS, MOCK_EARNING_HISTORY } from '@/lib/mockData';
-import { ShoppingBag, Banknote, MapPin } from 'lucide-react';
+import { ShoppingBag, Banknote, MapPin, Wallet } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-function WithdrawModal({ title, maxAmount, isEarnings, onClose }) {
+function WithdrawModal({ title, maxAmount, isEarnings, onAddToWallet, onClose }) {
+  const [dest, setDest] = useState('wallet'); // 'wallet' | 'bank'
   const [form, setForm] = useState({ bank_name: '', account_number: '', account_name: '' });
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
@@ -11,16 +13,22 @@ function WithdrawModal({ title, maxAmount, isEarnings, onClose }) {
   const [done, setDone] = useState(false);
 
   const amt = parseFloat(amount) || 0;
-  const tax = isEarnings ? Math.round(amt * 0.15) : 0;
-  const net = amt - tax;
+  const commission = (isEarnings && dest === 'bank') ? Math.round(amt * 0.15) : 0;
+  const net = amt - commission;
 
   async function submit() {
     if (!amt || amt < 500) { setError('Minimum withdrawal is ₦500'); return; }
     if (amt > maxAmount) { setError(`Max withdrawable is ₦${maxAmount.toLocaleString()}`); return; }
-    if (!form.bank_name || !form.account_number || !form.account_name) { setError('Fill in all bank details'); return; }
+    if (dest === 'bank' && (!form.bank_name || !form.account_number || !form.account_name)) {
+      setError('Fill in all bank details');
+      return;
+    }
     setError('');
     setSubmitting(true);
     await new Promise(r => setTimeout(r, 800));
+    if (dest === 'wallet') {
+      onAddToWallet(amt);
+    }
     setSubmitting(false);
     setDone(true);
   }
@@ -35,13 +43,60 @@ function WithdrawModal({ title, maxAmount, isEarnings, onClose }) {
 
         {done ? (
           <div className="text-center py-6">
-            <p className="text-green-400 font-semibold text-base">Request submitted!</p>
-            <p className="text-gray-400 text-sm mt-1">Processed within 24–48 hours.</p>
+            {dest === 'wallet' ? (
+              <>
+                <div className="w-12 h-12 bg-brand-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Wallet className="w-6 h-6 text-brand-400" />
+                </div>
+                <p className="text-green-400 font-semibold text-base">Added to wallet!</p>
+                <p className="text-gray-400 text-sm mt-1">₦{amt.toLocaleString()} is now in your CampusRun wallet.</p>
+              </>
+            ) : (
+              <>
+                <p className="text-green-400 font-semibold text-base">Request submitted!</p>
+                <p className="text-gray-400 text-sm mt-1">Processed within 24–48 hours.</p>
+              </>
+            )}
             <button onClick={onClose} className="mt-4 bg-brand-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">Done</button>
           </div>
         ) : (
           <>
-            {[
+            {/* Destination selector */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setDest('wallet'); setError(''); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                  dest === 'wallet'
+                    ? 'bg-brand-500 border-brand-500 text-white'
+                    : 'border-white/[0.08] text-gray-400 bg-surface-800'
+                }`}
+              >
+                <Wallet className="w-4 h-4" aria-hidden="true" />
+                To Wallet
+              </button>
+              <button
+                onClick={() => { setDest('bank'); setError(''); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                  dest === 'bank'
+                    ? 'bg-brand-500 border-brand-500 text-white'
+                    : 'border-white/[0.08] text-gray-400 bg-surface-800'
+                }`}
+              >
+                <Banknote className="w-4 h-4" aria-hidden="true" />
+                To Bank
+              </button>
+            </div>
+
+            {/* Wallet benefit note */}
+            {dest === 'wallet' && (
+              <div className="bg-brand-500/10 border border-brand-500/20 rounded-xl px-4 py-3">
+                <p className="text-xs text-brand-400 font-semibold">No commission · No transfer charges</p>
+                <p className="text-xs text-brand-400/70 mt-0.5">Full amount added instantly — use it to pay for orders.</p>
+              </div>
+            )}
+
+            {/* Bank fields — only shown when dest === 'bank' */}
+            {dest === 'bank' && [
               { label: 'Bank Name', field: 'bank_name', placeholder: 'e.g. GTBank' },
               { label: 'Account Number', field: 'account_number', placeholder: '0123456789' },
               { label: 'Account Name', field: 'account_name', placeholder: 'Full name on account' },
@@ -56,6 +111,7 @@ function WithdrawModal({ title, maxAmount, isEarnings, onClose }) {
                 />
               </div>
             ))}
+
             <div>
               <label className="text-xs font-medium text-gray-400 block mb-1">Amount (₦)</label>
               <input
@@ -67,33 +123,36 @@ function WithdrawModal({ title, maxAmount, isEarnings, onClose }) {
               />
             </div>
 
-            {/* Tax breakdown for earnings; no-deduction note for reimbursement */}
-            {isEarnings && amt > 0 ? (
+            {/* Commission breakdown — earnings to bank only */}
+            {isEarnings && dest === 'bank' && amt > 0 && (
               <div className="bg-surface-800 border border-white/[0.08] rounded-xl p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-400">Withdrawal</span>
                   <span className="text-white font-medium">₦{amt.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Tax (15%)</span>
-                  <span className="text-red-400 font-medium">−₦{tax.toLocaleString()}</span>
+                  <span className="text-gray-400">Commission (15%)</span>
+                  <span className="text-red-400 font-medium">−₦{commission.toLocaleString()}</span>
                 </div>
                 <div className="border-t border-white/[0.08] pt-2 flex justify-between text-sm">
                   <span className="text-white font-semibold">You receive</span>
                   <span className="text-green-400 font-bold">₦{net.toLocaleString()}</span>
                 </div>
               </div>
-            ) : !isEarnings ? (
+            )}
+
+            {/* No deduction note — reimbursement to bank */}
+            {!isEarnings && dest === 'bank' && (
               <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
                 <p className="text-xs text-green-400 font-medium">No deductions — full amount paid out</p>
               </div>
-            ) : null}
+            )}
 
             {error && <p className="text-xs text-red-400">{error}</p>}
             <div className="flex gap-2 pt-1">
               <button onClick={onClose} className="flex-1 bg-surface-800 border border-white/[0.08] text-gray-400 font-medium py-3 rounded-xl text-sm">Cancel</button>
               <button onClick={submit} disabled={submitting} className="flex-1 bg-brand-500 text-white font-semibold py-3 rounded-xl text-sm disabled:opacity-50">
-                {submitting ? 'Submitting…' : 'Submit'}
+                {submitting ? 'Processing…' : dest === 'wallet' ? 'Add to Wallet' : 'Submit Request'}
               </button>
             </div>
           </>
@@ -114,6 +173,7 @@ function withinHours(dateStr, hours) {
 }
 
 export default function CourierEarningsPage() {
+  const { profile, updateProfileLocally } = useAuth();
   const [modal, setModal] = useState(null); // 'reimbursement' | 'earnings' | null
   const [period, setPeriod] = useState('today');
 
@@ -125,11 +185,15 @@ export default function CourierEarningsPage() {
     return true;
   });
 
+  function handleAddToWallet(amount) {
+    updateProfileLocally({ wallet_balance: (profile?.wallet_balance || 0) + amount });
+  }
+
   return (
     <div className="bg-surface-950 min-h-full">
       {/* Header */}
       <div className="px-4 pt-5 pb-5">
-        <h1 className="text-xl font-bold text-white">My Wallet</h1>
+        <h1 className="text-xl font-bold text-white">My Earnings</h1>
         <p className="text-sm text-gray-500 mt-0.5">Your money, your pace.</p>
       </div>
 
@@ -139,7 +203,7 @@ export default function CourierEarningsPage() {
           <div className="flex items-start justify-between mb-4">
             <p className="text-xs font-bold text-white/70 uppercase tracking-wider">Purchase Reimbursement</p>
             <span className="text-xs bg-white/20 text-white font-semibold px-2.5 py-1 rounded-full">
-              WITHDRAWABLE · NO COMMISSION
+              NO COMMISSION
             </span>
           </div>
           <p className="text-4xl font-bold text-white mb-3">₦{e.food_reimbursed.toLocaleString()}</p>
@@ -154,7 +218,7 @@ export default function CourierEarningsPage() {
           <div className="flex items-start justify-between mb-4">
             <p className="text-xs font-bold text-white/70 uppercase tracking-wider">Delivery Earnings</p>
             <span className="text-xs bg-white/20 text-white font-semibold px-2.5 py-1 rounded-full">
-              WITHDRAWABLE
+              15% COMMISSION TO BANK
             </span>
           </div>
           <p className="text-4xl font-bold text-white mb-3">₦{e.this_week.toLocaleString()}</p>
@@ -252,6 +316,7 @@ export default function CourierEarningsPage() {
           title="Withdraw Reimbursement"
           maxAmount={e.food_reimbursed}
           isEarnings={false}
+          onAddToWallet={handleAddToWallet}
           onClose={() => setModal(null)}
         />
       )}
@@ -260,6 +325,7 @@ export default function CourierEarningsPage() {
           title="Withdraw Earnings"
           maxAmount={e.this_week}
           isEarnings={true}
+          onAddToWallet={handleAddToWallet}
           onClose={() => setModal(null)}
         />
       )}

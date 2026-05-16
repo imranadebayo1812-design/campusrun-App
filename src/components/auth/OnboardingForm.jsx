@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
-import { User, Phone, BookOpen, Home, CheckCircle, Package } from 'lucide-react';
+import { User, Phone, BookOpen, Home } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 
 const HOSTELS = [
@@ -11,13 +12,13 @@ const HOSTELS = [
 
 export default function OnboardingForm() {
   const { session, refreshProfile } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [data, setData] = useState({
     full_name: '', phone_number: '', course: '', campus_status: '', hostel: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [done, setDone] = useState(false);
 
   function update(field, value) {
     setData(prev => ({ ...prev, [field]: value }));
@@ -35,38 +36,13 @@ export default function OnboardingForm() {
     if (err) {
       setError(err.message || 'Could not save. Please try again.');
       setLoading(false);
-    } else {
-      setLoading(false);
-      setDone(true);
+      return;
     }
+    await refreshProfile();
+    navigate('/welcome', { replace: true, state: { name: data.full_name } });
   }
 
   const inputClass = "w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50";
-
-  // ── Success screen ──────────────────────────────────────────
-  if (done) {
-    return (
-      <div className="min-h-screen bg-surface-950 flex items-center justify-center p-4">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-72 bg-brand-600/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="w-full max-w-sm relative z-10 text-center">
-          <div className="w-20 h-20 bg-brand-500/20 rounded-full flex items-center justify-center mx-auto mb-5">
-            <CheckCircle className="w-10 h-10 text-brand-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">You're all set, {data.full_name.split(' ')[0]}!</h1>
-          <p className="text-gray-400 text-sm mb-8 leading-relaxed">
-            Welcome to CampusRun. Food, errands, packages — your courier is a tap away.
-          </p>
-          <button
-            onClick={() => refreshProfile()}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand-500/25 text-base"
-          >
-            <Package className="w-5 h-5" />
-            Start Ordering
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-surface-950 flex items-center justify-center p-4">

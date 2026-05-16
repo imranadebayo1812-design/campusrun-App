@@ -4,12 +4,13 @@ import { MOCK_ACTIVE_DELIVERY, MOCK_AVAILABLE_ORDERS, MOCK_EARNINGS } from '@/li
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
 import {
   Bike, MapPin, Package, Lock, CheckCircle, Wallet, TrendingUp,
-  Star, Power, Clock, ShoppingBag, Truck, AlertCircle,
+  Star, Power, Clock, ShoppingBag, Truck, AlertCircle, AlertTriangle,
+  Pencil, ShieldAlert,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 
-/* ── Delivery code verification modal ─────────────────────────── */
+/* ── Delivery code modal ────────────────────────────────────────── */
 function DeliveryCodeModal({ delivery, onSuccess, onClose }) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -35,9 +36,7 @@ function DeliveryCodeModal({ delivery, onSuccess, onClose }) {
         </div>
         <p className="text-sm text-gray-400">Ask the buyer for their 4-digit code to confirm delivery.</p>
         <input
-          type="number"
-          inputMode="numeric"
-          maxLength={4}
+          type="number" inputMode="numeric" maxLength={4}
           value={code}
           onChange={e => { setCode(e.target.value.slice(0, 4)); setError(''); }}
           placeholder="0000"
@@ -56,7 +55,149 @@ function DeliveryCodeModal({ delivery, onSuccess, onClose }) {
   );
 }
 
-/* ── Helpers ───────────────────────────────────────────────────── */
+/* ── Fraud warning modal ────────────────────────────────────────── */
+function FraudWarningModal({ itemName, onAccept, onClose }) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
+      <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-5 h-5 text-red-400" aria-hidden="true" />
+            <p className="font-bold text-white">Before You Edit Prices</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 text-xl font-bold leading-none">×</button>
+        </div>
+
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+          <p className="text-sm font-bold text-red-400 mb-2">Anti-Fraud Notice</p>
+          <p className="text-sm text-red-400/80 leading-relaxed">
+            Unauthorized price inflation may lead to <strong className="text-red-400">account suspension or permanent ban</strong>. All price edits are logged and reviewed by our team.
+          </p>
+        </div>
+
+        <p className="text-xs text-gray-500 leading-relaxed">
+          Only edit prices if the vendor's actual price differs from what was listed. The buyer will be notified and must approve before you can continue. False edits are detectable and will be penalized.
+        </p>
+
+        {itemName && (
+          <div className="bg-surface-800 border border-white/[0.06] rounded-xl px-4 py-2.5">
+            <p className="text-xs text-gray-500">Editing price for: <span className="text-white font-semibold">{itemName}</span></p>
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-1">
+          <button onClick={onClose} className="flex-1 bg-surface-800 border border-white/[0.08] text-gray-400 font-medium py-3 rounded-xl text-sm">Cancel</button>
+          <button onClick={onAccept} className="flex-1 bg-brand-500 text-white font-semibold py-3 rounded-xl text-sm">I Understand</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Item price edit modal ──────────────────────────────────────── */
+function ItemPriceEditModal({ target, onSubmit, onClose }) {
+  const { item } = target;
+  const [newPriceStr, setNewPriceStr] = useState('');
+
+  const originalPrice = parseFloat(item.original_price ?? item.price);
+  const newPrice = parseFloat(newPriceStr) || 0;
+  const diff = newPrice > 0 ? newPrice - originalPrice : 0;
+  const isIncrease = diff > 0;
+  const qty = item.qty || 1;
+
+  function submit() {
+    if (!newPrice || newPrice <= 0 || newPrice === originalPrice) return;
+    onSubmit({
+      orderId: target.orderId,
+      itemIndex: target.itemIndex,
+      itemName: item.name,
+      originalPrice,
+      newPrice,
+      diff,
+      qty,
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}>
+      <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Pencil className="w-4 h-4 text-brand-400" aria-hidden="true" />
+            <p className="font-bold text-white text-base">Edit Item Price</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 text-xl font-bold leading-none">×</button>
+        </div>
+
+        <div className="bg-surface-800 border border-white/[0.06] rounded-xl px-4 py-3 flex justify-between items-center">
+          <div>
+            <p className="text-xs text-gray-500">Item</p>
+            <p className="text-sm font-semibold text-white">{item.name}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-gray-500">Original price</p>
+            <p className="text-sm font-bold text-white">₦{(originalPrice * qty).toLocaleString()}</p>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-gray-400 block mb-1">
+            New price per unit (₦)
+          </label>
+          <input
+            type="number"
+            value={newPriceStr}
+            onChange={e => setNewPriceStr(e.target.value)}
+            placeholder={`Was ₦${originalPrice.toLocaleString()}`}
+            className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+          />
+        </div>
+
+        {/* Breakdown */}
+        {newPrice > 0 && newPrice !== originalPrice && (
+          <div className="bg-surface-800 border border-white/[0.08] rounded-xl p-4 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">Original ({qty}×)</span>
+              <span className="text-white">₦{(originalPrice * qty).toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">New price ({qty}×)</span>
+              <span className="text-white">₦{(newPrice * qty).toLocaleString()}</span>
+            </div>
+            <div className="border-t border-white/[0.08] pt-2 flex justify-between text-sm font-semibold">
+              <span className="text-gray-300">Difference</span>
+              <span className={isIncrease ? 'text-red-400' : 'text-green-400'}>
+                {isIncrease ? '+' : ''}₦{(diff * qty).toLocaleString()}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 bg-surface-800/50 rounded-xl px-3 py-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-gray-600 shrink-0" aria-hidden="true" />
+          <p className="text-[11px] text-gray-600">Price changes are monitored for fraud prevention.</p>
+        </div>
+
+        {newPrice > 0 && newPrice === originalPrice && (
+          <p className="text-xs text-gray-500 text-center">Price is unchanged — nothing to submit.</p>
+        )}
+
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 bg-surface-800 border border-white/[0.08] text-gray-400 font-medium py-3 rounded-xl text-sm">Cancel</button>
+          <button
+            onClick={submit}
+            disabled={!newPrice || newPrice <= 0 || newPrice === originalPrice}
+            className="flex-1 bg-brand-500 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm"
+          >
+            Submit Price Change
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Helpers ────────────────────────────────────────────────────── */
 function fmt(secs) {
   return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
 }
@@ -75,10 +216,10 @@ function getEta(order) {
 }
 
 const STATUS_NEXT = {
-  placed:     { label: 'Mark as Bought',      next: 'bought',     color: 'from-blue-600 to-blue-700' },
-  bought:     { label: 'Mark On The Way',     next: 'on_the_way', color: 'from-brand-500 to-indigo-600' },
-  on_the_way: { label: 'Mark as Arrived',     next: 'arrived',    color: 'from-indigo-600 to-indigo-700' },
-  arrived:    { label: 'Verify Delivery Code', next: 'delivered', color: 'from-green-600 to-green-700', requiresCode: true },
+  placed:     { label: 'Mark as Bought',       next: 'bought',     color: 'from-blue-600 to-blue-700' },
+  bought:     { label: 'Mark On The Way',      next: 'on_the_way', color: 'from-brand-500 to-indigo-600' },
+  on_the_way: { label: 'Mark as Arrived',      next: 'arrived',    color: 'from-indigo-600 to-indigo-700' },
+  arrived:    { label: 'Verify Delivery Code', next: 'delivered',  color: 'from-green-600 to-green-700', requiresCode: true },
 };
 
 const STATUS_BADGE = {
@@ -92,9 +233,12 @@ const STATUS_LABEL = {
   placed: 'Order Placed', bought: 'Bought', on_the_way: 'On The Way', arrived: 'Arrived',
 };
 
-/* ── Main component ────────────────────────────────────────────── */
+/* ── Main component ─────────────────────────────────────────────── */
 export default function CourierDashboard() {
-  const { profile } = useAuth();
+  const {
+    profile,
+    priceEditState, submitPriceEdits, clearRejectedOrder,
+  } = useAuth();
   const navigate = useNavigate();
   const [isOnline, setIsOnline] = useState(false);
   const [tick, setTick] = useState(0);
@@ -104,11 +248,21 @@ export default function CourierDashboard() {
   const [available, setAvailable] = useState([...MOCK_AVAILABLE_ORDERS]);
   const [verifyDelivery, setVerifyDelivery] = useState(null);
   const [updating, setUpdating] = useState(null);
+  const [fraudWarningTarget, setFraudWarningTarget] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
 
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Handle buyer cancellation due to price rejection
+  useEffect(() => {
+    if (priceEditState.rejectedOrderId) {
+      setActiveOrders(prev => prev.filter(o => o.id !== priceEditState.rejectedOrderId));
+      clearRejectedOrder();
+    }
+  }, [priceEditState.rejectedOrderId]);
 
   if (!profile?.is_courier) {
     return (
@@ -127,17 +281,54 @@ export default function CourierDashboard() {
 
   function acceptOrder(order) {
     setAvailable(prev => prev.filter(o => o.id !== order.id));
-    setActiveOrders(prev => [...prev, { ...order, status: 'placed', delivery_code: '2508', accepted_at: new Date().toISOString() }]);
+    setActiveOrders(prev => [
+      ...prev,
+      { ...order, status: 'placed', delivery_code: '2508', accepted_at: new Date().toISOString() },
+    ]);
   }
 
   async function updateStatus(delivery, nextStatus) {
     if (STATUS_NEXT[delivery.status]?.requiresCode) { setVerifyDelivery(delivery); return; }
     const gl = graceLeft(delivery);
-    if (delivery.status === 'placed' && gl > 0) return; // blocked by grace
+    if (delivery.status === 'placed' && gl > 0) return;
+    if (priceEditState.pendingApproval) return; // blocked waiting for buyer
     setUpdating(delivery.id);
     await new Promise(r => setTimeout(r, 500));
     setActiveOrders(prev => prev.map(o => o.id === delivery.id ? { ...o, status: nextStatus } : o));
     setUpdating(null);
+  }
+
+  function handleItemEditClick(orderId, itemIndex, item) {
+    setFraudWarningTarget({ orderId, itemIndex, item });
+  }
+
+  function handleFraudAccept() {
+    setEditingItem(fraudWarningTarget);
+    setFraudWarningTarget(null);
+  }
+
+  function handleItemPriceSubmit({ orderId, itemIndex, itemName, originalPrice, newPrice, diff, qty }) {
+    // Update item price in local order state
+    setActiveOrders(prev => prev.map(o => {
+      if (o.id !== orderId) return o;
+      const items = o.items.map((item, i) => {
+        if (i !== itemIndex) return item;
+        return {
+          ...item,
+          original_price: item.original_price ?? item.price,
+          price: String(newPrice),
+        };
+      });
+      return { ...o, items };
+    }));
+
+    // Submit to shared context → triggers buyer notification
+    submitPriceEdits(
+      orderId,
+      [{ orderId, itemIndex, itemName, originalPrice, newPrice, diff, qty }],
+      profile?.full_name
+    );
+    setEditingItem(null);
   }
 
   const inProgress = activeOrders.filter(o => o.status !== 'delivered');
@@ -147,11 +338,13 @@ export default function CourierDashboard() {
   const doneCount = done.length;
 
   const stats = [
-    { label: 'Total Deliveries', value: MOCK_EARNINGS.deliveries_week, sub: `${MOCK_EARNINGS.deliveries_today} today`, icon: CheckCircle, iconColor: 'text-green-400', iconBg: 'bg-green-500/15' },
-    { label: 'Earned This Week', value: `₦${MOCK_EARNINGS.this_week.toLocaleString()}`, sub: `₦${MOCK_EARNINGS.today.toLocaleString()} today`, icon: Wallet, iconColor: 'text-brand-400', iconBg: 'bg-brand-500/15' },
-    { label: 'Daily Average', value: `₦${Math.round(MOCK_EARNINGS.this_week / 7).toLocaleString()}`, sub: 'per day this week', icon: TrendingUp, iconColor: 'text-blue-400', iconBg: 'bg-blue-500/15' },
-    { label: 'Tips Received', value: `₦${MOCK_EARNINGS.tips.toLocaleString()}`, sub: 'all time', icon: Star, iconColor: 'text-yellow-400', iconBg: 'bg-yellow-500/15' },
+    { label: 'Total Deliveries', value: 14, sub: '3 today', icon: CheckCircle, iconColor: 'text-green-400', iconBg: 'bg-green-500/15' },
+    { label: 'Earned This Week', value: `₦${MOCK_EARNINGS.earned.toLocaleString()}`, sub: 'fees + tips', icon: Wallet, iconColor: 'text-brand-400', iconBg: 'bg-brand-500/15' },
+    { label: 'Daily Average', value: `₦${Math.round(MOCK_EARNINGS.earned / 7).toLocaleString()}`, sub: 'per day this week', icon: TrendingUp, iconColor: 'text-blue-400', iconBg: 'bg-blue-500/15' },
+    { label: 'Reimbursement', value: `₦${MOCK_EARNINGS.food_reimbursed.toLocaleString()}`, sub: 'pending payout', icon: Star, iconColor: 'text-yellow-400', iconBg: 'bg-yellow-500/15' },
   ];
+
+  const awaitingApproval = priceEditState.pendingApproval;
 
   return (
     <div className="bg-surface-950 min-h-full">
@@ -190,9 +383,9 @@ export default function CourierDashboard() {
       <div className="px-4 mb-4">
         <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-3 grid grid-cols-3 divide-x divide-white/[0.08]">
           {[
-            { label: 'OPEN', count: openCount, color: 'text-white' },
-            { label: 'ACTIVE', count: activeCount, color: 'text-brand-400' },
-            { label: 'DONE', count: doneCount, color: 'text-green-400' },
+            { label: 'OPEN',   count: openCount,   color: 'text-white' },
+            { label: 'ACTIVE', count: activeCount,  color: 'text-brand-400' },
+            { label: 'DONE',   count: doneCount,    color: 'text-green-400' },
           ].map(({ label, count, color }) => (
             <div key={label} className="text-center px-2 py-1">
               <p className={`text-2xl font-bold ${color}`}>{count}</p>
@@ -202,7 +395,7 @@ export default function CourierDashboard() {
         </div>
       </div>
 
-      {/* Offline state */}
+      {/* Offline */}
       {!isOnline && (
         <div className="px-4 mb-4">
           <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-8 flex flex-col items-center text-center">
@@ -213,7 +406,7 @@ export default function CourierDashboard() {
             <p className="text-gray-500 text-sm mt-1.5">Toggle online above to start receiving delivery requests.</p>
             <button
               onClick={() => setIsOnline(true)}
-              className="mt-5 bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white font-semibold px-6 py-2.5 rounded-xl text-sm shadow-lg shadow-brand-500/20"
+              className="mt-5 bg-gradient-to-br from-brand-500 to-indigo-600 text-white font-semibold px-6 py-2.5 rounded-xl text-sm shadow-lg shadow-brand-500/20"
             >
               Start Accepting Deliveries
             </button>
@@ -221,7 +414,7 @@ export default function CourierDashboard() {
         </div>
       )}
 
-      {/* My Active Deliveries */}
+      {/* Active Deliveries */}
       {isOnline && inProgress.length > 0 && (
         <div className="px-4 mb-4">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">My Active Deliveries</p>
@@ -232,7 +425,8 @@ export default function CourierDashboard() {
               const gracePeriodActive = gl > 0 && delivery.status === 'placed';
               const eta = getEta(delivery);
               const isBlocked = delivery.status === 'placed' && gl > 0;
-              /* force re-render on tick changes to update countdown */
+              const priceEditPending = awaitingApproval;
+              const canEditPrices = delivery.status === 'placed' && !isBlocked && !priceEditPending && delivery.order_type === 'purchase';
               void tick;
 
               return (
@@ -250,6 +444,19 @@ export default function CourierDashboard() {
                       >
                         Cancel
                       </button>
+                    </div>
+                  )}
+
+                  {/* Awaiting buyer price approval banner */}
+                  {priceEditPending && (
+                    <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-3 flex items-start gap-3">
+                      <Clock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5 animate-pulse" aria-hidden="true" />
+                      <div>
+                        <p className="text-sm font-bold text-amber-400">Awaiting buyer approval</p>
+                        <p className="text-xs text-amber-400/70 mt-0.5">
+                          Price update sent. Buyer must accept or cancel before you can continue.
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -279,7 +486,7 @@ export default function CourierDashboard() {
                       </div>
                     </div>
 
-                    {/* ETA after bought */}
+                    {/* ETA */}
                     {delivery.status !== 'placed' && eta && (
                       <div className="flex items-center gap-2 mb-3">
                         <Clock className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
@@ -287,17 +494,57 @@ export default function CourierDashboard() {
                       </div>
                     )}
 
-                    {/* Items */}
+                    {/* Items with per-item price editing */}
                     {delivery.order_type === 'purchase' && delivery.items?.length > 0 && (
                       <div className="bg-surface-800 border border-white/[0.06] rounded-xl p-3 mb-3">
-                        <p className="text-xs font-semibold text-gray-400 mb-1.5">Items to buy:</p>
-                        {delivery.items.map((item, i) => (
-                          <div key={i} className="flex justify-between text-xs text-gray-300">
-                            <span>{item.qty}× {item.name}</span>
-                            <span>₦{(parseFloat(item.price) * item.qty).toLocaleString()}</span>
-                          </div>
-                        ))}
-                        <div className="border-t border-white/[0.08] mt-1.5 pt-1.5 flex justify-between text-xs font-semibold">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs font-semibold text-gray-400">Items to buy</p>
+                          {canEditPrices && (
+                            <span className="text-[10px] text-gray-600 flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+                              Price changes are monitored
+                            </span>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          {delivery.items.map((item, i) => {
+                            const originalPrice = item.original_price != null ? parseFloat(item.original_price) : null;
+                            const currentPrice = parseFloat(item.price);
+                            const wasEdited = originalPrice != null && originalPrice !== currentPrice;
+                            const diffAmt = wasEdited ? (currentPrice - originalPrice) * (item.qty || 1) : 0;
+
+                            return (
+                              <div key={i} className="flex items-start justify-between gap-2">
+                                <span className="text-xs text-gray-300 flex-1 leading-relaxed">{item.qty}× {item.name}</span>
+                                <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                                  {wasEdited && (
+                                    <span className="text-xs line-through text-gray-600">
+                                      ₦{(originalPrice * item.qty).toLocaleString()}
+                                    </span>
+                                  )}
+                                  <span className={`text-xs font-semibold ${wasEdited ? 'text-amber-400' : 'text-gray-300'}`}>
+                                    ₦{(currentPrice * item.qty).toLocaleString()}
+                                  </span>
+                                  {wasEdited && (
+                                    <span className="text-[10px] font-bold bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">
+                                      +₦{diffAmt.toLocaleString()}
+                                    </span>
+                                  )}
+                                  {canEditPrices && (
+                                    <button
+                                      onClick={() => handleItemEditClick(delivery.id, i, item)}
+                                      className="flex items-center gap-0.5 text-[10px] font-semibold text-brand-400 bg-brand-500/10 border border-brand-500/20 px-1.5 py-0.5 rounded"
+                                    >
+                                      <Pencil className="w-2.5 h-2.5" aria-hidden="true" />
+                                      Edit
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="border-t border-white/[0.08] mt-2 pt-2 flex justify-between text-xs font-semibold">
                           <span className="text-gray-400">Food cost (reimburse)</span>
                           <span className="text-green-400">+₦{delivery.food_cost?.toLocaleString()}</span>
                         </div>
@@ -322,11 +569,14 @@ export default function CourierDashboard() {
                     {action && (
                       <button
                         onClick={() => updateStatus(delivery, action.next)}
-                        disabled={updating === delivery.id || isBlocked}
+                        disabled={updating === delivery.id || isBlocked || priceEditPending}
                         className={`w-full bg-gradient-to-br ${action.color} text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity`}
                       >
                         {action.requiresCode && <Lock className="w-4 h-4" aria-hidden="true" />}
-                        {updating === delivery.id ? 'Updating…' : isBlocked ? `Waiting for grace period (${fmt(gl)})` : action.label}
+                        {updating === delivery.id ? 'Updating…' :
+                         priceEditPending ? 'Waiting for buyer approval…' :
+                         isBlocked ? `Waiting for grace period (${fmt(gl)})` :
+                         action.label}
                       </button>
                     )}
                   </div>
@@ -371,7 +621,9 @@ export default function CourierDashboard() {
                   </div>
                 </div>
                 {order.order_type === 'purchase' && order.food_cost > 0 && (
-                  <p className="text-xs text-gray-500 mb-3">Food cost to reimburse: <span className="text-green-400 font-semibold">₦{order.food_cost.toLocaleString()}</span></p>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Food cost to reimburse: <span className="text-green-400 font-semibold">₦{order.food_cost.toLocaleString()}</span>
+                  </p>
                 )}
                 {order.order_type === 'errand' && order.item_description && (
                   <p className="text-xs text-gray-400 bg-surface-800 rounded-lg px-3 py-2 mb-3">{order.item_description}</p>
@@ -394,14 +646,33 @@ export default function CourierDashboard() {
 
       <div className="h-6" />
 
+      {/* Modals */}
       {verifyDelivery && (
         <DeliveryCodeModal
           delivery={verifyDelivery}
           onSuccess={() => {
-            setActiveOrders(prev => prev.map(o => o.id === verifyDelivery.id ? { ...o, status: 'delivered' } : o));
+            setActiveOrders(prev => prev.map(o =>
+              o.id === verifyDelivery.id ? { ...o, status: 'delivered' } : o
+            ));
             setVerifyDelivery(null);
           }}
           onClose={() => setVerifyDelivery(null)}
+        />
+      )}
+
+      {fraudWarningTarget && (
+        <FraudWarningModal
+          itemName={fraudWarningTarget.item.name}
+          onAccept={handleFraudAccept}
+          onClose={() => setFraudWarningTarget(null)}
+        />
+      )}
+
+      {editingItem && (
+        <ItemPriceEditModal
+          target={editingItem}
+          onSubmit={handleItemPriceSubmit}
+          onClose={() => setEditingItem(null)}
         />
       )}
     </div>

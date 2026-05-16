@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { MOCK_EARNINGS, MOCK_EARNING_HISTORY } from '@/lib/mockData';
-import { ShoppingBag, Banknote, MapPin, Wallet, AlertTriangle, Mail } from 'lucide-react';
+import { ShoppingBag, Banknote, MapPin, Wallet, AlertTriangle, Mail, Lock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 function WithdrawModal({ title, maxAmount, isEarnings, onSuccess, onClose }) {
@@ -171,10 +171,12 @@ function withinHours(dateStr, hours) {
 }
 
 export default function CourierEarningsPage() {
-  const { profile, updateProfileLocally, addWalletTransaction } = useAuth();
+  const { profile, updateProfileLocally, addWalletTransaction, priceEditState } = useAuth();
   const [modal, setModal] = useState(null);
   const [period, setPeriod] = useState('today');
   const [earnings, setEarnings] = useState({ ...MOCK_EARNINGS });
+
+  const pendingVerification = priceEditState.pendingVerificationAmount;
 
   const availableEarnings = earnings.earned - earnings.withdrawn_earnings;
   const availableReimbursement = earnings.food_reimbursed - earnings.withdrawn_reimbursement;
@@ -268,6 +270,23 @@ export default function CourierEarningsPage() {
             <span>Withdrawn: <strong className="text-white">₦{earnings.withdrawn_earnings.toLocaleString()}</strong></span>
           </div>
         </div>
+
+        {/* Pending verification card — price edit differences awaiting admin review */}
+        {pendingVerification > 0 && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-start gap-3">
+            <Lock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-bold text-amber-400">Pending Verification</p>
+                <p className="text-lg font-bold text-amber-400">₦{pendingVerification.toLocaleString()}</p>
+              </div>
+              <p className="text-xs text-amber-400/70 mt-1">
+                Price edit difference under admin review. Released once approved.
+                Delivery fee and tips remain withdrawable normally.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Withdraw buttons */}
         <div className="grid grid-cols-2 gap-3 pt-1">

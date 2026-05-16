@@ -7,6 +7,15 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(MOCK_PROFILE);
   const [walletTransactions, setWalletTransactions] = useState([...MOCK_TRANSACTIONS]);
 
+  // Price edit state shared between CourierDashboard and TrackingPage
+  const [priceEditState, setPriceEditState] = useState({
+    pendingApproval: false,
+    edits: [],                      // [{orderId, itemIndex, itemName, originalPrice, newPrice, diff, qty}]
+    pendingVerificationAmount: 0,   // accumulated approved price diffs (shown in earnings)
+    adminQueue: [],                 // full edit history for admin panel
+    rejectedOrderId: null,          // set when buyer cancels → signals CourierDashboard
+  });
+
   const session = { user: MOCK_USER };
 
   function updateProfileLocally(updates) {
@@ -15,6 +24,57 @@ export function AuthProvider({ children }) {
 
   function addWalletTransaction(tx) {
     setWalletTransactions(prev => [tx, ...prev]);
+  }
+
+  // Called by CourierDashboard when courier submits a price edit
+  function submitPriceEdits(orderId, edits, courierName) {
+    const auditEntries = edits.map((e, i) => ({
+      id: `audit-${Date.now()}-${i}`,
+      courier_name: courierName || 'Unknown',
+      order_id: orderId,
+      item_name: e.itemName,
+      original_price: e.originalPrice,
+      new_price: e.newPrice,
+      difference: e.diff,
+      qty: e.qty,
+      timestamp: new Date().toISOString(),
+      status: 'pending',
+    }));
+    setPriceEditState(prev => ({
+      ...prev,
+      pendingApproval: true,
+      edits,
+      adminQueue: [...prev.adminQueue, ...auditEntries],
+    }));
+  }
+
+  // Called by TrackingPage (buyer) when they accept the price change
+  function buyerAcceptsPriceEdit() {
+    const extraAmount = priceEditState.edits.reduce(
+      (sum, e) => sum + Math.max(0, e.diff) * (e.qty || 1),
+      0
+    );
+    setPriceEditState(prev => ({
+      ...prev,
+      pendingApproval: false,
+      edits: [],
+      pendingVerificationAmount: prev.pendingVerificationAmount + extraAmount,
+    }));
+  }
+
+  // Called by TrackingPage (buyer) when they cancel due to price change
+  function buyerRejectsPriceEdit(orderId) {
+    setPriceEditState(prev => ({
+      ...prev,
+      pendingApproval: false,
+      edits: [],
+      rejectedOrderId: orderId,
+    }));
+  }
+
+  // Called by CourierDashboard after it handles the rejection
+  function clearRejectedOrder() {
+    setPriceEditState(prev => ({ ...prev, rejectedOrderId: null }));
   }
 
   function signOut() {}
@@ -28,6 +88,8 @@ export function AuthProvider({ children }) {
       signUp, signIn, signOut, refreshProfile,
       updateProfileLocally,
       walletTransactions, addWalletTransaction,
+      priceEditState,
+      submitPriceEdits, buyerAcceptsPriceEdit, buyerRejectsPriceEdit, clearRejectedOrder,
     }}>
       {children}
     </AuthContext.Provider>

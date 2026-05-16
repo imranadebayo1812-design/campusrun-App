@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import { MOCK_ORDERS } from '@/lib/mockData';
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
 import {
@@ -183,6 +184,7 @@ function RatingModal({ onClose, onSubmit }) {
 export default function TrackingPage() {
   const { deliveryId } = useParams();
   const navigate = useNavigate();
+  const { priceEditState, buyerAcceptsPriceEdit, buyerRejectsPriceEdit } = useAuth();
   const [localStatus, setLocalStatus] = useState(null);
   const [cancelling, setCancelling] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -312,6 +314,62 @@ export default function TrackingPage() {
               Cancellation window closed
             </div>
           )
+        )}
+
+        {/* Price approval card — shown when courier edits item prices */}
+        {priceEditState.pendingApproval && !isCancelled && !isDelivered && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" aria-hidden="true" />
+              <p className="text-sm font-bold text-amber-400">Price Updated by Courier</p>
+            </div>
+            <p className="text-xs text-gray-400">
+              Your runner updated item prices at the vendor. Review and accept to continue, or cancel the order.
+            </p>
+
+            {/* Item-level breakdown */}
+            <div className="bg-surface-900 border border-white/[0.08] rounded-xl p-3 space-y-2">
+              {priceEditState.edits.map((edit, i) => (
+                <div key={i} className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-white flex-1">{edit.itemName}</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-sm line-through text-gray-500">
+                      ₦{(edit.originalPrice * edit.qty).toLocaleString()}
+                    </span>
+                    <span className="text-sm font-bold text-white">
+                      ₦{(edit.newPrice * edit.qty).toLocaleString()}
+                    </span>
+                    {edit.diff > 0 && (
+                      <span className="text-[11px] font-bold bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">
+                        +₦{(edit.diff * edit.qty).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <div className="border-t border-white/[0.08] pt-2 flex justify-between text-sm font-semibold">
+                <span className="text-gray-400">Total additional</span>
+                <span className="text-amber-400">
+                  +₦{priceEditState.edits.reduce((sum, e) => sum + Math.max(0, e.diff) * (e.qty || 1), 0).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { buyerRejectsPriceEdit(delivery.id); cancelOrder(); }}
+                className="flex-1 bg-red-500/15 border border-red-500/30 text-red-400 font-semibold py-3 rounded-xl text-sm"
+              >
+                Cancel Order
+              </button>
+              <button
+                onClick={buyerAcceptsPriceEdit}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl text-sm"
+              >
+                Accept &amp; Continue
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Delivery code */}

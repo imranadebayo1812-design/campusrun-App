@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/api/supabaseClient';
+import { ensurePaystack, PAYSTACK_PUBLIC_KEY } from '@/lib/paystack';
 import { Wallet, Plus, ArrowDownLeft, ArrowUpRight, TrendingUp, Banknote } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -96,7 +98,7 @@ function WithdrawToBankModal({ maxAmount, onSuccess, onClose }) {
 }
 
 export default function WalletPage() {
-  const { profile, updateProfileLocally, walletTransactions, addWalletTransaction } = useAuth();
+  const { session, profile, updateProfileLocally, walletTransactions, addWalletTransaction } = useAuth();
   const [topupAmount, setTopupAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -109,28 +111,55 @@ export default function WalletPage() {
     setLoading(true);
     setError('');
     setSuccess('');
-    await new Promise(r => setTimeout(r, 800));
-    const newBalance = (profile?.wallet_balance || 0) + amount;
-    addWalletTransaction({
-      id: `tx-${Date.now()}`,
-      user_id: 'user-1',
-      type: 'topup',
-      amount,
-      balance_after: newBalance,
-      description: 'Wallet top up',
-      created_at: new Date().toISOString(),
-    });
-    updateProfileLocally({ wallet_balance: newBalance });
-    setTopupAmount('');
-    setSuccess(`₦${amount.toLocaleString()} added to your wallet!`);
-    setLoading(false);
+    try {
+      await ensurePaystack();
+      const ref = `topup_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      window.PaystackPop.setup({
+        key: PAYSTACK_PUBLIC_KEY,
+        email: session.user.email,
+        amount: amount * 100,
+        ref,
+        currency: 'NGN',
+        onSuccess: async (txn) => {
+          const { error: rpcErr } = await supabase.rpc('record_topup', {
+            p_reference: txn.reference,
+            p_amount: amount,
+          });
+          if (rpcErr) {
+            setError('Payment received but wallet credit failed. Contact support@campusrun.online.');
+          } else {
+            const newBalance = (profile?.wallet_balance || 0) + amount;
+            updateProfileLocally({ wallet_balance: newBalance });
+            addWalletTransaction({
+              id: `tx-${Date.now()}`,
+              user_id: session.user.id,
+              type: 'topup',
+              amount,
+              balance_after: newBalance,
+              description: 'Wallet top-up',
+              created_at: new Date().toISOString(),
+            });
+            setTopupAmount('');
+            setSuccess(`₦${amount.toLocaleString()} added to your wallet!`);
+          }
+          setLoading(false);
+        },
+        onCancel: () => {
+          setError('Payment cancelled.');
+          setLoading(false);
+        },
+      }).openIframe();
+    } catch {
+      setError('Could not load payment. Check your connection and try again.');
+      setLoading(false);
+    }
   }
 
   function handleWithdrawSuccess(amount) {
     const newBalance = Math.max(0, (profile?.wallet_balance || 0) - amount);
     addWalletTransaction({
       id: `tx-${Date.now()}`,
-      user_id: 'user-1',
+      user_id: session?.user?.id,
       type: 'withdrawal',
       amount,
       balance_after: newBalance,

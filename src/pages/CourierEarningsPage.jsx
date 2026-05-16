@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_EARNINGS, MOCK_EARNING_HISTORY } from '@/lib/mockData';
+import { supabase } from '@/api/supabaseClient';
 import { ShoppingBag, Banknote, MapPin, Wallet, AlertTriangle, Mail, Lock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -171,18 +171,81 @@ function withinHours(dateStr, hours) {
 }
 
 export default function CourierEarningsPage() {
-  const { profile, updateProfileLocally, addWalletTransaction, priceEditState } = useAuth();
+  const { session, profile, updateProfileLocally, addWalletTransaction, priceEditState } = useAuth();
   const [modal, setModal] = useState(null);
   const [period, setPeriod] = useState('today');
-  const [earnings, setEarnings] = useState({ ...MOCK_EARNINGS });
+  const [earningsList, setEarningsList] = useState([]);
+  const [withdrawnEarnings, setWithdrawnEarnings] = useState(0);
+  const [withdrawnReimbursement, setWithdrawnReimbursement] = useState(0);
 
   const pendingVerification = priceEditState.pendingVerificationAmount;
 
-  const availableEarnings = earnings.earned - earnings.withdrawn_earnings;
-  const availableReimbursement = earnings.food_reimbursed - earnings.withdrawn_reimbursement;
-  const frozen = earnings.has_frozen_earnings;
+  // ── Load earnings from DB ──────────────────────────────────
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    const userId = session.user.id;
+    let channel;
 
-  const filteredHistory = MOCK_EARNING_HISTORY.filter(entry => {
+    async function load() {
+      const { data } = await supabase
+        .from('courier_earnings')
+        .select('*, deliveries(pickup_location, dropoff_location, food_cost)')
+        .eq('courier_id', userId)
+        .order('created_at', { ascending: false });
+      setEarningsList(data || []);
+
+      channel = supabase.channel(`courier-earnings:${userId}`)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'courier_earnings',
+          filter: `courier_id=eq.${userId}`,
+        }, payload =>
+          setEarningsList(prev =>
+            prev.some(e => e.id === payload.new.id) ? prev : [payload.new, ...prev]
+          )
+        )
+        .subscribe();
+    }
+
+    load();
+    return () => { if (channel) supabase.removeChannel(channel); };
+  }, [session?.user?.id]);
+
+  // ── Derive totals ──────────────────────────────────────────
+  const earned = earningsList
+    .filter(e => ['delivery_fee', 'tip'].includes(e.type))
+    .reduce((s, e) => s + e.amount, 0);
+
+  const foodReimbursed = earningsList
+    .filter(e => e.type === 'reimbursement')
+    .reduce((s, e) => s + e.amount, 0);
+
+  const frozen = earningsList.some(e => e.status === 'frozen');
+
+  const availableEarnings = Math.max(0, earned - withdrawnEarnings);
+  const availableReimbursement = Math.max(0, foodReimbursed - withdrawnReimbursement);
+
+  // ── Group earnings by delivery for history display ─────────
+  const groupedHistory = Object.values(
+    earningsList.reduce((acc, entry) => {
+      const did = entry.delivery_id || entry.id;
+      if (!acc[did]) acc[did] = {
+        id: did,
+        pickup_location: entry.deliveries?.pickup_location || '—',
+        dropoff_location: entry.deliveries?.dropoff_location || '—',
+        delivery_fee: 0,
+        food_cost: 0,
+        created_at: entry.created_at,
+      };
+      if (['delivery_fee', 'tip'].includes(entry.type)) {
+        acc[did].delivery_fee += entry.amount;
+      } else if (entry.type === 'reimbursement') {
+        acc[did].food_cost += entry.amount;
+      }
+      return acc;
+    }, {})
+  ).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  const filteredHistory = groupedHistory.filter(entry => {
     if (period === 'today') return withinHours(entry.created_at, 24);
     if (period === 'week') return withinHours(entry.created_at, 24 * 7);
     return true;
@@ -190,16 +253,16 @@ export default function CourierEarningsPage() {
 
   function handleWithdrawSuccess({ amt, net, dest }, type) {
     if (type === 'earnings') {
-      setEarnings(prev => ({ ...prev, withdrawn_earnings: prev.withdrawn_earnings + amt }));
+      setWithdrawnEarnings(prev => prev + amt);
     } else {
-      setEarnings(prev => ({ ...prev, withdrawn_reimbursement: prev.withdrawn_reimbursement + amt }));
+      setWithdrawnReimbursement(prev => prev + amt);
     }
 
     if (dest === 'wallet') {
       const newBalance = (profile?.wallet_balance || 0) + net;
       addWalletTransaction({
         id: `tx-${Date.now()}`,
-        user_id: 'user-1',
+        user_id: session?.user?.id,
         type: 'earning',
         amount: net,
         balance_after: newBalance,
@@ -251,8 +314,8 @@ export default function CourierEarningsPage() {
           {/* Available (remaining) is the headline number */}
           <p className="text-4xl font-bold text-white mb-3">₦{availableReimbursement.toLocaleString()}</p>
           <div className="flex gap-4 text-xs text-white/70 flex-wrap">
-            <span>Total: <strong className="text-white">₦{earnings.food_reimbursed.toLocaleString()}</strong></span>
-            <span>Withdrawn: <strong className="text-white">₦{earnings.withdrawn_reimbursement.toLocaleString()}</strong></span>
+            <span>Total: <strong className="text-white">₦{foodReimbursed.toLocaleString()}</strong></span>
+            <span>Withdrawn: <strong className="text-white">₦{withdrawnReimbursement.toLocaleString()}</strong></span>
             <span>Remaining: <strong className="text-white">₦{availableReimbursement.toLocaleString()}</strong></span>
           </div>
         </div>
@@ -266,8 +329,8 @@ export default function CourierEarningsPage() {
           {/* Available (remaining) is the headline number */}
           <p className="text-4xl font-bold text-white mb-3">₦{availableEarnings.toLocaleString()}</p>
           <div className="flex gap-4 text-xs text-white/70 flex-wrap">
-            <span>Earned: <strong className="text-white">₦{earnings.earned.toLocaleString()}</strong></span>
-            <span>Withdrawn: <strong className="text-white">₦{earnings.withdrawn_earnings.toLocaleString()}</strong></span>
+            <span>Earned: <strong className="text-white">₦{earned.toLocaleString()}</strong></span>
+            <span>Withdrawn: <strong className="text-white">₦{withdrawnEarnings.toLocaleString()}</strong></span>
           </div>
         </div>
 

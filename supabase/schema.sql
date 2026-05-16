@@ -318,14 +318,15 @@ create policy "Users can see their own referrals"
 
 
 -- ── 8. Realtime ──────────────────────────────────────────────
--- Enable Realtime on the tables the app subscribes to:
--- (Run in Supabase Dashboard → Database → Replication)
--- Or uncomment these:
--- alter publication supabase_realtime add table public.deliveries;
--- alter publication supabase_realtime add table public.notifications;
+-- Enable Realtime on the tables the app subscribes to.
+-- Run supabase/enable-realtime.sql in the SQL Editor if these fail here.
+alter publication supabase_realtime add table public.deliveries;
+alter publication supabase_realtime add table public.notifications;
+alter publication supabase_realtime add table public.wallet_transactions;
+alter publication supabase_realtime add table public.courier_earnings;
 
 
--- ── 9. Wallet payment RPC ─────────────────────────────────────
+-- ── 9. Wallet RPCs ─────────────────────────────────────────────
 -- Atomic: deduct balance + record tx + verify delivery
 create or replace function public.process_wallet_payment(
   p_delivery_id uuid,
@@ -359,5 +360,32 @@ begin
   update public.deliveries
   set payment_verified = true, payment_method = 'wallet'
   where id = p_delivery_id and buyer_id = auth.uid();
+end;
+$$;
+
+
+-- ── 10. Wallet top-up RPC ─────────────────────────────────────
+-- Idempotent: skips if Paystack reference already recorded.
+create or replace function public.record_topup(
+  p_reference text,
+  p_amount    integer
+)
+returns void language plpgsql security definer as $$
+declare
+  v_balance integer;
+begin
+  if exists (
+    select 1 from public.wallet_transactions where reference = p_reference
+  ) then return; end if;
+
+  update public.profiles
+  set wallet_balance = wallet_balance + p_amount
+  where id = auth.uid()
+  returning wallet_balance into v_balance;
+
+  insert into public.wallet_transactions
+    (user_id, type, amount, balance_after, description, reference)
+  values
+    (auth.uid(), 'topup', p_amount, v_balance, 'Wallet top-up', p_reference);
 end;
 $$;

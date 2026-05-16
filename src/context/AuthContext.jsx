@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/api/supabaseClient';
-import { MOCK_TRANSACTIONS, MOCK_NOTIFICATIONS } from '@/lib/mockData';
 
 const AuthContext = createContext(null);
 
@@ -10,9 +9,8 @@ export function AuthProvider({ children }) {
   const [loading, setLoading]     = useState(true);
   const [authError, setAuthError] = useState(false);
 
-  // Still mock until Phase 2 (orders / wallet wired to DB)
-  const [walletTransactions, setWalletTransactions] = useState([...MOCK_TRANSACTIONS]);
-  const [notifications, setNotifications] = useState([...MOCK_NOTIFICATIONS]);
+  const [walletTransactions, setWalletTransactions] = useState([]);
+  const [notifications, setNotifications] = useState([]);
 
   // Price-edit flow shared between CourierDashboard ↔ TrackingPage
   const [priceEditState, setPriceEditState] = useState({
@@ -54,6 +52,8 @@ export function AuthProvider({ children }) {
         loadProfile(newSession.user.id);
       } else {
         setProfile(null);
+        setWalletTransactions([]);
+        setNotifications([]);
       }
     });
 
@@ -62,6 +62,59 @@ export function AuthProvider({ children }) {
       subscription.unsubscribe();
     };
   }, []);
+
+  // ── Load transactions & notifications when session is ready ─
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    const userId = session.user.id;
+    let txChannel, notifChannel;
+
+    async function loadUserData() {
+      const [{ data: txs }, { data: notifs }] = await Promise.all([
+        supabase
+          .from('wallet_transactions')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(50),
+      ]);
+      setWalletTransactions(txs || []);
+      setNotifications(notifs || []);
+
+      txChannel = supabase.channel(`wallet-tx:${userId}`)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'wallet_transactions',
+          filter: `user_id=eq.${userId}`,
+        }, payload =>
+          setWalletTransactions(prev =>
+            prev.some(t => t.id === payload.new.id) ? prev : [payload.new, ...prev]
+          )
+        )
+        .subscribe();
+
+      notifChannel = supabase.channel(`notifs:${userId}`)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        }, payload =>
+          setNotifications(prev =>
+            prev.some(n => n.id === payload.new.id) ? prev : [payload.new, ...prev]
+          )
+        )
+        .subscribe();
+    }
+
+    loadUserData();
+    return () => {
+      if (txChannel) supabase.removeChannel(txChannel);
+      if (notifChannel) supabase.removeChannel(notifChannel);
+    };
+  }, [session?.user?.id]);
 
   async function loadProfile(userId) {
     const { data, error } = await supabase
@@ -123,12 +176,20 @@ export function AuthProvider({ children }) {
     ]);
   }
 
-  function markAllRead() {
+  async function markAllRead() {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    if (session?.user?.id) {
+      await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', session.user.id)
+        .eq('read', false);
+    }
   }
 
-  function markRead(id) {
+  async function markRead(id) {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    await supabase.from('notifications').update({ read: true }).eq('id', id);
   }
 
   // ── Price-edit flow ────────────────────────────────────────

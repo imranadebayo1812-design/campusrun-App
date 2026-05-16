@@ -7,6 +7,8 @@ function isNileEmail(email) {
   return NILE_EMAIL_RE.test(email);
 }
 
+const AuthContext = createContext(null);
+
 export function AuthProvider({ children }) {
   const [session, setSession]     = useState(undefined); // undefined = initializing
   const [profile, setProfile]     = useState(null);

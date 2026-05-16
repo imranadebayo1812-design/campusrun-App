@@ -15,6 +15,7 @@ export default function PaymentPage() {
   const [method, setMethod] = useState('paystack');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [paid, setPaid] = useState(false);
   const total = delivery?.total_amount || 0;
   const walletBalance = profile?.wallet_balance || 0;
   const canUseWallet = walletBalance >= total;
@@ -39,7 +40,7 @@ export default function PaymentPage() {
         return;
       }
       updateProfileLocally({ wallet_balance: walletBalance - total });
-      navigate(`/track/${deliveryId}`);
+      setPaid(true);
       return;
     }
 
@@ -55,7 +56,8 @@ export default function PaymentPage() {
             await supabase.from('deliveries')
               .update({ payment_verified: true, payment_method: 'paystack' })
               .eq('id', deliveryId);
-            navigate(`/track/${deliveryId}`);
+            setLoading(false);
+            setPaid(true);
           },
           onCancel: () => { setLoading(false); },
         });
@@ -70,6 +72,30 @@ export default function PaymentPage() {
 
     setLoading(false);
   }
+
+  if (paid) return (
+    <div className="bg-surface-950 min-h-full flex flex-col items-center justify-center px-6 text-center gap-5">
+      <div className="w-16 h-16 bg-green-500/15 rounded-full flex items-center justify-center">
+        <CheckCircle className="w-8 h-8 text-green-400" />
+      </div>
+      <div>
+        <p className="text-xl font-bold text-white">Order placed!</p>
+        <p className="text-sm text-gray-400 mt-1">Your order is confirmed. A runner will pick it up shortly.</p>
+      </div>
+      <button
+        onClick={() => navigate(`/track/${deliveryId}`, { replace: true })}
+        className="w-full max-w-xs bg-gradient-to-br from-brand-500 to-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand-500/20"
+      >
+        Track Order
+      </button>
+      <button
+        onClick={() => navigate('/orders', { replace: true })}
+        className="text-sm text-gray-500"
+      >
+        View all orders
+      </button>
+    </div>
+  );
 
   if (!delivery) {
     return (

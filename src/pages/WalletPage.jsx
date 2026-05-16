@@ -98,7 +98,7 @@ function WithdrawToBankModal({ maxAmount, onSuccess, onClose }) {
 }
 
 export default function WalletPage() {
-  const { session, profile, refreshProfile, walletTransactions } = useAuth();
+  const { session, profile, refreshProfile, updateProfileLocally, walletTransactions } = useAuth();
   const [topupAmount, setTopupAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -121,16 +121,18 @@ export default function WalletPage() {
         ref,
         currency: 'NGN',
         onSuccess: async (txn) => {
+          const roundedAmount = Math.round(amount);
           const { error: rpcErr } = await supabase.rpc('record_topup', {
             p_reference: txn.reference,
-            p_amount: amount,
+            p_amount: roundedAmount,
           });
           if (rpcErr) {
-            setError('Payment received but wallet credit failed. Contact support@campusrun.online.');
+            setError(`Payment received but wallet update failed: ${rpcErr.message}`);
           } else {
-            await refreshProfile(); // pulls confirmed balance from DB
+            updateProfileLocally({ wallet_balance: (profile?.wallet_balance || 0) + roundedAmount });
+            refreshProfile();
             setTopupAmount('');
-            setSuccess(`₦${amount.toLocaleString()} added to your wallet!`);
+            setSuccess(`₦${roundedAmount.toLocaleString()} added to your wallet!`);
           }
           setLoading(false);
         },

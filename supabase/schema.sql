@@ -323,3 +323,41 @@ create policy "Users can see their own referrals"
 -- Or uncomment these:
 -- alter publication supabase_realtime add table public.deliveries;
 -- alter publication supabase_realtime add table public.notifications;
+
+
+-- ── 9. Wallet payment RPC ─────────────────────────────────────
+-- Atomic: deduct balance + record tx + verify delivery
+create or replace function public.process_wallet_payment(
+  p_delivery_id uuid,
+  p_amount integer
+)
+returns void language plpgsql security definer as $$
+declare
+  v_balance integer;
+  v_pickup text;
+begin
+  select wallet_balance into v_balance
+  from public.profiles where id = auth.uid() for update;
+
+  if v_balance is null or v_balance < p_amount then
+    raise exception 'insufficient_balance';
+  end if;
+
+  update public.profiles
+  set wallet_balance = wallet_balance - p_amount
+  where id = auth.uid();
+
+  select pickup_location into v_pickup
+  from public.deliveries where id = p_delivery_id;
+
+  insert into public.wallet_transactions
+    (user_id, type, amount, balance_after, description, delivery_id)
+  values
+    (auth.uid(), 'payment', p_amount, v_balance - p_amount,
+     'Delivery — ' || coalesce(v_pickup, ''), p_delivery_id);
+
+  update public.deliveries
+  set payment_verified = true, payment_method = 'wallet'
+  where id = p_delivery_id and buyer_id = auth.uid();
+end;
+$$;

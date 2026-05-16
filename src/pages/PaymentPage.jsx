@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_ORDERS, MOCK_TRANSACTIONS } from '@/lib/mockData';
+import { supabase } from '@/api/supabaseClient';
+import { ensurePaystack, PAYSTACK_PUBLIC_KEY } from '@/lib/paystack';
 import { CreditCard, Wallet, ChevronLeft, CheckCircle } from 'lucide-react';
 
 export default function PaymentPage() {
   const { deliveryId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, updateProfileLocally } = useAuth();
+  const { profile, session, updateProfileLocally } = useAuth();
 
   const delivery = location.state?.delivery;
   const [method, setMethod] = useState('paystack');
@@ -22,35 +23,52 @@ export default function PaymentPage() {
     setLoading(true);
     setError('');
 
-    await new Promise(r => setTimeout(r, 1200));
-
     if (method === 'wallet') {
       if (!canUseWallet) {
         setError('Insufficient wallet balance.');
         setLoading(false);
         return;
       }
-      const newBalance = walletBalance - total;
-      updateProfileLocally({ wallet_balance: newBalance });
-      MOCK_TRANSACTIONS.unshift({
-        id: `tx-${Date.now()}`,
-        user_id: 'user-1',
-        type: 'payment',
-        amount: total,
-        balance_after: newBalance,
-        description: `Delivery payment — ${delivery?.pickup_location}`,
-        created_at: new Date().toISOString(),
+      const { error: rpcErr } = await supabase.rpc('process_wallet_payment', {
+        p_delivery_id: deliveryId,
+        p_amount: total,
       });
+      if (rpcErr) {
+        setError(rpcErr.message === 'insufficient_balance' ? 'Insufficient wallet balance.' : 'Payment failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+      updateProfileLocally({ wallet_balance: walletBalance - total });
+      navigate(`/track/${deliveryId}`);
+      return;
     }
 
-    const order = MOCK_ORDERS.find(o => o.id === deliveryId);
-    if (order) {
-      order.payment_verified = true;
-      order.payment_method = method;
+    if (method === 'paystack') {
+      try {
+        await ensurePaystack();
+        const handler = window.PaystackPop.setup({
+          key: PAYSTACK_PUBLIC_KEY,
+          email: session.user.email,
+          amount: total * 100,
+          ref: `cr_${deliveryId}_${Date.now()}`,
+          onSuccess: async () => {
+            await supabase.from('deliveries')
+              .update({ payment_verified: true, payment_method: 'paystack' })
+              .eq('id', deliveryId);
+            navigate(`/track/${deliveryId}`);
+          },
+          onCancel: () => { setLoading(false); },
+        });
+        handler.openIframe();
+        return;
+      } catch (err) {
+        setError('Could not load payment provider. Check your connection.');
+        setLoading(false);
+        return;
+      }
     }
 
     setLoading(false);
-    navigate(`/track/${deliveryId}`);
   }
 
   if (!delivery) {
@@ -147,12 +165,6 @@ export default function PaymentPage() {
               {method === 'wallet' && <CheckCircle className="w-5 h-5 text-green-400" />}
             </button>
           </div>
-        </div>
-
-        {/* Demo notice */}
-        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5 flex items-center gap-2">
-          <span className="text-amber-400 text-xs">🧪</span>
-          <p className="text-xs text-amber-400">Demo mode — no real payment is processed.</p>
         </div>
 
         {error && (

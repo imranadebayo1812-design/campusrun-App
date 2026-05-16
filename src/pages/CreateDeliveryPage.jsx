@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { MOCK_ORDERS, MOCK_VENDORS } from '@/lib/mockData';
+import { MOCK_VENDORS } from '@/lib/mockData';
+import { supabase } from '@/api/supabaseClient';
 import { calculateDeliveryFee, DEFAULT_SERVICE_FEE, isResidentialZone, getZoneKey } from '@/lib/deliveryPricing';
 import { ChevronLeft, ChevronRight, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, Search, Navigation, Upload, Bookmark, FileText, Hash } from 'lucide-react';
 
@@ -241,7 +242,7 @@ function ItemDetailSheet({ item, inCart, onAdd, onClose }) {
 export default function CreateDeliveryPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile } = useAuth();
+  const { profile, session } = useAuth();
 
   const initType = location.state?.type || 'purchase';
   const initVendor = location.state?.vendor || '';
@@ -355,34 +356,44 @@ export default function CreateDeliveryPage() {
     setLoading(true);
     setError('');
 
-    await new Promise(r => setTimeout(r, 500));
+    const dropoff = roomNumber.trim()
+      ? `${dropoffLocation} — Room ${roomNumber.trim()}`
+      : dropoffLocation;
 
-    const deliveryCode = generateDeliveryCode();
-    const newOrder = {
-      id: `order-${Date.now()}`,
-      buyer_id: 'user-1',
+    const orderData = {
+      buyer_id: session.user.id,
       order_type: orderType,
-      pickup_location: pickupLocation,
-      dropoff_location: roomNumber.trim() ? `${dropoffLocation} — Room ${roomNumber.trim()}` : dropoffLocation,
-      items: orderType === 'purchase' ? items : [],
-      item_description: orderType === 'errand' ? itemDescription : '',
-      package_value: orderType === 'errand' ? parseFloat(packageValue) || 0 : null,
-      special_instructions: specialInstructions,
+      pickup_location: vendor ? vendor.name : pickupLocation,
+      dropoff_location: dropoff,
+      items: orderType === 'purchase'
+        ? items.map(i => ({ name: i.name, qty: i.qty, price: String(i.price) }))
+        : [],
+      item_description: orderType === 'errand' ? itemDescription : null,
+      special_instructions: specialInstructions || null,
       food_cost: orderType === 'purchase' ? foodCost : 0,
       delivery_fee: deliveryFee,
       service_fee: serviceFee,
       total_amount: totalAmount,
-      delivery_code: deliveryCode,
-      status: 'placed',
+      delivery_code: generateDeliveryCode(),
+      payment_verified: false,
       courier_accepted: false,
-      courier_name: null,
-      created_at: new Date().toISOString(),
     };
 
-    MOCK_ORDERS.unshift(newOrder);
+    const { data, error: dbErr } = await supabase
+      .from('deliveries')
+      .insert(orderData)
+      .select()
+      .single();
+
+    if (dbErr) {
+      setError('Could not place order. Please try again.');
+      setLoading(false);
+      return;
+    }
+
     saveAddressToHistory(dropoffLocation);
     setLoading(false);
-    navigate(`/payment/${newOrder.id}`, { state: { delivery: newOrder } });
+    navigate(`/payment/${data.id}`, { state: { delivery: data } });
   }
 
   const inputClass = "w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50";

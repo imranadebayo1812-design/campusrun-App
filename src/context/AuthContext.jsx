@@ -1,7 +1,11 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/api/supabaseClient';
 
-const AuthContext = createContext(null);
+const NILE_EMAIL_RE = /^[^\s@]+@([a-z0-9-]+\.)*nileuniversity\.edu\.ng$/i;
+
+function isNileEmail(email) {
+  return NILE_EMAIL_RE.test(email);
+}
 
 export function AuthProvider({ children }) {
   const [session, setSession]     = useState(undefined); // undefined = initializing
@@ -43,7 +47,7 @@ export function AuthProvider({ children }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (!mounted) return;
-      if (newSession && !newSession.user.email?.toLowerCase().endsWith('@nileuniversity.edu.ng')) {
+      if (newSession && !isNileEmail(newSession.user.email || '')) {
         supabase.auth.signOut();
         return;
       }
@@ -132,7 +136,7 @@ export function AuthProvider({ children }) {
   // ── Auth actions ───────────────────────────────────────────
 
   async function signUp(email, password, fullName) {
-    if (!email.toLowerCase().endsWith('@nileuniversity.edu.ng')) {
+    if (!isNileEmail(email)) {
       return { error: { message: 'Only Nile University email addresses (@nileuniversity.edu.ng) are allowed.' } };
     }
     const { error } = await supabase.auth.signUp({
@@ -144,7 +148,7 @@ export function AuthProvider({ children }) {
   }
 
   async function signIn(email, password) {
-    if (!email.toLowerCase().endsWith('@nileuniversity.edu.ng')) {
+    if (!isNileEmail(email)) {
       return { error: { message: 'Only Nile University email addresses (@nileuniversity.edu.ng) are allowed.' } };
     }
     const { error } = await supabase.auth.signInWithPassword({ email, password });

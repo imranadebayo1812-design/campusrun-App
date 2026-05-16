@@ -133,11 +133,13 @@ export function AuthProvider({ children }) {
 
   // ── Auth actions ───────────────────────────────────────────
 
-  async function signUp(email, password, fullName) {
+  async function signUp(email, password, fullName, referralCode = '') {
+    const metadata = { full_name: fullName };
+    if (referralCode) metadata.referral_code = referralCode;
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: { data: metadata },
     });
     return { error };
   }

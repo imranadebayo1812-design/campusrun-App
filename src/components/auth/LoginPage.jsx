@@ -1,16 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useLocation } from 'react-router-dom';
 import Logo from '@/components/ui/Logo';
 
 export default function LoginPage() {
   const { signIn, signUp } = useAuth();
+  const location = useLocation();
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Pre-fill referral code from ?ref= URL param and switch to signup mode
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      setReferralCode(ref.toUpperCase());
+      setMode('signup');
+    }
+  }, [location.search]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -19,11 +32,11 @@ export default function LoginPage() {
     setLoading(true);
 
     if (mode === 'signup') {
-      const { error } = await signUp(email, password, fullName);
+      const { error } = await signUp(email, password, fullName, referralCode.trim().toUpperCase());
       if (error) {
         setError(error.message);
       } else {
-        setSuccess('Check your email to confirm your account, then log in.');
+        setSuccess('Account created! You can now log in.');
         setMode('login');
       }
     } else {
@@ -136,9 +149,25 @@ export default function LoginPage() {
           </form>
 
           {mode === 'signup' && (
-            <p className="text-xs text-gray-500 text-center">
-              Only Nile University email addresses are allowed.
-            </p>
+            <>
+              <div>
+                <label htmlFor="login-referral" className="block text-sm font-medium text-gray-300 mb-1.5">
+                  Referral Code <span className="text-gray-600 font-normal">(optional)</span>
+                </label>
+                <input
+                  id="login-referral"
+                  type="text"
+                  value={referralCode}
+                  onChange={e => setReferralCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. ABC12345"
+                  maxLength={12}
+                  className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 uppercase tracking-widest"
+                />
+              </div>
+              <p className="text-xs text-gray-500 text-center">
+                Only Nile University email addresses are allowed.
+              </p>
+            </>
           )}
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { User, Phone, BookOpen, Home, LogOut, Shield } from 'lucide-react';
+import { User, Phone, BookOpen, Home, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function ProfilePage() {
@@ -115,19 +115,6 @@ export default function ProfilePage() {
             className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
           >
             Activate Courier Mode
-          </button>
-        </div>
-      )}
-
-      {/* Admin shortcut */}
-      {profile?.is_admin && (
-        <div className="mx-4 mb-4">
-          <button
-            onClick={() => navigate('/admin')}
-            className="w-full flex items-center gap-3 bg-surface-900 border border-white/[0.08] rounded-2xl p-4"
-          >
-            <Shield className="w-5 h-5 text-brand-400" />
-            <span className="text-sm font-semibold text-white">Admin Portal</span>
           </button>
         </div>
       )}

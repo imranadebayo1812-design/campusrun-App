@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { MOCK_ORDERS, MOCK_VENDORS } from '@/lib/mockData';
 import { calculateDeliveryFee, DEFAULT_SERVICE_FEE, isResidentialZone, getZoneKey } from '@/lib/deliveryPricing';
-import { ChevronLeft, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, Search, Navigation, Upload, Bookmark, FileText, Hash } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, Search, Navigation, Upload, Bookmark, FileText, Hash } from 'lucide-react';
 
 const LOCATION_GROUPS = [
   {
@@ -51,6 +51,13 @@ function generateDeliveryCode() {
 
 function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor, savedAddresses = [] }) {
   const [query, setQuery] = useState('');
+  // auto-expand the group that contains the current value on first render
+  const [expanded, setExpanded] = useState(() => {
+    for (const g of LOCATION_GROUPS) {
+      if (g.subItems?.includes(value)) return new Set([g.label]);
+    }
+    return new Set();
+  });
 
   const pinnedSaved = savedAddresses.filter(a => !query || a.toLowerCase().includes(query.toLowerCase()));
 
@@ -67,6 +74,17 @@ function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor, s
       return null;
     })
     .filter(Boolean);
+
+  function toggleGroup(lbl) {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      next.has(lbl) ? next.delete(lbl) : next.add(lbl);
+      return next;
+    });
+  }
+
+  // while searching, treat all groups as expanded so results are visible
+  const isExpanded = lbl => query ? true : expanded.has(lbl);
 
   return (
     <div>
@@ -93,9 +111,7 @@ function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor, s
                   type="button"
                   onClick={() => onChange(addr)}
                   className={`w-full text-left px-4 py-3 border-b border-white/[0.05] text-sm flex items-center gap-2 transition-colors ${
-                    value === addr
-                      ? 'text-brand-400 bg-brand-500/10 font-medium'
-                      : 'text-gray-300 hover:bg-white/[0.04]'
+                    value === addr ? 'text-brand-400 bg-brand-500/10 font-medium' : 'text-gray-300 hover:bg-white/[0.04]'
                   }`}
                 >
                   <Bookmark className="w-3.5 h-3.5 text-brand-400 shrink-0" />
@@ -115,33 +131,40 @@ function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor, s
           ) : (
             visibleGroups.map(group => (
               <div key={group.label}>
-                {/* Group header or flat zone row */}
-                <button
-                  type="button"
-                  onClick={() => onChange(group.label)}
-                  className={`w-full text-left px-4 py-3 border-b border-white/[0.05] text-sm flex items-center gap-2 transition-colors ${
-                    group.subItems ? 'font-semibold' : 'last:border-0'
-                  } ${
-                    value === group.label
-                      ? 'text-brand-400 bg-brand-500/10 font-medium'
-                      : group.subItems
-                        ? 'text-white hover:bg-white/[0.04]'
+                {group.subItems ? (
+                  /* Expandable group header — tap to reveal sub-venues */
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.label)}
+                    className={`w-full text-left px-4 py-3 border-b border-white/[0.05] text-sm font-semibold flex items-center gap-2 transition-colors hover:bg-white/[0.04] ${
+                      group.subItems.includes(value) ? 'text-brand-400' : 'text-white'
+                    }`}
+                  >
+                    {group.label}
+                    <ChevronRight className={`w-4 h-4 text-gray-500 shrink-0 ml-auto transition-transform duration-200 ${
+                      isExpanded(group.label) ? 'rotate-90' : ''
+                    }`} />
+                  </button>
+                ) : (
+                  /* Flat zone — tap to select */
+                  <button
+                    type="button"
+                    onClick={() => onChange(group.label)}
+                    className={`w-full text-left px-4 py-3 border-b border-white/[0.05] text-sm transition-colors last:border-0 flex items-center gap-2 ${
+                      value === group.label
+                        ? 'text-brand-400 bg-brand-500/10 font-medium'
                         : 'text-gray-300 hover:bg-white/[0.04]'
-                  }`}
-                >
-                  {savedAddresses.includes(group.label) && (
-                    <Bookmark className="w-3.5 h-3.5 text-brand-400 shrink-0" />
-                  )}
-                  {group.label}
-                  {group.subItems && (
-                    <span className="ml-auto text-xs text-gray-600 font-normal shrink-0">
-                      {group.subItems.length} venues
-                    </span>
-                  )}
-                </button>
+                    }`}
+                  >
+                    {savedAddresses.includes(group.label) && (
+                      <Bookmark className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                    )}
+                    {group.label}
+                  </button>
+                )}
 
-                {/* Indented sub-items */}
-                {group.subItems?.map((sub, idx) => (
+                {/* Sub-items — only visible when expanded */}
+                {group.subItems && isExpanded(group.label) && group.subItems.map((sub, idx) => (
                   <button
                     key={sub}
                     type="button"

@@ -8,10 +8,12 @@ import MobileShell from '@/components/layout/MobileShell';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import WelcomePage from '@/pages/WelcomePage';
 import { ToastProvider } from '@/context/ToastContext';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 export default function App() {
   const { session, profile, loading, authError } = useAuth();
   const location = useLocation();
+  usePushNotifications();
 
   // Public routes — no auth required, always render directly
   if (location.pathname === '/privacy') return <PrivacyPolicyPage />;

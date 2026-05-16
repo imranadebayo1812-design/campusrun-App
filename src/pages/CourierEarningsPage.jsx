@@ -1,57 +1,127 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
-import { ShoppingBag, Banknote, MapPin, Wallet, AlertTriangle, Mail, Lock } from 'lucide-react';
+import { ShoppingBag, Banknote, MapPin, Wallet, AlertTriangle, Mail, Lock, CheckCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-function WithdrawModal({ title, maxAmount, isEarnings, onSuccess, onClose }) {
-  const [dest, setDest] = useState('wallet');
-  const [form, setForm] = useState({ bank_name: '', account_number: '', account_name: '' });
-  const [amount, setAmount] = useState('');
-  const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
-  const [confirmed, setConfirmed] = useState({ amt: 0, net: 0, dest: 'wallet' });
+// ── WithdrawModal ─────────────────────────────────────────────────────────────
 
-  const amt = parseFloat(amount) || 0;
+function WithdrawModal({ title, maxAmount, isEarnings, type, onSuccess, onClose }) {
+  const [dest, setDest]               = useState('wallet');
+  const [banks, setBanks]             = useState([]);
+  const [banksLoading, setBanksLoading] = useState(false);
+  const [bankCode, setBankCode]       = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [verifiedName, setVerifiedName]   = useState('');
+  const [verifying, setVerifying]     = useState(false);
+  const [verifyError, setVerifyError] = useState('');
+  const [amount, setAmount]           = useState('');
+  const [error, setError]             = useState('');
+  const [submitting, setSubmitting]   = useState(false);
+  const [done, setDone]               = useState(false);
+  const [confirmed, setConfirmed]     = useState(null);
+
+  const amt        = parseFloat(amount) || 0;
   const commission = isEarnings ? Math.round(amt * 0.15) : 0;
-  const net = amt - commission;
+  const net        = amt - commission;
 
-  async function submit() {
-    if (!amt || amt < 500) { setError('Minimum withdrawal is ₦500'); return; }
-    if (amt > maxAmount) { setError(`Max withdrawable is ₦${maxAmount.toLocaleString()}`); return; }
-    if (dest === 'bank' && (!form.bank_name || !form.account_number || !form.account_name)) {
-      setError('Fill in all bank details');
+  // Load Nigerian banks when "To Bank" tab is first opened
+  useEffect(() => {
+    if (dest !== 'bank' || banks.length > 0) return;
+    setBanksLoading(true);
+    supabase.functions.invoke('list-banks')
+      .then(({ data }) => setBanks(data?.data ?? []))
+      .finally(() => setBanksLoading(false));
+  }, [dest]);
+
+  // Reset verification whenever bank or account number changes
+  useEffect(() => {
+    setVerifiedName('');
+    setVerifyError('');
+  }, [bankCode, accountNumber]);
+
+  async function verifyAccount() {
+    if (!bankCode)                    { setVerifyError('Select a bank'); return; }
+    if (accountNumber.length !== 10)  { setVerifyError('Account number must be 10 digits'); return; }
+    setVerifying(true);
+    setVerifyError('');
+
+    const { data, error: fnErr } = await supabase.functions.invoke('verify-account', {
+      body: { bank_code: bankCode, account_number: accountNumber },
+    });
+    setVerifying(false);
+
+    if (fnErr || !data?.status) {
+      setVerifyError(data?.message ?? 'Could not verify. Check details and try again.');
       return;
     }
+    setVerifiedName(data.data.account_name);
+  }
+
+  async function submit() {
     setError('');
+    if (!amt || amt < 500)     { setError('Minimum withdrawal is ₦500'); return; }
+    if (amt > maxAmount)       { setError(`Max is ₦${maxAmount.toLocaleString()}`); return; }
+    if (dest === 'bank' && !verifiedName) { setError('Verify your bank account first'); return; }
+
     setSubmitting(true);
-    await new Promise(r => setTimeout(r, 800));
+
+    if (dest === 'wallet') {
+      const { error: rpcErr } = await supabase.rpc('transfer_earnings_to_wallet', {
+        p_amount: amt,
+        p_type:   type,
+      });
+      setSubmitting(false);
+      if (rpcErr) { setError('Transfer failed. Please try again.'); return; }
+    } else {
+      const selectedBank = banks.find(b => b.code === bankCode);
+      const { data, error: fnErr } = await supabase.functions.invoke('initiate-payout', {
+        body: {
+          amount,
+          type,
+          bank_code:      bankCode,
+          account_number: accountNumber,
+          account_name:   verifiedName,
+          bank_name:      selectedBank?.name ?? '',
+        },
+      });
+      setSubmitting(false);
+      if (fnErr || !data?.success) {
+        setError(data?.error ?? 'Transfer failed. Please try again or contact support.');
+        return;
+      }
+    }
+
     const result = { amt, net, dest };
     setConfirmed(result);
     onSuccess(result);
-    setSubmitting(false);
     setDone(true);
   }
 
+  const inputClass = 'w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50';
+
   return (
-    <div className="fixed inset-0 z-[200] flex items-end justify-center p-0" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
-      <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4">
-        <div className="flex items-center justify-between mb-1">
+    <div
+      className="fixed inset-0 z-[200] flex items-end justify-center"
+      style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+    >
+      <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between">
           <p className="font-bold text-white text-base">{title}</p>
           <button onClick={onClose} className="text-gray-400 text-xl font-bold leading-none">×</button>
         </div>
 
-        {done ? (
+        {done && confirmed ? (
+          /* ── Success state ── */
           <div className="text-center py-6">
+            <div className="w-14 h-14 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+              <CheckCircle className="w-7 h-7 text-green-400" />
+            </div>
             {confirmed.dest === 'wallet' ? (
               <>
-                <div className="w-12 h-12 bg-brand-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Wallet className="w-6 h-6 text-brand-400" />
-                </div>
-                <p className="text-green-400 font-semibold text-base">Added to wallet!</p>
+                <p className="text-green-400 font-bold text-base">Added to wallet!</p>
                 <p className="text-gray-400 text-sm mt-1">
-                  ₦{confirmed.net.toLocaleString()} added to your CampusRun wallet.
+                  ₦{confirmed.net.toLocaleString()} is now in your CampusRun wallet.
                   {isEarnings && (
                     <span className="text-gray-500"> (₦{(confirmed.amt - confirmed.net).toLocaleString()} commission deducted)</span>
                   )}
@@ -59,19 +129,28 @@ function WithdrawModal({ title, maxAmount, isEarnings, onSuccess, onClose }) {
               </>
             ) : (
               <>
-                <p className="text-green-400 font-semibold text-base">Request submitted!</p>
-                <p className="text-gray-400 text-sm mt-1">₦{confirmed.net.toLocaleString()} will be paid out within 24–48 hours.</p>
+                <p className="text-green-400 font-bold text-base">Transfer initiated!</p>
+                <p className="text-gray-400 text-sm mt-1">
+                  ₦{confirmed.net.toLocaleString()} is on its way to your bank account.
+                  {isEarnings && <span className="text-gray-500"> (15% commission deducted)</span>}
+                </p>
+                <p className="text-gray-500 text-xs mt-2">Funds typically arrive within 1–2 business days.</p>
               </>
             )}
-            <button onClick={onClose} className="mt-4 bg-brand-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">Done</button>
+            <button
+              onClick={onClose}
+              className="mt-5 bg-brand-500 text-white px-8 py-2.5 rounded-xl text-sm font-semibold"
+            >
+              Done
+            </button>
           </div>
         ) : (
           <>
-            {/* Destination */}
+            {/* ── Destination toggle ── */}
             <div className="flex gap-2">
               {[
                 { value: 'wallet', label: 'To Wallet', Icon: Wallet },
-                { value: 'bank', label: 'To Bank', Icon: Banknote },
+                { value: 'bank',   label: 'To Bank',   Icon: Banknote },
               ].map(({ value, label, Icon }) => (
                 <button
                   key={value}
@@ -88,41 +167,91 @@ function WithdrawModal({ title, maxAmount, isEarnings, onSuccess, onClose }) {
               ))}
             </div>
 
+            {/* ── Wallet info ── */}
             {dest === 'wallet' && (
               <div className="bg-brand-500/10 border border-brand-500/20 rounded-xl px-4 py-3">
-                <p className="text-xs text-brand-400 font-semibold">No bank transfer charges · Instant</p>
-                <p className="text-xs text-brand-400/70 mt-0.5">Net amount added to your wallet — spend it on orders without re-transferring.</p>
+                <p className="text-xs text-brand-400 font-semibold">Instant · No bank charges</p>
+                <p className="text-xs text-brand-400/70 mt-0.5">
+                  Amount credited to your CampusRun wallet immediately.
+                </p>
               </div>
             )}
 
-            {dest === 'bank' && [
-              { label: 'Bank Name', field: 'bank_name', placeholder: 'e.g. GTBank' },
-              { label: 'Account Number', field: 'account_number', placeholder: '0123456789' },
-              { label: 'Account Name', field: 'account_name', placeholder: 'Full name on account' },
-            ].map(({ label, field, placeholder }) => (
-              <div key={field}>
-                <label className="text-xs font-medium text-gray-400 block mb-1">{label}</label>
+            {/* ── Bank fields ── */}
+            {dest === 'bank' && (
+              <>
+                <div>
+                  <label className="text-xs font-medium text-gray-400 block mb-1.5">Bank</label>
+                  {banksLoading ? (
+                    <div className="flex items-center gap-2 text-xs text-gray-500 py-2">
+                      <div className="w-3 h-3 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                      Loading banks…
+                    </div>
+                  ) : (
+                    <select
+                      value={bankCode}
+                      onChange={e => setBankCode(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">Select bank…</option>
+                      {banks.map(b => (
+                        <option key={b.code} value={b.code}>{b.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-gray-400 block mb-1.5">Account Number</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={10}
+                      value={accountNumber}
+                      onChange={e => setAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder="10-digit account number"
+                      className={`flex-1 bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50`}
+                    />
+                    <button
+                      onClick={verifyAccount}
+                      disabled={verifying || accountNumber.length !== 10 || !bankCode}
+                      className="px-4 py-3 bg-brand-500 hover:bg-brand-600 disabled:opacity-40 text-white text-xs font-bold rounded-xl shrink-0 transition-colors"
+                    >
+                      {verifying ? (
+                        <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      ) : 'Verify'}
+                    </button>
+                  </div>
+                </div>
+
+                {verifyError && <p className="text-xs text-red-400">{verifyError}</p>}
+
+                {verifiedName && (
+                  <div className="flex items-center gap-2.5 bg-green-500/10 border border-green-500/25 rounded-xl px-4 py-3">
+                    <CheckCircle className="w-4 h-4 text-green-400 shrink-0" aria-hidden="true" />
+                    <p className="text-sm text-green-400 font-semibold">{verifiedName}</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ── Amount — shown after bank verified (or always for wallet) ── */}
+            {(dest === 'wallet' || verifiedName) && (
+              <div>
+                <label className="text-xs font-medium text-gray-400 block mb-1.5">Amount (₦)</label>
                 <input
-                  value={form[field]}
-                  onChange={e => setForm(p => ({ ...p, [field]: e.target.value }))}
-                  placeholder={placeholder}
-                  className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                  type="number"
+                  inputMode="numeric"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  placeholder={`Min ₦500 · Max ₦${maxAmount.toLocaleString()}`}
+                  className={inputClass}
                 />
               </div>
-            ))}
+            )}
 
-            <div>
-              <label className="text-xs font-medium text-gray-400 block mb-1">Amount (₦)</label>
-              <input
-                type="number"
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
-                placeholder={`Min ₦500 · Max ₦${maxAmount.toLocaleString()}`}
-                className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
-              />
-            </div>
-
-            {/* Commission breakdown — earnings only */}
+            {/* ── Commission breakdown ── */}
             {isEarnings && amt > 0 && (
               <div className="bg-surface-800 border border-white/[0.08] rounded-xl p-4 space-y-2">
                 <div className="flex justify-between text-sm">
@@ -147,10 +276,28 @@ function WithdrawModal({ title, maxAmount, isEarnings, onSuccess, onClose }) {
             )}
 
             {error && <p className="text-xs text-red-400">{error}</p>}
+
             <div className="flex gap-2 pt-1">
-              <button onClick={onClose} className="flex-1 bg-surface-800 border border-white/[0.08] text-gray-400 font-medium py-3 rounded-xl text-sm">Cancel</button>
-              <button onClick={submit} disabled={submitting} className="flex-1 bg-brand-500 text-white font-semibold py-3 rounded-xl text-sm disabled:opacity-50">
-                {submitting ? 'Processing…' : dest === 'wallet' ? 'Add to Wallet' : 'Submit Request'}
+              <button
+                onClick={onClose}
+                className="flex-1 bg-surface-800 border border-white/[0.08] text-gray-400 font-medium py-3 rounded-xl text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submit}
+                disabled={
+                  submitting ||
+                  !amt ||
+                  (dest === 'bank' && !verifiedName)
+                }
+                className="flex-1 bg-brand-500 hover:bg-brand-600 text-white font-semibold py-3 rounded-xl text-sm disabled:opacity-50 transition-colors"
+              >
+                {submitting
+                  ? 'Processing…'
+                  : dest === 'wallet'
+                    ? 'Add to Wallet'
+                    : 'Send to Bank'}
               </button>
             </div>
           </>
@@ -160,10 +307,12 @@ function WithdrawModal({ title, maxAmount, isEarnings, onSuccess, onClose }) {
   );
 }
 
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 const PERIOD_FILTERS = [
   { key: 'today', label: 'Today' },
-  { key: 'week', label: 'This Week' },
-  { key: 'all', label: 'All Time' },
+  { key: 'week',  label: 'This Week' },
+  { key: 'all',   label: 'All Time' },
 ];
 
 function withinHours(dateStr, hours) {
@@ -171,28 +320,34 @@ function withinHours(dateStr, hours) {
 }
 
 export default function CourierEarningsPage() {
-  const { session, profile, updateProfileLocally, addWalletTransaction, priceEditState } = useAuth();
-  const [modal, setModal] = useState(null);
-  const [period, setPeriod] = useState('today');
-  const [earningsList, setEarningsList] = useState([]);
-  const [withdrawnEarnings, setWithdrawnEarnings] = useState(0);
-  const [withdrawnReimbursement, setWithdrawnReimbursement] = useState(0);
+  const { session, priceEditState } = useAuth();
+  const [modal, setModal]           = useState(null); // 'earnings' | 'reimbursement'
+  const [period, setPeriod]         = useState('today');
+  const [earningsList, setEarningsList]       = useState([]);
+  const [withdrawalsList, setWithdrawalsList] = useState([]);
 
   const pendingVerification = priceEditState.pendingVerificationAmount;
 
-  // ── Load earnings from DB ──────────────────────────────────
+  // ── Load earnings + withdrawals ───────────────────────────
   useEffect(() => {
     if (!session?.user?.id) return;
     const userId = session.user.id;
     let channel;
 
     async function load() {
-      const { data } = await supabase
-        .from('courier_earnings')
-        .select('*, deliveries(pickup_location, dropoff_location, food_cost)')
-        .eq('courier_id', userId)
-        .order('created_at', { ascending: false });
-      setEarningsList(data || []);
+      const [{ data: earnings }, { data: withdrawals }] = await Promise.all([
+        supabase
+          .from('courier_earnings')
+          .select('*, deliveries(pickup_location, dropoff_location, food_cost)')
+          .eq('courier_id', userId)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('courier_withdrawals')
+          .select('*')
+          .eq('courier_id', userId),
+      ]);
+      setEarningsList(earnings ?? []);
+      setWithdrawalsList(withdrawals ?? []);
 
       channel = supabase.channel(`courier-earnings:${userId}`)
         .on('postgres_changes', {
@@ -210,7 +365,7 @@ export default function CourierEarningsPage() {
     return () => { if (channel) supabase.removeChannel(channel); };
   }, [session?.user?.id]);
 
-  // ── Derive totals ──────────────────────────────────────────
+  // ── Derive totals ─────────────────────────────────────────
   const earned = earningsList
     .filter(e => ['delivery_fee', 'tip'].includes(e.type))
     .reduce((s, e) => s + e.amount, 0);
@@ -221,57 +376,49 @@ export default function CourierEarningsPage() {
 
   const frozen = earningsList.some(e => e.status === 'frozen');
 
-  const availableEarnings = Math.max(0, earned - withdrawnEarnings);
+  const withdrawnEarnings = withdrawalsList
+    .filter(w => w.type === 'earnings' && ['processing', 'completed'].includes(w.status))
+    .reduce((s, w) => s + w.gross_amount, 0);
+
+  const withdrawnReimbursement = withdrawalsList
+    .filter(w => w.type === 'reimbursement' && ['processing', 'completed'].includes(w.status))
+    .reduce((s, w) => s + w.gross_amount, 0);
+
+  const availableEarnings      = Math.max(0, earned - withdrawnEarnings);
   const availableReimbursement = Math.max(0, foodReimbursed - withdrawnReimbursement);
 
-  // ── Group earnings by delivery for history display ─────────
+  // ── Group earnings by delivery for history ────────────────
   const groupedHistory = Object.values(
     earningsList.reduce((acc, entry) => {
       const did = entry.delivery_id || entry.id;
       if (!acc[did]) acc[did] = {
         id: did,
-        pickup_location: entry.deliveries?.pickup_location || '—',
+        pickup_location:  entry.deliveries?.pickup_location  || '—',
         dropoff_location: entry.deliveries?.dropoff_location || '—',
         delivery_fee: 0,
-        food_cost: 0,
-        created_at: entry.created_at,
+        food_cost:    0,
+        created_at:   entry.created_at,
       };
-      if (['delivery_fee', 'tip'].includes(entry.type)) {
-        acc[did].delivery_fee += entry.amount;
-      } else if (entry.type === 'reimbursement') {
-        acc[did].food_cost += entry.amount;
-      }
+      if (['delivery_fee', 'tip'].includes(entry.type)) acc[did].delivery_fee += entry.amount;
+      else if (entry.type === 'reimbursement')           acc[did].food_cost    += entry.amount;
       return acc;
     }, {})
   ).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   const filteredHistory = groupedHistory.filter(entry => {
     if (period === 'today') return withinHours(entry.created_at, 24);
-    if (period === 'week') return withinHours(entry.created_at, 24 * 7);
+    if (period === 'week')  return withinHours(entry.created_at, 24 * 7);
     return true;
   });
 
-  function handleWithdrawSuccess({ amt, net, dest }, type) {
-    if (type === 'earnings') {
-      setWithdrawnEarnings(prev => prev + amt);
-    } else {
-      setWithdrawnReimbursement(prev => prev + amt);
-    }
-
-    if (dest === 'wallet') {
-      const newBalance = (profile?.wallet_balance || 0) + net;
-      addWalletTransaction({
-        id: `tx-${Date.now()}`,
-        user_id: session?.user?.id,
-        type: 'earning',
-        amount: net,
-        balance_after: newBalance,
-        description: type === 'earnings' ? 'Earnings transfer to wallet' : 'Reimbursement transfer to wallet',
-        created_at: new Date().toISOString(),
-      });
-      updateProfileLocally({ wallet_balance: newBalance });
-    }
-
+  function handleWithdrawSuccess() {
+    // Reload withdrawals so available balances update
+    if (!session?.user?.id) return;
+    supabase
+      .from('courier_withdrawals')
+      .select('*')
+      .eq('courier_id', session.user.id)
+      .then(({ data }) => setWithdrawalsList(data ?? []));
     setModal(null);
   }
 
@@ -311,12 +458,10 @@ export default function CourierEarningsPage() {
             <p className="text-xs font-bold text-white/70 uppercase tracking-wider">Purchase Reimbursement</p>
             <span className="text-xs bg-white/20 text-white font-semibold px-2.5 py-1 rounded-full">NO COMMISSION</span>
           </div>
-          {/* Available (remaining) is the headline number */}
           <p className="text-4xl font-bold text-white mb-3">₦{availableReimbursement.toLocaleString()}</p>
           <div className="flex gap-4 text-xs text-white/70 flex-wrap">
             <span>Total: <strong className="text-white">₦{foodReimbursed.toLocaleString()}</strong></span>
             <span>Withdrawn: <strong className="text-white">₦{withdrawnReimbursement.toLocaleString()}</strong></span>
-            <span>Remaining: <strong className="text-white">₦{availableReimbursement.toLocaleString()}</strong></span>
           </div>
         </div>
 
@@ -326,7 +471,6 @@ export default function CourierEarningsPage() {
             <p className="text-xs font-bold text-white/70 uppercase tracking-wider">Delivery Earnings</p>
             <span className="text-xs bg-white/20 text-white font-semibold px-2.5 py-1 rounded-full">15% COMMISSION</span>
           </div>
-          {/* Available (remaining) is the headline number */}
           <p className="text-4xl font-bold text-white mb-3">₦{availableEarnings.toLocaleString()}</p>
           <div className="flex gap-4 text-xs text-white/70 flex-wrap">
             <span>Earned: <strong className="text-white">₦{earned.toLocaleString()}</strong></span>
@@ -334,7 +478,7 @@ export default function CourierEarningsPage() {
           </div>
         </div>
 
-        {/* Pending verification card — price edit differences awaiting admin review */}
+        {/* Pending verification */}
         {pendingVerification > 0 && (
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-start gap-3">
             <Lock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
@@ -345,7 +489,6 @@ export default function CourierEarningsPage() {
               </div>
               <p className="text-xs text-amber-400/70 mt-1">
                 Price edit difference under admin review. Released once approved.
-                Delivery fee and tips remain withdrawable normally.
               </p>
             </div>
           </div>
@@ -356,19 +499,19 @@ export default function CourierEarningsPage() {
           <button
             onClick={() => setModal('reimbursement')}
             disabled={frozen || availableReimbursement === 0}
-            className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold text-white transition-colors disabled:opacity-40"
+            className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold text-white disabled:opacity-40"
             style={{ background: 'linear-gradient(135deg, #047857 0%, #065f46 100%)' }}
           >
-            <ShoppingBag className="w-4 h-4" />
+            <ShoppingBag className="w-4 h-4" aria-hidden="true" />
             Withdraw Reimbursement
           </button>
           <button
             onClick={() => setModal('earnings')}
             disabled={frozen || availableEarnings === 0}
-            className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold text-white transition-colors disabled:opacity-40"
+            className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold text-white disabled:opacity-40"
             style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)' }}
           >
-            <Banknote className="w-4 h-4" />
+            <Banknote className="w-4 h-4" aria-hidden="true" />
             Withdraw Earnings
           </button>
         </div>
@@ -405,7 +548,7 @@ export default function CourierEarningsPage() {
             {filteredHistory.map(entry => (
               <div key={entry.id} className="bg-surface-900 border border-white/[0.08] rounded-xl p-3 flex items-center gap-3">
                 <div className="w-9 h-9 bg-brand-500/15 rounded-xl flex items-center justify-center shrink-0">
-                  <MapPin className="w-4 h-4 text-brand-400" />
+                  <MapPin className="w-4 h-4 text-brand-400" aria-hidden="true" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">
@@ -440,7 +583,8 @@ export default function CourierEarningsPage() {
           title="Withdraw Reimbursement"
           maxAmount={availableReimbursement}
           isEarnings={false}
-          onSuccess={result => handleWithdrawSuccess(result, 'reimbursement')}
+          type="reimbursement"
+          onSuccess={handleWithdrawSuccess}
           onClose={() => setModal(null)}
         />
       )}
@@ -449,7 +593,8 @@ export default function CourierEarningsPage() {
           title="Withdraw Earnings"
           maxAmount={availableEarnings}
           isEarnings={true}
-          onSuccess={result => handleWithdrawSuccess(result, 'earnings')}
+          type="earnings"
+          onSuccess={handleWithdrawSuccess}
           onClose={() => setModal(null)}
         />
       )}

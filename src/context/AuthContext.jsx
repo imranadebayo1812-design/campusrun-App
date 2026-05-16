@@ -49,10 +49,6 @@ export function AuthProvider({ children }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (!mounted) return;
-      if (newSession && !isNileEmail(newSession.user.email || '')) {
-        supabase.auth.signOut();
-        return;
-      }
       setSession(newSession ?? null);
       if (newSession) {
         loadProfile(newSession.user.id);
@@ -138,9 +134,6 @@ export function AuthProvider({ children }) {
   // ── Auth actions ───────────────────────────────────────────
 
   async function signUp(email, password, fullName) {
-    if (!isNileEmail(email)) {
-      return { error: { message: 'Only Nile University email addresses (@nileuniversity.edu.ng) are allowed.' } };
-    }
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -150,9 +143,6 @@ export function AuthProvider({ children }) {
   }
 
   async function signIn(email, password) {
-    if (!isNileEmail(email)) {
-      return { error: { message: 'Only Nile University email addresses (@nileuniversity.edu.ng) are allowed.' } };
-    }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   }

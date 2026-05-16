@@ -55,22 +55,25 @@ const SECTIONS = [
 
 export default function PrivacyPolicyPage() {
   const navigate = useNavigate();
-  const canGoBack = window.history.length > 1;
+
+  function goBack() {
+    // window.history.state.idx is set by React Router — 0 means no app history to go back to
+    if (window.history.state?.idx > 0) navigate(-1);
+    else navigate('/');
+  }
 
   return (
     <div className="min-h-screen bg-surface-950">
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="sticky top-0 bg-surface-950/95 backdrop-blur z-10 px-4 pt-safe-top pt-4 pb-3 border-b border-white/[0.06] flex items-center gap-3">
-          {canGoBack && (
-            <button
-              onClick={() => navigate(-1)}
-              aria-label="Go back"
-              className="w-9 h-9 rounded-xl bg-surface-800 flex items-center justify-center shrink-0"
-            >
-              <ChevronLeft className="w-5 h-5 text-gray-400" aria-hidden="true" />
-            </button>
-          )}
+          <button
+            onClick={goBack}
+            aria-label="Go back"
+            className="w-9 h-9 rounded-xl bg-surface-800 flex items-center justify-center shrink-0"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-400" aria-hidden="true" />
+          </button>
           <div className="flex items-center gap-2.5">
             <Logo size={28} />
             <div>

@@ -229,6 +229,15 @@ export default function CreateDeliveryPage() {
   });
   const [roomNumber, setRoomNumber] = useState('');
   const [documentFile, setDocumentFile] = useState(null);
+  const [expandedMenuGroups, setExpandedMenuGroups] = useState(new Set());
+
+  function toggleMenuGroup(label) {
+    setExpandedMenuGroups(prev => {
+      const next = new Set(prev);
+      next.has(label) ? next.delete(label) : next.add(label);
+      return next;
+    });
+  }
 
   const isDropoffHostel = Boolean(
     dropoffLocation &&
@@ -449,43 +458,122 @@ export default function CreateDeliveryPage() {
             <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">
               {activeVendor.name} Menu — Tap to add
             </p>
-            <div className="space-y-1.5">
-              {activeVendor.items.map(menuItem => {
-                const isAvailable = menuItem.available !== false;
-                const inCart = isAvailable ? items.find(it => it.name === menuItem.name) : null;
-                return (
-                  <button
-                    key={menuItem.name}
-                    type="button"
-                    onClick={() => isAvailable && addMenuItemToCart(menuItem)}
-                    disabled={!isAvailable}
-                    className={`w-full flex items-center justify-between bg-surface-900 border rounded-xl px-4 py-3 text-left transition-all ${
-                      isAvailable
-                        ? 'border-white/[0.08] active:scale-[0.98] hover:border-brand-500/30 cursor-pointer'
-                        : 'border-white/[0.05] opacity-50 cursor-not-allowed'
-                    }`}
-                  >
-                    <div>
-                      <p className={`text-sm font-medium ${isAvailable ? 'text-white' : 'text-gray-500'}`}>{menuItem.name}</p>
-                      <p className="text-xs text-gray-500">₦{menuItem.price.toLocaleString()}</p>
+            {activeVendor.menuGroups ? (
+              <div className="space-y-2">
+                {activeVendor.menuGroups.map(group => {
+                  const groupItems = group.names.map(n => activeVendor.items.find(it => it.name === n)).filter(Boolean);
+                  const isOpen = expandedMenuGroups.has(group.label);
+                  return (
+                    <div key={group.label} className="bg-surface-900 border border-white/[0.08] rounded-xl overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => toggleMenuGroup(group.label)}
+                        className="w-full flex items-center justify-between px-4 py-3 border-b border-white/[0.06] hover:bg-white/[0.03] transition-colors"
+                      >
+                        <span className="text-sm font-semibold text-white">{group.label}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs text-gray-500">{groupItems.length}</span>
+                          <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />
+                        </div>
+                      </button>
+                      {isOpen && groupItems.map((menuItem, idx) => {
+                        const inCart = items.find(it => it.name === menuItem.name);
+                        return (
+                          <button
+                            key={menuItem.name}
+                            type="button"
+                            onClick={() => addMenuItemToCart(menuItem)}
+                            className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors hover:bg-white/[0.03] active:scale-[0.99] ${
+                              idx < groupItems.length - 1 ? 'border-b border-white/[0.05]' : ''
+                            }`}
+                          >
+                            <div>
+                              <p className="text-sm font-medium text-white">{menuItem.name}</p>
+                              <p className="text-xs text-gray-500">₦{menuItem.price.toLocaleString()}</p>
+                            </div>
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                              inCart ? 'bg-brand-500 text-white' : 'bg-surface-800 border border-white/[0.08] text-gray-400'
+                            }`}>
+                              {inCart ? <span className="text-xs font-bold">{inCart.qty}</span> : <Plus className="w-3.5 h-3.5" />}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
-                    {isAvailable ? (
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                        inCart ? 'bg-brand-500 text-white' : 'bg-surface-800 border border-white/[0.08] text-gray-400'
-                      }`}>
-                        {inCart ? (
-                          <span className="text-xs font-bold">{inCart.qty}</span>
-                        ) : (
-                          <Plus className="w-3.5 h-3.5" />
-                        )}
+                  );
+                })}
+                {(() => {
+                  const unavail = activeVendor.items.filter(it => it.available === false);
+                  if (!unavail.length) return null;
+                  const isOpen = expandedMenuGroups.has('__unavailable__');
+                  return (
+                    <div className="bg-surface-900 border border-white/[0.08] rounded-xl overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => toggleMenuGroup('__unavailable__')}
+                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.03] transition-colors"
+                      >
+                        <span className="text-sm font-semibold text-gray-500">Currently Unavailable</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs text-gray-600">{unavail.length}</span>
+                          <ChevronRight className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />
+                        </div>
+                      </button>
+                      {isOpen && unavail.map((menuItem, idx) => (
+                        <button
+                          key={menuItem.name}
+                          type="button"
+                          disabled
+                          className={`w-full flex items-center justify-between px-4 py-3 opacity-50 cursor-not-allowed text-left border-t border-white/[0.05] ${
+                            idx < unavail.length - 1 ? 'border-b border-white/[0.05]' : ''
+                          }`}
+                        >
+                          <div>
+                            <p className="text-sm font-medium text-gray-500">{menuItem.name}</p>
+                            <p className="text-xs text-gray-600">₦{menuItem.price.toLocaleString()}</p>
+                          </div>
+                          <span className="text-xs text-gray-600 shrink-0">Unavailable</span>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {activeVendor.items.map(menuItem => {
+                  const isAvailable = menuItem.available !== false;
+                  const inCart = isAvailable ? items.find(it => it.name === menuItem.name) : null;
+                  return (
+                    <button
+                      key={menuItem.name}
+                      type="button"
+                      onClick={() => isAvailable && addMenuItemToCart(menuItem)}
+                      disabled={!isAvailable}
+                      className={`w-full flex items-center justify-between bg-surface-900 border rounded-xl px-4 py-3 text-left transition-all ${
+                        isAvailable
+                          ? 'border-white/[0.08] active:scale-[0.98] hover:border-brand-500/30 cursor-pointer'
+                          : 'border-white/[0.05] opacity-50 cursor-not-allowed'
+                      }`}
+                    >
+                      <div>
+                        <p className={`text-sm font-medium ${isAvailable ? 'text-white' : 'text-gray-500'}`}>{menuItem.name}</p>
+                        <p className="text-xs text-gray-500">₦{menuItem.price.toLocaleString()}</p>
                       </div>
-                    ) : (
-                      <span className="text-xs text-gray-600 shrink-0">Unavailable</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+                      {isAvailable ? (
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                          inCart ? 'bg-brand-500 text-white' : 'bg-surface-800 border border-white/[0.08] text-gray-400'
+                        }`}>
+                          {inCart ? <span className="text-xs font-bold">{inCart.qty}</span> : <Plus className="w-3.5 h-3.5" />}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-600 shrink-0">Unavailable</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 

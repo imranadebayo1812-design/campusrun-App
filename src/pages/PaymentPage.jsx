@@ -30,8 +30,9 @@ export default function PaymentPage() {
         setLoading(false);
         return;
       }
-      const { error: rpcErr } = await supabase.rpc('process_wallet_payment', {
+      const { error: rpcErr } = await supabase.rpc('pay_delivery_with_wallet', {
         p_delivery_id: deliveryId,
+        p_user_id: session.user.id,
         p_amount: total,
       });
       if (rpcErr) {
@@ -59,7 +60,20 @@ export default function PaymentPage() {
             setLoading(false);
             setPaid(true);
           },
-          onCancel: () => { setLoading(false); },
+          onCancel: async () => {
+            // On mobile, Paystack sometimes fires onCancel even after a
+            // successful payment. Re-check the DB before treating as cancelled.
+            const { data } = await supabase
+              .from('deliveries')
+              .select('payment_verified')
+              .eq('id', deliveryId)
+              .single();
+            if (data?.payment_verified) {
+              setPaid(true);
+            } else {
+              setLoading(false);
+            }
+          },
         });
         handler.openIframe();
         return;

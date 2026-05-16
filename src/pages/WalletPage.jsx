@@ -122,22 +122,42 @@ export default function WalletPage() {
         currency: 'NGN',
         onSuccess: async (txn) => {
           const roundedAmount = Math.round(amount);
+          // Optimistic update immediately so the user sees the new balance
+          updateProfileLocally({ wallet_balance: (profile?.wallet_balance || 0) + roundedAmount });
+          setTopupAmount('');
+          setSuccess(`₦${roundedAmount.toLocaleString()} added to your wallet!`);
+          setLoading(false);
+          // Sync RPC + DB in background
           const { error: rpcErr } = await supabase.rpc('record_topup', {
             p_reference: txn.reference,
             p_amount: roundedAmount,
           });
           if (rpcErr) {
+            setSuccess('');
             setError(`Payment received but wallet update failed: ${rpcErr.message}`);
+            refreshProfile(); // revert optimistic update with real DB value
           } else {
-            updateProfileLocally({ wallet_balance: (profile?.wallet_balance || 0) + roundedAmount });
             refreshProfile();
-            setTopupAmount('');
-            setSuccess(`₦${roundedAmount.toLocaleString()} added to your wallet!`);
           }
-          setLoading(false);
         },
-        onCancel: () => {
-          setError('Payment cancelled.');
+        onCancel: async () => {
+          // On mobile Paystack sometimes calls onCancel after a successful payment.
+          // Check if a new topup transaction was actually created.
+          const { data } = await supabase
+            .from('wallet_transactions')
+            .select('amount')
+            .eq('user_id', session.user.id)
+            .eq('type', 'topup')
+            .eq('reference', ref)
+            .maybeSingle();
+          if (data) {
+            updateProfileLocally({ wallet_balance: (profile?.wallet_balance || 0) + Math.round(amount) });
+            setTopupAmount('');
+            setSuccess(`₦${Math.round(amount).toLocaleString()} added to your wallet!`);
+            refreshProfile();
+          } else {
+            setError('Payment cancelled.');
+          }
           setLoading(false);
         },
       }).openIframe();

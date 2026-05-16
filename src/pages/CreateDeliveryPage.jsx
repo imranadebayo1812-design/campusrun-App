@@ -212,6 +212,17 @@ export default function CreateDeliveryPage() {
   const [itemDescription, setItemDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // vendor matched by name when user picks a vendor from the location picker
+  const pickerVendor = !vendor && pickupLocation
+    ? MOCK_VENDORS.find(v => v.name === pickupLocation) ?? null
+    : null;
+  const activeVendor = vendor || pickerVendor;
+
+  function handlePickupChange(loc) {
+    setPickupLocation(loc);
+    if (MOCK_VENDORS.find(v => v.name === loc)) setOrderType('purchase');
+  }
   const [savedAddresses, setSavedAddresses] = useState(() => {
     try { return JSON.parse(localStorage.getItem('campusrun_saved_addresses') || '[]'); }
     catch { return []; }
@@ -398,7 +409,7 @@ export default function CreateDeliveryPage() {
               <InlineLocationSelect
                 label="Pickup Location"
                 value={pickupLocation}
-                onChange={setPickupLocation}
+                onChange={handlePickupChange}
                 icon={MapPin}
                 iconColor="text-green-400"
                 savedAddresses={savedAddresses}
@@ -433,11 +444,13 @@ export default function CreateDeliveryPage() {
         </div>
 
         {/* Vendor menu quick-add */}
-        {vendor && orderType === 'purchase' && (
+        {activeVendor && orderType === 'purchase' && (
           <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">Menu — Tap to add</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">
+              {activeVendor.name} Menu — Tap to add
+            </p>
             <div className="space-y-1.5">
-              {vendor.items.map(menuItem => {
+              {activeVendor.items.map(menuItem => {
                 const isAvailable = menuItem.available !== false;
                 const inCart = isAvailable ? items.find(it => it.name === menuItem.name) : null;
                 return (
@@ -481,10 +494,10 @@ export default function CreateDeliveryPage() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
-                {vendor ? 'Your Order' : 'Item Details'}
+                {activeVendor ? 'Your Order' : 'Item Details'}
               </p>
               <button type="button" onClick={addItem} className="text-brand-400 text-xs font-semibold flex items-center gap-1">
-                <Plus className="w-3 h-3" /> {vendor ? 'Add custom item' : 'Add item'}
+                <Plus className="w-3 h-3" /> {activeVendor ? 'Add custom item' : 'Add item'}
               </button>
             </div>
             <div className="space-y-2">

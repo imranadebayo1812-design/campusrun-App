@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { User, Phone, BookOpen, Home, LogOut } from 'lucide-react';
+import { User, Phone, BookOpen, Home, LogOut, Bike } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function ProfilePage() {
@@ -105,19 +105,35 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Become a courier */}
-      {!isCourier && (
-        <div className="mx-4 mb-4 bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
-          <p className="text-sm font-semibold text-green-400 mb-1">Earn as a Courier</p>
-          <p className="text-xs text-gray-400 mb-3">Deliver for other students and earn money on your own schedule.</p>
+      {/* Settings */}
+      <div className="mx-4 mb-4 bg-surface-900 border border-white/[0.08] rounded-2xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-white/[0.08]">
+          <p className="text-sm font-semibold text-white">Settings</p>
+        </div>
+        <div className="px-4 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isCourier ? 'bg-brand-500/15' : 'bg-surface-800'}`}>
+              <Bike className={`w-4 h-4 ${isCourier ? 'text-brand-400' : 'text-gray-500'}`} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-white">Courier Mode</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {isCourier ? 'Enabled — you can accept deliveries' : 'Off — buyer mode only'}
+              </p>
+            </div>
+          </div>
           <button
-            onClick={() => updateProfileLocally({ is_courier: true })}
-            className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
+            onClick={() => updateProfileLocally({ is_courier: !isCourier })}
+            className={`relative w-12 h-6 rounded-full transition-colors duration-200 shrink-0 ${
+              isCourier ? 'bg-brand-500' : 'bg-surface-700 border border-white/[0.1]'
+            }`}
           >
-            Activate Courier Mode
+            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
+              isCourier ? 'translate-x-6' : 'translate-x-0.5'
+            }`} />
           </button>
         </div>
-      )}
+      </div>
 
       {/* Wallet balance */}
       <div className="mx-4 mb-4 bg-surface-900 border border-white/[0.08] rounded-2xl p-4 flex justify-between items-center">

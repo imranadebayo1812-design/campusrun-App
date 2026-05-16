@@ -19,7 +19,7 @@ export default function MobileShell({ children }) {
   }
 
   return (
-    <div className="app-shell flex flex-col max-w-md mx-auto bg-surface-950 shadow-2xl relative">
+    <div className="app-shell flex flex-col max-w-md mx-auto bg-surface-950 shadow-2xl relative overflow-x-hidden">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[999] focus:bg-brand-500 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-semibold"
@@ -28,8 +28,8 @@ export default function MobileShell({ children }) {
       </a>
 
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 bg-surface-900 border-b border-white/[0.08] safe-top shrink-0 z-10">
-        <div className="flex items-center gap-2.5 min-w-0 overflow-hidden">
+      <header className="flex items-center px-4 py-3 bg-surface-900 border-b border-white/[0.08] safe-top shrink-0 z-10 gap-3">
+        <div className="flex-1 min-w-0 flex items-center">
           <Logo size={38} />
         </div>
 

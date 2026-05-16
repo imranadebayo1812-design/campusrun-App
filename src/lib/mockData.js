@@ -221,14 +221,14 @@ export const MOCK_REFERRAL = {
 };
 
 export const MOCK_EARNINGS = {
-  today: 1800,
-  this_week: 8500,
-  total: 24500,
-  deliveries_today: 3,
-  deliveries_week: 14,
-  food_reimbursed: 4600,
-  tips: 500,
-  withdrawn: 0,
+  // Delivery fees + tips combined into one earned figure
+  earned: 9000,               // 8500 fees + 500 tips
+  withdrawn_earnings: 0,
+  // Food cost credited to courier only after order completes
+  food_reimbursed: 4600,      // total reimbursed across completed orders
+  withdrawn_reimbursement: 0,
+  // Frozen when an unresolved issue report exists
+  has_frozen_earnings: false,
 };
 
 export const MOCK_EARNING_HISTORY = [

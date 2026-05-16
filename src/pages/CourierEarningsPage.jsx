@@ -1,19 +1,17 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { MOCK_EARNINGS, MOCK_EARNING_HISTORY } from '@/lib/mockData';
-import { ShoppingBag, Banknote, MapPin, Wallet } from 'lucide-react';
+import { ShoppingBag, Banknote, MapPin, Wallet, AlertTriangle, Mail } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 function WithdrawModal({ title, maxAmount, isEarnings, onSuccess, onClose }) {
-  const [dest, setDest] = useState('wallet'); // 'wallet' | 'bank'
+  const [dest, setDest] = useState('wallet');
   const [form, setForm] = useState({ bank_name: '', account_number: '', account_name: '' });
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
-  const [finalAmt, setFinalAmt] = useState(0);
-  const [finalNet, setFinalNet] = useState(0);
-  const [finalDest, setFinalDest] = useState('wallet');
+  const [confirmed, setConfirmed] = useState({ amt: 0, net: 0, dest: 'wallet' });
 
   const amt = parseFloat(amount) || 0;
   const commission = isEarnings ? Math.round(amt * 0.15) : 0;
@@ -29,10 +27,9 @@ function WithdrawModal({ title, maxAmount, isEarnings, onSuccess, onClose }) {
     setError('');
     setSubmitting(true);
     await new Promise(r => setTimeout(r, 800));
-    setFinalAmt(amt);
-    setFinalNet(net);
-    setFinalDest(dest);
-    onSuccess({ amt, net, dest });
+    const result = { amt, net, dest };
+    setConfirmed(result);
+    onSuccess(result);
     setSubmitting(false);
     setDone(true);
   }
@@ -47,54 +44,50 @@ function WithdrawModal({ title, maxAmount, isEarnings, onSuccess, onClose }) {
 
         {done ? (
           <div className="text-center py-6">
-            {finalDest === 'wallet' ? (
+            {confirmed.dest === 'wallet' ? (
               <>
                 <div className="w-12 h-12 bg-brand-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
                   <Wallet className="w-6 h-6 text-brand-400" />
                 </div>
                 <p className="text-green-400 font-semibold text-base">Added to wallet!</p>
                 <p className="text-gray-400 text-sm mt-1">
-                  ₦{finalNet.toLocaleString()} is now in your CampusRun wallet.
-                  {isEarnings && <span className="text-gray-500"> (₦{Math.round(finalAmt * 0.15).toLocaleString()} commission deducted)</span>}
+                  ₦{confirmed.net.toLocaleString()} added to your CampusRun wallet.
+                  {isEarnings && (
+                    <span className="text-gray-500"> (₦{(confirmed.amt - confirmed.net).toLocaleString()} commission deducted)</span>
+                  )}
                 </p>
               </>
             ) : (
               <>
                 <p className="text-green-400 font-semibold text-base">Request submitted!</p>
-                <p className="text-gray-400 text-sm mt-1">Processed within 24–48 hours.</p>
+                <p className="text-gray-400 text-sm mt-1">₦{confirmed.net.toLocaleString()} will be paid out within 24–48 hours.</p>
               </>
             )}
             <button onClick={onClose} className="mt-4 bg-brand-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">Done</button>
           </div>
         ) : (
           <>
-            {/* Destination selector */}
+            {/* Destination */}
             <div className="flex gap-2">
-              <button
-                onClick={() => { setDest('wallet'); setError(''); }}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
-                  dest === 'wallet'
-                    ? 'bg-brand-500 border-brand-500 text-white'
-                    : 'border-white/[0.08] text-gray-400 bg-surface-800'
-                }`}
-              >
-                <Wallet className="w-4 h-4" aria-hidden="true" />
-                To Wallet
-              </button>
-              <button
-                onClick={() => { setDest('bank'); setError(''); }}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
-                  dest === 'bank'
-                    ? 'bg-brand-500 border-brand-500 text-white'
-                    : 'border-white/[0.08] text-gray-400 bg-surface-800'
-                }`}
-              >
-                <Banknote className="w-4 h-4" aria-hidden="true" />
-                To Bank
-              </button>
+              {[
+                { value: 'wallet', label: 'To Wallet', Icon: Wallet },
+                { value: 'bank', label: 'To Bank', Icon: Banknote },
+              ].map(({ value, label, Icon }) => (
+                <button
+                  key={value}
+                  onClick={() => { setDest(value); setError(''); }}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                    dest === value
+                      ? 'bg-brand-500 border-brand-500 text-white'
+                      : 'border-white/[0.08] text-gray-400 bg-surface-800'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" aria-hidden="true" />
+                  {label}
+                </button>
+              ))}
             </div>
 
-            {/* Wallet benefit note */}
             {dest === 'wallet' && (
               <div className="bg-brand-500/10 border border-brand-500/20 rounded-xl px-4 py-3">
                 <p className="text-xs text-brand-400 font-semibold">No bank transfer charges · Instant</p>
@@ -102,7 +95,6 @@ function WithdrawModal({ title, maxAmount, isEarnings, onSuccess, onClose }) {
               </div>
             )}
 
-            {/* Bank fields */}
             {dest === 'bank' && [
               { label: 'Bank Name', field: 'bank_name', placeholder: 'e.g. GTBank' },
               { label: 'Account Number', field: 'account_number', placeholder: '0123456789' },
@@ -130,7 +122,7 @@ function WithdrawModal({ title, maxAmount, isEarnings, onSuccess, onClose }) {
               />
             </div>
 
-            {/* Commission breakdown — all earnings withdrawals */}
+            {/* Commission breakdown — earnings only */}
             {isEarnings && amt > 0 && (
               <div className="bg-surface-800 border border-white/[0.08] rounded-xl p-4 space-y-2">
                 <div className="flex justify-between text-sm">
@@ -148,7 +140,6 @@ function WithdrawModal({ title, maxAmount, isEarnings, onSuccess, onClose }) {
               </div>
             )}
 
-            {/* No deduction note — reimbursement */}
             {!isEarnings && (
               <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-4 py-3">
                 <p className="text-xs text-green-400 font-medium">No deductions — full amount paid out</p>
@@ -181,9 +172,13 @@ function withinHours(dateStr, hours) {
 
 export default function CourierEarningsPage() {
   const { profile, updateProfileLocally, addWalletTransaction } = useAuth();
-  const [modal, setModal] = useState(null); // 'reimbursement' | 'earnings' | null
+  const [modal, setModal] = useState(null);
   const [period, setPeriod] = useState('today');
   const [earnings, setEarnings] = useState({ ...MOCK_EARNINGS });
+
+  const availableEarnings = earnings.earned - earnings.withdrawn_earnings;
+  const availableReimbursement = earnings.food_reimbursed - earnings.withdrawn_reimbursement;
+  const frozen = earnings.has_frozen_earnings;
 
   const filteredHistory = MOCK_EARNING_HISTORY.filter(entry => {
     if (period === 'today') return withinHours(entry.created_at, 24);
@@ -192,14 +187,12 @@ export default function CourierEarningsPage() {
   });
 
   function handleWithdrawSuccess({ amt, net, dest }, type) {
-    // Decrease the relevant earnings balance
     if (type === 'earnings') {
-      setEarnings(prev => ({ ...prev, this_week: Math.max(0, prev.this_week - amt), withdrawn: prev.withdrawn + amt }));
+      setEarnings(prev => ({ ...prev, withdrawn_earnings: prev.withdrawn_earnings + amt }));
     } else {
-      setEarnings(prev => ({ ...prev, food_reimbursed: Math.max(0, prev.food_reimbursed - amt) }));
+      setEarnings(prev => ({ ...prev, withdrawn_reimbursement: prev.withdrawn_reimbursement + amt }));
     }
 
-    // If going to wallet: credit wallet balance + add a transaction record
     if (dest === 'wallet') {
       const newBalance = (profile?.wallet_balance || 0) + net;
       addWalletTransaction({
@@ -224,31 +217,55 @@ export default function CourierEarningsPage() {
         <p className="text-sm text-gray-500 mt-0.5">Your money, your pace.</p>
       </div>
 
+      {/* Frozen earnings banner */}
+      {frozen && (
+        <div className="mx-4 mb-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
+            <div className="flex-1">
+              <p className="text-sm font-bold text-amber-400">Earnings frozen</p>
+              <p className="text-xs text-amber-400/80 mt-1">
+                A reported issue is under review. Withdrawals are disabled until support resolves it.
+              </p>
+              <a
+                href="mailto:support@campusrun.online"
+                className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-amber-400 underline underline-offset-2"
+              >
+                <Mail className="w-3.5 h-3.5" aria-hidden="true" />
+                Contact support@campusrun.online
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="px-4 space-y-3">
         {/* Purchase Reimbursement card */}
         <div className="rounded-2xl p-5 overflow-hidden shadow-lg shadow-black/30" style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }}>
-          <div className="flex items-start justify-between mb-4">
+          <div className="flex items-start justify-between mb-3">
             <p className="text-xs font-bold text-white/70 uppercase tracking-wider">Purchase Reimbursement</p>
             <span className="text-xs bg-white/20 text-white font-semibold px-2.5 py-1 rounded-full">NO COMMISSION</span>
           </div>
-          <p className="text-4xl font-bold text-white mb-3">₦{earnings.food_reimbursed.toLocaleString()}</p>
-          <div className="flex gap-4 text-xs text-white/70">
-            <span>Total food spent: <strong className="text-white">₦{(earnings.food_reimbursed + 800).toLocaleString()}</strong></span>
-            <span>Reimbursed: <strong className="text-white">₦{earnings.food_reimbursed.toLocaleString()}</strong></span>
+          {/* Available (remaining) is the headline number */}
+          <p className="text-4xl font-bold text-white mb-3">₦{availableReimbursement.toLocaleString()}</p>
+          <div className="flex gap-4 text-xs text-white/70 flex-wrap">
+            <span>Total: <strong className="text-white">₦{earnings.food_reimbursed.toLocaleString()}</strong></span>
+            <span>Withdrawn: <strong className="text-white">₦{earnings.withdrawn_reimbursement.toLocaleString()}</strong></span>
+            <span>Remaining: <strong className="text-white">₦{availableReimbursement.toLocaleString()}</strong></span>
           </div>
         </div>
 
         {/* Delivery Earnings card */}
         <div className="rounded-2xl p-5 overflow-hidden shadow-lg shadow-black/30" style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)' }}>
-          <div className="flex items-start justify-between mb-4">
+          <div className="flex items-start justify-between mb-3">
             <p className="text-xs font-bold text-white/70 uppercase tracking-wider">Delivery Earnings</p>
             <span className="text-xs bg-white/20 text-white font-semibold px-2.5 py-1 rounded-full">15% COMMISSION</span>
           </div>
-          <p className="text-4xl font-bold text-white mb-3">₦{earnings.this_week.toLocaleString()}</p>
+          {/* Available (remaining) is the headline number */}
+          <p className="text-4xl font-bold text-white mb-3">₦{availableEarnings.toLocaleString()}</p>
           <div className="flex gap-4 text-xs text-white/70 flex-wrap">
-            <span>Earned: <strong className="text-white">₦{earnings.this_week.toLocaleString()}</strong></span>
-            <span>Tips: <strong className="text-white">₦{earnings.tips.toLocaleString()}</strong></span>
-            <span>Withdrawn: <strong className="text-white">₦{earnings.withdrawn.toLocaleString()}</strong></span>
+            <span>Earned: <strong className="text-white">₦{earnings.earned.toLocaleString()}</strong></span>
+            <span>Withdrawn: <strong className="text-white">₦{earnings.withdrawn_earnings.toLocaleString()}</strong></span>
           </div>
         </div>
 
@@ -256,7 +273,7 @@ export default function CourierEarningsPage() {
         <div className="grid grid-cols-2 gap-3 pt-1">
           <button
             onClick={() => setModal('reimbursement')}
-            disabled={earnings.food_reimbursed === 0}
+            disabled={frozen || availableReimbursement === 0}
             className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold text-white transition-colors disabled:opacity-40"
             style={{ background: 'linear-gradient(135deg, #047857 0%, #065f46 100%)' }}
           >
@@ -265,7 +282,7 @@ export default function CourierEarningsPage() {
           </button>
           <button
             onClick={() => setModal('earnings')}
-            disabled={earnings.this_week === 0}
+            disabled={frozen || availableEarnings === 0}
             className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold text-white transition-colors disabled:opacity-40"
             style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)' }}
           >
@@ -339,7 +356,7 @@ export default function CourierEarningsPage() {
       {modal === 'reimbursement' && (
         <WithdrawModal
           title="Withdraw Reimbursement"
-          maxAmount={earnings.food_reimbursed}
+          maxAmount={availableReimbursement}
           isEarnings={false}
           onSuccess={result => handleWithdrawSuccess(result, 'reimbursement')}
           onClose={() => setModal(null)}
@@ -348,7 +365,7 @@ export default function CourierEarningsPage() {
       {modal === 'earnings' && (
         <WithdrawModal
           title="Withdraw Earnings"
-          maxAmount={earnings.this_week}
+          maxAmount={availableEarnings}
           isEarnings={true}
           onSuccess={result => handleWithdrawSuccess(result, 'earnings')}
           onClose={() => setModal(null)}

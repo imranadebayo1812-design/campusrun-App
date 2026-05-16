@@ -25,25 +25,25 @@ export default function FeedbackModal({ delivery, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-      <div className="bg-white rounded-t-2xl w-full max-w-md mx-auto p-5 space-y-4">
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-end">
+      <div className="bg-surface-900 border border-white/[0.08] rounded-t-2xl w-full max-w-md mx-auto p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <p className="font-semibold text-gray-900">Rate your delivery</p>
+          <p className="font-semibold text-white">Rate your delivery</p>
           <button onClick={onClose}><X className="w-5 h-5 text-gray-400" /></button>
         </div>
 
         {done ? (
           <div className="text-center py-6">
             <p className="text-2xl mb-2">⭐</p>
-            <p className="font-semibold">Thanks for your feedback!</p>
-            <button onClick={onClose} className="mt-4 bg-brand-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">Close</button>
+            <p className="font-semibold text-white">Thanks for your feedback!</p>
+            <button onClick={onClose} className="mt-4 bg-gradient-to-br from-brand-500 to-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">Close</button>
           </div>
         ) : (
           <>
             <div className="flex justify-center gap-2">
               {[1, 2, 3, 4, 5].map(s => (
                 <button key={s} onClick={() => setRating(s)}>
-                  <Star className={`w-8 h-8 transition-colors ${s <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
+                  <Star className={`w-8 h-8 transition-colors ${s <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`} />
                 </button>
               ))}
             </div>
@@ -52,12 +52,12 @@ export default function FeedbackModal({ delivery, onClose }) {
               onChange={e => setComment(e.target.value)}
               placeholder="Any comments? (optional)"
               rows={3}
-              className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none"
+              className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 resize-none"
             />
             <button
               onClick={submit}
               disabled={!rating || loading}
-              className="w-full bg-brand-500 text-white font-semibold py-3 rounded-xl disabled:opacity-50"
+              className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 disabled:opacity-50 text-white font-semibold py-3 rounded-xl shadow-lg shadow-brand-500/20"
             >
               {loading ? 'Submitting…' : 'Submit Feedback'}
             </button>

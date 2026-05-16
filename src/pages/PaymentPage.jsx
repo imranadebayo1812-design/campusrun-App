@@ -150,8 +150,9 @@ export default function PaymentPage() {
         </div>
 
         {/* Demo notice */}
-        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
-          <p className="text-xs text-amber-400">Demo mode — no real payment will be charged. Tap Pay to simulate a successful payment.</p>
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5 flex items-center gap-2">
+          <span className="text-amber-400 text-xs">🧪</span>
+          <p className="text-xs text-amber-400">Demo mode — no real payment is processed.</p>
         </div>
 
         {error && (
@@ -163,7 +164,7 @@ export default function PaymentPage() {
         <button
           onClick={handlePay}
           disabled={loading}
-          className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold py-4 rounded-2xl text-base shadow-lg shadow-brand-500/20"
+          className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 disabled:opacity-50 text-white font-bold py-4 rounded-2xl text-base shadow-lg shadow-brand-500/20"
         >
           {loading ? 'Processing…' : `Pay ₦${total.toLocaleString()}`}
         </button>

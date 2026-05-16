@@ -84,7 +84,7 @@ export default function OrdersPage() {
   const tabs = [
     { key: 'all', label: 'All', count: orders.length },
     { key: 'active', label: 'Active', count: active.length },
-    { key: 'in_progress', label: 'In Progress', count: inProgress.length },
+    { key: 'in_progress', label: 'On The Way', count: inProgress.length },
     { key: 'completed', label: 'Completed', count: completed.length },
   ];
 
@@ -132,16 +132,16 @@ export default function OrdersPage() {
             <div className="w-14 h-14 bg-surface-900 rounded-full flex items-center justify-center mx-auto mb-4">
               <Package className="w-7 h-7 text-gray-600" />
             </div>
-            <p className="text-gray-400 font-medium">No orders here</p>
+            <p className="text-gray-400 font-medium">No orders yet</p>
             <p className="text-gray-600 text-sm mt-1">
-              {filter === 'all' ? 'Place your first delivery order' : 'No orders in this category'}
+              {filter === 'all' ? 'Food, errands, packages — your courier is a tap away.' : 'Nothing here yet.'}
             </p>
             {filter === 'all' && (
               <button
                 onClick={() => navigate('/create-order')}
-                className="mt-4 bg-brand-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold"
+                className="mt-4 bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-brand-500/20"
               >
-                Create Order
+                Place your first order
               </button>
             )}
           </div>

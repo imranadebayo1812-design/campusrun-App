@@ -130,7 +130,7 @@ export default function CourierDashboard() {
       <div className="px-4 pt-5 pb-4 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-white">Courier Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Accept and manage deliveries</p>
+          <p className="text-sm text-gray-500 mt-0.5">You're on duty. Campus is counting on you.</p>
         </div>
         <button
           onClick={() => setIsOnline(v => !v)}
@@ -184,13 +184,13 @@ export default function CourierDashboard() {
             <div className="w-14 h-14 bg-surface-800 rounded-full flex items-center justify-center mb-4">
               <Power className="w-7 h-7 text-gray-500" />
             </div>
-            <p className="text-white font-semibold text-base">You are offline</p>
-            <p className="text-gray-500 text-sm mt-1.5">Go online to see and accept new orders</p>
+            <p className="text-white font-semibold text-base">You're off duty</p>
+            <p className="text-gray-500 text-sm mt-1.5">Toggle online above to start receiving delivery requests.</p>
             <button
               onClick={() => setIsOnline(true)}
-              className="mt-5 bg-brand-500 text-white font-semibold px-6 py-2.5 rounded-xl text-sm"
+              className="mt-5 bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white font-semibold px-6 py-2.5 rounded-xl text-sm shadow-lg shadow-brand-500/20"
             >
-              Go Online
+              Start Accepting Deliveries
             </button>
           </div>
         ) : activeOrders.filter(o => o.status !== 'delivered').length === 0 ? (

@@ -104,12 +104,12 @@ export default function CourierEarningsPage() {
       {/* Header */}
       <div className="px-4 pt-5 pb-5">
         <h1 className="text-xl font-bold text-white">My Wallet</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Track earnings and request payouts</p>
+        <p className="text-sm text-gray-500 mt-0.5">Your money, your pace.</p>
       </div>
 
       <div className="px-4 space-y-3">
         {/* Purchase Reimbursement card (green) */}
-        <div className="rounded-2xl p-5 overflow-hidden" style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }}>
+        <div className="rounded-2xl p-5 overflow-hidden shadow-lg shadow-black/30" style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }}>
           <div className="flex items-start justify-between mb-4">
             <p className="text-xs font-bold text-white/70 uppercase tracking-wider">Purchase Reimbursement</p>
             <span className="text-xs bg-white/20 text-white font-semibold px-2.5 py-1 rounded-full">
@@ -124,7 +124,7 @@ export default function CourierEarningsPage() {
         </div>
 
         {/* Delivery Earnings card (purple) */}
-        <div className="rounded-2xl p-5 overflow-hidden" style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)' }}>
+        <div className="rounded-2xl p-5 overflow-hidden shadow-lg shadow-black/30" style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)' }}>
           <div className="flex items-start justify-between mb-4">
             <p className="text-xs font-bold text-white/70 uppercase tracking-wider">Delivery Earnings</p>
             <span className="text-xs bg-white/20 text-white font-semibold px-2.5 py-1 rounded-full">

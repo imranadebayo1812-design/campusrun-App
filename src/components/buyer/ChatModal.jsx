@@ -45,10 +45,10 @@ export default function ChatModal({ deliveryId, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-      <div className="bg-white rounded-t-2xl w-full max-w-md mx-auto h-[70vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b">
-          <p className="font-semibold text-gray-900">Chat with Courier</p>
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-end">
+      <div className="bg-surface-900 border border-white/[0.08] rounded-t-2xl w-full max-w-md mx-auto h-[70vh] flex flex-col">
+        <div className="flex items-center justify-between p-4 border-b border-white/[0.08]">
+          <p className="font-semibold text-white">Chat with Courier</p>
           <button onClick={onClose}><X className="w-5 h-5 text-gray-400" /></button>
         </div>
 
@@ -58,10 +58,10 @@ export default function ChatModal({ deliveryId, onClose }) {
             return (
               <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
-                  isMine ? 'bg-brand-500 text-white rounded-tr-sm' : 'bg-gray-100 text-gray-900 rounded-tl-sm'
+                  isMine ? 'bg-brand-500 text-white rounded-tr-sm' : 'bg-surface-800 text-gray-200 rounded-tl-sm'
                 }`}>
                   <p>{msg.message}</p>
-                  <p className={`text-xs mt-0.5 ${isMine ? 'text-brand-100' : 'text-gray-400'}`}>
+                  <p className={`text-xs mt-0.5 ${isMine ? 'text-brand-200/70' : 'text-gray-500'}`}>
                     {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                   </p>
                 </div>
@@ -69,17 +69,17 @@ export default function ChatModal({ deliveryId, onClose }) {
             );
           })}
           {messages.length === 0 && (
-            <p className="text-center text-sm text-gray-400 py-8">No messages yet. Say hello!</p>
+            <p className="text-center text-sm text-gray-500 py-8">No messages yet. Say hello!</p>
           )}
           <div ref={bottomRef} />
         </div>
 
-        <form onSubmit={sendMessage} className="p-4 border-t flex gap-2">
+        <form onSubmit={sendMessage} className="p-4 border-t border-white/[0.08] flex gap-2">
           <input
             value={message}
             onChange={e => setMessage(e.target.value)}
-            placeholder="Type a message…"
-            className="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+            placeholder="Message your courier…"
+            className="flex-1 bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
           />
           <button
             type="submit"

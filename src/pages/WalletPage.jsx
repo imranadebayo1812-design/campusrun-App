@@ -63,7 +63,7 @@ export default function WalletPage() {
       {/* Balance card */}
       <div className="mx-4 mb-5">
         <div
-          className="rounded-2xl p-6 relative overflow-hidden"
+          className="rounded-2xl p-6 relative overflow-hidden shadow-lg shadow-black/30"
           style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 60%, #2563eb 100%)' }}
         >
           <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/10" />
@@ -107,7 +107,7 @@ export default function WalletPage() {
           <button
             onClick={topUp}
             disabled={loading}
-            className="flex items-center gap-1.5 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-semibold px-4 rounded-xl text-sm"
+            className="flex items-center gap-1.5 bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 disabled:opacity-50 text-white font-semibold px-4 rounded-xl text-sm shadow-md shadow-brand-500/20"
           >
             <Plus className="w-4 h-4" />
             {loading ? '…' : 'Add'}

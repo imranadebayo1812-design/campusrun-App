@@ -354,7 +354,7 @@ export default function CreateDeliveryPage() {
             {vendor ? vendor.name : 'New Delivery'}
           </h1>
           <p className="text-xs text-gray-500">
-            {vendor ? vendor.zone : 'Fill in the delivery details'}
+            {vendor ? vendor.zone : 'Where to & what do you need?'}
           </p>
         </div>
       </div>
@@ -377,7 +377,7 @@ export default function CreateDeliveryPage() {
                 <ShoppingBag className={`w-8 h-8 mx-auto mb-3 ${orderType === 'purchase' ? 'text-brand-400' : 'text-gray-500'}`} />
                 <p className={`font-semibold text-sm ${orderType === 'purchase' ? 'text-white' : 'text-gray-400'}`}>Item Purchase</p>
                 <p className={`text-xs mt-1 leading-snug ${orderType === 'purchase' ? 'text-brand-300/70' : 'text-gray-600'}`}>
-                  Courier buys food/items for you
+                  We pick it up and bring it to you
                 </p>
               </button>
               <button
@@ -392,7 +392,7 @@ export default function CreateDeliveryPage() {
                 <Package className={`w-8 h-8 mx-auto mb-3 ${orderType === 'errand' ? 'text-brand-400' : 'text-gray-500'}`} />
                 <p className={`font-semibold text-sm ${orderType === 'errand' ? 'text-white' : 'text-gray-400'}`}>Package / Errand</p>
                 <p className={`text-xs mt-1 leading-snug ${orderType === 'errand' ? 'text-brand-300/70' : 'text-gray-600'}`}>
-                  Send an existing item/package
+                  Deliver anything, anywhere on campus
                 </p>
               </button>
             </div>
@@ -585,7 +585,7 @@ export default function CreateDeliveryPage() {
                 {activeVendor ? 'Your Order' : 'Item Details'}
               </p>
               <button type="button" onClick={addItem} className="text-brand-400 text-xs font-semibold flex items-center gap-1">
-                <Plus className="w-3 h-3" /> {activeVendor ? 'Add custom item' : 'Add item'}
+                <Plus className="w-3 h-3" /> {activeVendor ? 'Add custom item' : 'Add another item'}
               </button>
             </div>
             <div className="space-y-2">
@@ -798,9 +798,9 @@ export default function CreateDeliveryPage() {
           type="button"
           onClick={submitOrder}
           disabled={loading}
-          className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold py-4 rounded-2xl text-base shadow-lg shadow-brand-500/20"
+          className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 disabled:opacity-50 text-white font-bold py-4 rounded-2xl text-base shadow-lg shadow-brand-500/20"
         >
-          {loading ? 'Creating order…' : `Proceed to Payment — ₦${totalAmount.toLocaleString()}`}
+          {loading ? 'Creating order…' : `Continue to Payment — ₦${totalAmount.toLocaleString()}`}
         </button>
       </div>
     </div>

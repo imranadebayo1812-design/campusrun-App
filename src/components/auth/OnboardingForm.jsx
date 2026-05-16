@@ -95,7 +95,7 @@ export default function OnboardingForm() {
               <button
                 disabled={!data.full_name || !data.phone_number || !data.course}
                 onClick={() => setStep(2)}
-                className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold py-3.5 rounded-xl mt-2 transition-colors"
+                className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 disabled:opacity-50 text-white font-bold py-3.5 rounded-xl mt-2 shadow-lg shadow-brand-500/20"
               >
                 Next
               </button>
@@ -151,7 +151,7 @@ export default function OnboardingForm() {
                 <button
                   disabled={!data.campus_status || loading}
                   onClick={finish}
-                  className="flex-1 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors"
+                  className="flex-1 bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl shadow-lg shadow-brand-500/20"
                 >
                   {loading ? 'Saving…' : 'Finish'}
                 </button>

@@ -32,6 +32,13 @@ const STATUS_DOT = {
   cancelled: 'bg-red-400',
 };
 
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -55,7 +62,7 @@ export default function HomePage() {
       {/* Header */}
       <div className="px-4 pt-5 pb-3 flex items-center justify-between gap-3">
         <div>
-          <p className="text-gray-500 text-xs font-medium">Good day,</p>
+          <p className="text-gray-500 text-xs font-medium">{getGreeting()},</p>
           <h2 className="text-xl font-bold text-white">{firstName} 👋</h2>
         </div>
         <button
@@ -82,7 +89,7 @@ export default function HomePage() {
       {activeOrders.length > 0 && (
         <div className="px-4 mb-5">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Active Orders</p>
+            <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">In Progress</p>
             <button
               onClick={() => navigate('/orders')}
               className="text-brand-400 text-xs font-semibold flex items-center gap-0.5"
@@ -124,7 +131,7 @@ export default function HomePage() {
       {/* All vendors */}
       <div className="px-4">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">All Vendors</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Order from Campus</p>
           <span className="text-xs text-gray-600">{MOCK_VENDORS.length} vendors</span>
         </div>
         <div className="grid grid-cols-2 gap-3">

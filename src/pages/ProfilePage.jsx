@@ -35,7 +35,7 @@ export default function ProfilePage() {
       {/* Avatar card */}
       <div className="mx-4 mb-5">
         <div
-          className="rounded-2xl p-5 relative overflow-hidden flex items-center gap-4"
+          className="rounded-2xl p-5 relative overflow-hidden flex items-center gap-4 shadow-lg shadow-black/30"
           style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 60%, #2563eb 100%)' }}
         >
           <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/10" />
@@ -63,7 +63,7 @@ export default function ProfilePage() {
       {/* Personal info */}
       <div className="mx-4 mb-4 bg-surface-900 border border-white/[0.08] rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-white/[0.08] flex items-center justify-between">
-          <p className="text-sm font-semibold text-white">Personal Info</p>
+          <p className="text-sm font-semibold text-white">Your Details</p>
           <button
             onClick={() => editing ? saveProfile() : setEditing(true)}
             className="text-xs font-semibold text-brand-400"

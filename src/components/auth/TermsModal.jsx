@@ -14,15 +14,21 @@ export default function TermsModal() {
     setLoading(true);
     setError('');
 
-    updateProfileLocally({ terms_accepted: true, terms_accepted_at: new Date().toISOString() });
+    // Write to DB first — modal stays open until confirmed
+    const { error: dbErr } = await supabase
+      .from('profiles')
+      .update({ terms_accepted: true, terms_accepted_at: new Date().toISOString() })
+      .eq('id', session.user.id);
 
-    try { await supabase.auth.updateUser({ data: { terms_accepted: true } }); } catch {}
-    try {
-      const now = new Date().toISOString();
-      await supabase.from('profiles').update({ terms_accepted: true, terms_accepted_at: now }).eq('id', session.user.id);
-    } catch {}
-    try { await supabase.rpc('accept_terms'); } catch {}
+    if (dbErr) {
+      setError('Could not save your consent. Please check your connection and try again.');
+      savingRef.current = false;
+      setLoading(false);
+      return;
+    }
 
+    // Only dismiss the modal after DB confirms
+    updateProfileLocally({ terms_accepted: true });
     savingRef.current = false;
     setLoading(false);
   }

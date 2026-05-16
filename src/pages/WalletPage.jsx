@@ -98,7 +98,7 @@ function WithdrawToBankModal({ maxAmount, onSuccess, onClose }) {
 }
 
 export default function WalletPage() {
-  const { session, profile, updateProfileLocally, walletTransactions, addWalletTransaction } = useAuth();
+  const { session, profile, refreshProfile, walletTransactions } = useAuth();
   const [topupAmount, setTopupAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -128,17 +128,7 @@ export default function WalletPage() {
           if (rpcErr) {
             setError('Payment received but wallet credit failed. Contact support@campusrun.online.');
           } else {
-            const newBalance = (profile?.wallet_balance || 0) + amount;
-            updateProfileLocally({ wallet_balance: newBalance });
-            addWalletTransaction({
-              id: `tx-${Date.now()}`,
-              user_id: session.user.id,
-              type: 'topup',
-              amount,
-              balance_after: newBalance,
-              description: 'Wallet top-up',
-              created_at: new Date().toISOString(),
-            });
+            await refreshProfile(); // pulls confirmed balance from DB
             setTopupAmount('');
             setSuccess(`₦${amount.toLocaleString()} added to your wallet!`);
           }
@@ -155,18 +145,7 @@ export default function WalletPage() {
     }
   }
 
-  function handleWithdrawSuccess(amount) {
-    const newBalance = Math.max(0, (profile?.wallet_balance || 0) - amount);
-    addWalletTransaction({
-      id: `tx-${Date.now()}`,
-      user_id: session?.user?.id,
-      type: 'withdrawal',
-      amount,
-      balance_after: newBalance,
-      description: 'Withdrawal to bank',
-      created_at: new Date().toISOString(),
-    });
-    updateProfileLocally({ wallet_balance: newBalance });
+  function handleWithdrawSuccess() {
     setShowWithdraw(false);
   }
 
@@ -289,7 +268,7 @@ export default function WalletPage() {
       {showWithdraw && (
         <WithdrawToBankModal
           maxAmount={balance}
-          onSuccess={handleWithdrawSuccess}
+          onSuccess={() => setShowWithdraw(false)}
           onClose={() => setShowWithdraw(false)}
         />
       )}

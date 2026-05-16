@@ -38,8 +38,10 @@ export default function OnboardingForm() {
       setLoading(false);
       return;
     }
-    await refreshProfile();
+    // Navigate first — App's early return for /welcome shows the page immediately.
+    // Refresh profile in background so the auth guards update without racing the navigation.
     navigate('/welcome', { replace: true, state: { name: data.full_name } });
+    refreshProfile();
   }
 
   const inputClass = "w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50";

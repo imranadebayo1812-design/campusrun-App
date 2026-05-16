@@ -17,6 +17,7 @@ export default function App() {
 
   // Public routes — no auth required, always render directly
   if (location.pathname === '/privacy') return <PrivacyPolicyPage />;
+  if (location.pathname === '/welcome') return <WelcomePage />;
 
   if (loading) return <LoadingScreen />;
   if (authError) return (

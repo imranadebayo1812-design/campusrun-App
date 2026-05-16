@@ -189,12 +189,14 @@ export default function ProfilePage() {
           </div>
           <button
             onClick={() => updateProfileLocally({ is_courier: !isCourier })}
+            aria-checked={!!isCourier}
+            role="switch"
             className={`relative w-12 h-6 rounded-full transition-colors duration-200 shrink-0 ${
               isCourier ? 'bg-brand-500' : 'bg-surface-700 border border-white/[0.1]'
             }`}
           >
-            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
-              isCourier ? 'translate-x-6' : 'translate-x-0.5'
+            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all duration-200 ${
+              isCourier ? 'left-[26px]' : 'left-0.5'
             }`} />
           </button>
         </div>

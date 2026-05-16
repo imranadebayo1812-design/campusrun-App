@@ -175,8 +175,9 @@ export default function WalletPage() {
 
   return (
     <div className="bg-surface-950 min-h-full">
-      <div className="px-4 pt-5 pb-4">
+      <div className="px-4 pt-5 pb-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-white">Wallet</h1>
+        <span className="text-xs text-gray-600">v4</span>
       </div>
 
       {/* Balance card */}

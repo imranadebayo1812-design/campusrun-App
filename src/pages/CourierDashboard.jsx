@@ -535,10 +535,15 @@ export default function CourierDashboard() {
                       </div>
                       <button
                         onClick={async () => {
-                          await supabase.rpc('cancel_delivery', {
+                          const { error: rpcErr } = await supabase.rpc('cancel_delivery', {
                             p_delivery_id: delivery.id,
                             p_cancelled_by: 'courier',
                           });
+                          if (rpcErr) {
+                            await supabase.from('deliveries')
+                              .update({ status: 'cancelled' })
+                              .eq('id', delivery.id);
+                          }
                           setActiveOrders(prev => prev.filter(o => o.id !== delivery.id));
                         }}
                         className="text-xs font-semibold bg-amber-500/20 border border-amber-500/30 text-amber-400 px-3 py-1.5 rounded-lg"

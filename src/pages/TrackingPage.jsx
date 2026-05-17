@@ -296,8 +296,35 @@ export default function TrackingPage() {
     setDelivery(prev => ({ ...prev, items: updatedItems, price_edit_flag: false }));
   }
 
+  async function cancelOrder() {
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      // Try the RPC first (handles wallet refund)
+      const { error: rpcError } = await supabase.rpc('cancel_delivery', {
+        p_delivery_id: deliveryId,
+        p_cancelled_by: 'buyer',
+      });
+      if (rpcError) {
+        // RPC not deployed or failed — fall back to direct status update
+        const { error: updateError } = await supabase
+          .from('deliveries')
+          .update({ status: 'cancelled' })
+          .eq('id', deliveryId);
+        if (updateError) {
+          setCancelError(`Could not cancel: ${updateError.message}`);
+          setCancelling(false);
+          return;
+        }
+      }
+      setDelivery(prev => ({ ...prev, status: 'cancelled' }));
+    } catch (err) {
+      setCancelError(`Unexpected error: ${err?.message || err}`);
+    }
+    setCancelling(false);
+  }
+
   async function rejectPriceEdit() {
-    // 1. Restore items to original prices and clear the flag
     const restoredItems = (delivery.items || []).map(item => {
       if (item.original_price == null) return item;
       const { original_price, ...rest } = item;
@@ -307,32 +334,17 @@ export default function TrackingPage() {
       .update({ items: restoredItems, price_edit_flag: false, price_edit_buyer_response: 'rejected' })
       .eq('id', deliveryId);
 
-    // 2. Cancel with refund via RPC
-    await supabase.rpc('cancel_delivery', { p_delivery_id: deliveryId, p_cancelled_by: 'buyer' });
-    setDelivery(prev => ({ ...prev, items: restoredItems, price_edit_flag: false, status: 'cancelled' }));
-  }
-
-  async function cancelOrder() {
-    setCancelling(true);
-    setCancelError(null);
-    const { error: rpcError } = await supabase.rpc('cancel_delivery', {
+    // Cancel with refund — fall back to direct update if RPC unavailable
+    const { error: rpcErr } = await supabase.rpc('cancel_delivery', {
       p_delivery_id: deliveryId,
       p_cancelled_by: 'buyer',
     });
-    if (rpcError) {
-      // Fallback: direct status update so the cancellation still goes through
-      const { error: updateError } = await supabase
-        .from('deliveries')
-        .update({ status: 'cancelled', cancelled_by: 'buyer' })
+    if (rpcErr) {
+      await supabase.from('deliveries')
+        .update({ status: 'cancelled' })
         .eq('id', deliveryId);
-      if (updateError) {
-        setCancelError('Cancellation failed. Please try again or contact support.');
-        setCancelling(false);
-        return;
-      }
     }
-    setDelivery(prev => ({ ...prev, status: 'cancelled' }));
-    setCancelling(false);
+    setDelivery(prev => ({ ...prev, items: restoredItems, price_edit_flag: false, status: 'cancelled' }));
   }
 
   let etaText = null;

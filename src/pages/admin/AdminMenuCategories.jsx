@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/api/supabaseClient';
+import { MOCK_VENDORS } from '@/lib/mockData';
 import {
-  Plus, Pencil, Trash2, ChevronDown, ChevronRight,
-  Save, X, Package, Tag, ToggleLeft, ToggleRight,
+  Plus, Trash2, ChevronDown, ChevronRight,
+  Save, X, Package, Tag, ToggleLeft, ToggleRight, Download,
 } from 'lucide-react';
 
 /* ── helpers ─────────────────────────────────────────────────────── */
@@ -121,6 +122,8 @@ export default function AdminMenuCategories() {
   const [newVendorName, setNewVendorName] = useState('');
   const [showAddVendor, setShowAddVendor] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState('');
   const [error, setError] = useState('');
 
   const loadAll = useCallback(async () => {
@@ -135,6 +138,59 @@ export default function AdminMenuCategories() {
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+
+  async function importDefaultMenu() {
+    if (!window.confirm('This will import all vendors and menu items from the built-in list. Existing data will NOT be deleted. Continue?')) return;
+    setImporting(true);
+    setError('');
+    let catCount = 0;
+    let itemCount = 0;
+
+    for (const vendor of MOCK_VENDORS) {
+      const groups = vendor.menuGroups
+        ? vendor.menuGroups
+        : [{ label: 'Menu', names: vendor.items.map(i => i.name) }];
+
+      for (let order = 0; order < groups.length; order++) {
+        const group = groups[order];
+        const label = group.label.replace(/^[\p{Emoji}\s]+/u, '').trim() || group.label;
+        setImportProgress(`Importing ${vendor.name} › ${label}…`);
+
+        const { data: cat, error: catErr } = await supabase
+          .from('menu_categories')
+          .insert({ vendor_name: vendor.name, name: label, display_order: order })
+          .select().single();
+
+        if (catErr || !cat) continue;
+        catCount++;
+
+        const groupItems = group.names
+          ? vendor.items.filter(i => group.names.includes(i.name))
+          : vendor.items;
+
+        if (groupItems.length === 0) continue;
+
+        const { error: itemErr } = await supabase.from('menu_items').insert(
+          groupItems.map(item => ({
+            vendor_name: vendor.name,
+            category_id: cat.id,
+            name: item.name,
+            price: item.price,
+            is_available: item.available !== false,
+          }))
+        );
+        if (!itemErr) itemCount += groupItems.length;
+      }
+    }
+
+    setImportProgress('');
+    setImporting(false);
+    await loadAll();
+    setExpandedVendors(
+      MOCK_VENDORS.reduce((acc, v) => ({ ...acc, [v.name]: true }), {})
+    );
+    alert(`Done! Imported ${catCount} categories and ${itemCount} items.`);
+  }
 
   const catsByVendor = groupBy(categories, 'vendor_name');
   const itemsByCat = groupBy(items, 'category_id');
@@ -227,18 +283,28 @@ export default function AdminMenuCategories() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
         <div>
           <h2 className="text-xl font-bold text-white">Menu Categories</h2>
           <p className="text-sm text-gray-400 mt-0.5">{vendors.length} vendors · {categories.length} categories · {items.length} items</p>
         </div>
-        <button
-          onClick={() => setShowAddVendor(v => !v)}
-          className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold px-4 py-2 rounded-xl"
-        >
-          <Plus className="w-4 h-4" />
-          Add Vendor
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={importDefaultMenu}
+            disabled={importing}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2 rounded-xl"
+          >
+            <Download className="w-4 h-4" />
+            {importing ? importProgress || 'Importing…' : 'Import Default Menu'}
+          </button>
+          <button
+            onClick={() => setShowAddVendor(v => !v)}
+            className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold px-4 py-2 rounded-xl"
+          >
+            <Plus className="w-4 h-4" />
+            Add Vendor
+          </button>
+        </div>
       </div>
 
       {/* Add vendor panel */}

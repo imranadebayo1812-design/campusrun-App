@@ -296,31 +296,33 @@ export default function TrackingPage() {
   }
 
   async function rejectPriceEdit() {
+    // 1. Restore items to original prices and clear the flag
     const restoredItems = (delivery.items || []).map(item => {
       if (item.original_price == null) return item;
       const { original_price, ...rest } = item;
       return { ...rest, price: original_price };
     });
     await supabase.from('deliveries')
-      .update({ items: restoredItems, price_edit_flag: false, price_edit_buyer_response: 'rejected', status: 'cancelled' })
+      .update({ items: restoredItems, price_edit_flag: false, price_edit_buyer_response: 'rejected' })
       .eq('id', deliveryId);
+
+    // 2. Cancel with refund via RPC
+    await supabase.rpc('cancel_delivery', { p_delivery_id: deliveryId, p_cancelled_by: 'buyer' });
     setDelivery(prev => ({ ...prev, items: restoredItems, price_edit_flag: false, status: 'cancelled' }));
   }
 
-  let etaText = null;
+  async function cancelOrder() {
+    setCancelling(true);
+    setDelivery(prev => ({ ...prev, status: 'cancelled' })); // optimistic
+    await supabase.rpc('cancel_delivery', { p_delivery_id: deliveryId, p_cancelled_by: 'buyer' });
+    setCancelling(false);
+  }
   try {
     const { distance_m } = calculateDeliveryFee(delivery.pickup_location, delivery.dropoff_location);
     if (distance_m && !isDelivered && !isCancelled) {
       etaText = `~${Math.max(2, Math.round(distance_m / 80))} min`;
     }
   } catch {}
-
-  function cancelOrder() {
-    setCancelling(true);
-    setDelivery(prev => ({ ...prev, status: 'cancelled' })); // optimistic
-    supabase.from('deliveries').update({ status: 'cancelled' }).eq('id', deliveryId)
-      .then(() => setCancelling(false));
-  }
 
   function sendChat() {
     const text = chatInput.trim();

@@ -534,7 +534,13 @@ export default function CourierDashboard() {
                         <p className="text-xs text-amber-400/70">Both sides can cancel freely</p>
                       </div>
                       <button
-                        onClick={() => setActiveOrders(prev => prev.filter(o => o.id !== delivery.id))}
+                        onClick={async () => {
+                          await supabase.rpc('cancel_delivery', {
+                            p_delivery_id: delivery.id,
+                            p_cancelled_by: 'courier',
+                          });
+                          setActiveOrders(prev => prev.filter(o => o.id !== delivery.id));
+                        }}
                         className="text-xs font-semibold bg-amber-500/20 border border-amber-500/30 text-amber-400 px-3 py-1.5 rounded-lg"
                       >
                         Cancel

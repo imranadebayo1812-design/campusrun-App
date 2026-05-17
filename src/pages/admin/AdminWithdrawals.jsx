@@ -51,7 +51,7 @@ function WithdrawalModal({ withdrawal, onClose, onUpdate }) {
       .single();
     if (courier) {
       await supabase.from('profiles')
-        .update({ wallet_balance: (courier.wallet_balance || 0) + withdrawal.amount })
+        .update({ wallet_balance: (courier.wallet_balance || 0) + withdrawal.net_amount })
         .eq('id', withdrawal.courier_id);
     }
     setActionLoading(false);
@@ -73,7 +73,7 @@ function WithdrawalModal({ withdrawal, onClose, onUpdate }) {
         <div className="p-6 space-y-4">
           {/* Amount */}
           <div className="bg-gradient-to-br from-brand-500/10 to-indigo-500/10 border border-brand-500/20 rounded-2xl p-4 text-center">
-            <p className="text-3xl font-bold text-white">₦{(withdrawal.amount || 0).toLocaleString()}</p>
+            <p className="text-3xl font-bold text-white">₦{(withdrawal.net_amount || 0).toLocaleString()}</p>
             <p className="text-xs text-gray-400 mt-1">Withdrawal Amount</p>
           </div>
 
@@ -186,19 +186,19 @@ export default function AdminWithdrawals() {
     // Summary counts
     const { data: summary } = await supabase
       .from('courier_withdrawals')
-      .select('status, amount');
+      .select('status, net_amount');
     const t = { pending: 0, approved: 0, completed: 0, failed: 0, rejected: 0 };
     const amounts = { pending: 0, completed: 0 };
     (summary || []).forEach(w => {
       t[w.status] = (t[w.status] || 0) + 1;
-      if (w.status === 'pending') amounts.pending += (w.amount || 0);
-      if (w.status === 'completed') amounts.completed += (w.amount || 0);
+      if (w.status === 'pending') amounts.pending += (w.net_amount || 0);
+      if (w.status === 'completed') amounts.completed += (w.net_amount || 0);
     });
     setTotals({ counts: t, amounts });
 
     let q = supabase
       .from('courier_withdrawals')
-      .select('id, amount, status, bank_name, account_number, account_name, courier_id, created_at, approved_at, completed_at, failure_reason, paystack_reference, courier:profiles!courier_id(full_name, email)')
+      .select('id, net_amount, gross_amount, status, bank_name, account_number, account_name, courier_id, type, created_at, approved_at, completed_at, failure_reason, paystack_reference, courier:profiles!courier_id(full_name, email)')
       .order('created_at', { ascending: false });
 
     if (filter !== 'all') q = q.eq('status', filter);
@@ -326,7 +326,7 @@ export default function AdminWithdrawals() {
                     <p className="text-white font-medium whitespace-nowrap">{w.courier?.full_name || '–'}</p>
                     <p className="text-xs text-gray-500">{w.courier?.email}</p>
                   </td>
-                  <td className="px-4 py-3 font-bold text-white whitespace-nowrap">₦{(w.amount || 0).toLocaleString()}</td>
+                  <td className="px-4 py-3 font-bold text-white whitespace-nowrap">₦{(w.net_amount || 0).toLocaleString()}</td>
                   <td className="px-4 py-3 text-gray-300 whitespace-nowrap">{w.bank_name || '–'}</td>
                   <td className="px-4 py-3 font-mono text-xs text-gray-400">{w.account_number || '–'}</td>
                   <td className="px-4 py-3">

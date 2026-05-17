@@ -1,0 +1,34 @@
+import type { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'com.campusrun.app',
+  appName: 'CampusRun',
+  webDir: 'dist',
+  server: {
+    androidScheme: 'https',
+  },
+  plugins: {
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
+    SplashScreen: {
+      launchShowDuration: 2000,
+      backgroundColor: '#080812',
+      androidSplashResourceName: 'splash',
+      showSpinner: false,
+    },
+    StatusBar: {
+      style: 'dark',
+      backgroundColor: '#080812',
+    },
+  },
+  ios: {
+    contentInset: 'always',
+    backgroundColor: '#080812',
+  },
+  android: {
+    backgroundColor: '#080812',
+  },
+};
+
+export default config;

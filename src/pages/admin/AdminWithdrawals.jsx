@@ -16,15 +16,21 @@ const STATUS_STYLES = {
 
 function WithdrawalModal({ withdrawal, onClose, onUpdate }) {
   const [actionLoading, setActionLoading] = useState(false);
+  const [approveError, setApproveError] = useState('');
   const [rejectReason, setRejectReason] = useState('');
   const [showReject, setShowReject] = useState(false);
 
   async function approve() {
     setActionLoading(true);
-    await supabase
-      .from('courier_withdrawals')
-      .update({ status: 'approved', approved_at: new Date().toISOString() })
-      .eq('id', withdrawal.id);
+    setApproveError('');
+    const { data, error } = await supabase.functions.invoke('admin-approve-payout', {
+      body: { withdrawal_id: withdrawal.id },
+    });
+    if (error || !data?.success) {
+      setApproveError(data?.error ?? error?.message ?? 'Transfer failed. Check Paystack balance and try again.');
+      setActionLoading(false);
+      return;
+    }
     setActionLoading(false);
     onUpdate();
     onClose();
@@ -135,20 +141,28 @@ function WithdrawalModal({ withdrawal, onClose, onUpdate }) {
                 </div>
               </div>
             ) : (
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowReject(true)}
-                  className="flex-1 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 py-3 rounded-xl text-sm font-semibold"
-                >
-                  Reject
-                </button>
-                <button
-                  onClick={approve}
-                  disabled={actionLoading}
-                  className="flex-1 bg-green-500/15 text-green-400 border border-green-500/20 hover:bg-green-500/25 disabled:opacity-40 py-3 rounded-xl text-sm font-semibold"
-                >
-                  {actionLoading ? 'Processing…' : 'Approve'}
-                </button>
+              <div className="space-y-2">
+                {approveError && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                    <p className="text-xs text-red-400">{approveError}</p>
+                  </div>
+                )}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowReject(true)}
+                    className="flex-1 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 py-3 rounded-xl text-sm font-semibold"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    onClick={approve}
+                    disabled={actionLoading}
+                    className="flex-1 bg-green-500/15 text-green-400 border border-green-500/20 hover:bg-green-500/25 disabled:opacity-40 py-3 rounded-xl text-sm font-semibold"
+                  >
+                    {actionLoading ? 'Sending to bank…' : 'Approve & Pay'}
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-600 text-center">Approving will immediately initiate a Paystack bank transfer</p>
               </div>
             )}
           </div>

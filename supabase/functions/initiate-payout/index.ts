@@ -86,6 +86,7 @@ serve(async (req) => {
     paystack_transfer_id: String(transfer.data.id ?? ''),
     paystack_reference:   reference,
     bank_name,
+    bank_code,
     account_number,
     account_name,
   });

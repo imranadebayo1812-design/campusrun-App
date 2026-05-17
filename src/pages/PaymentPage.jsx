@@ -60,7 +60,7 @@ export default function PaymentPage() {
         p_amount: total,
       });
       if (rpcErr) {
-        setError(rpcErr.message === 'insufficient_balance' ? 'Insufficient wallet balance.' : 'Payment failed. Please try again.');
+        setError(rpcErr.message === 'insufficient_balance' ? 'Insufficient wallet balance.' : `DB: ${rpcErr.message}`);
         setLoading(false);
         return;
       }

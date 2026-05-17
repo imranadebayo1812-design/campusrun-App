@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import {
   LayoutDashboard, Package, Users, Bike, Banknote,
-  Bell, BarChart2, LogOut, ChevronRight, Shield, Menu, X,
+  Bell, BarChart2, LogOut, ChevronRight, Menu, X,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -46,9 +46,7 @@ export default function AdminLayout() {
         <div className="px-5 py-5 border-b border-white/[0.06]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-gradient-to-br from-brand-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/30">
-                <Shield className="w-4.5 h-4.5 text-white" />
-              </div>
+              <img src="/logo.png" alt="CampusRun" className="w-9 h-9 rounded-xl object-cover shadow-lg shadow-brand-500/30" />
               <div>
                 <p className="text-white font-bold text-sm tracking-tight">CampusRun</p>
                 <p className="text-[10px] text-brand-400 font-semibold uppercase tracking-[0.15em]">Admin Console</p>

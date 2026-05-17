@@ -345,6 +345,10 @@ export default function CourierDashboard() {
   }
 
   async function acceptOrder(order) {
+    if (order.buyer_id === session.user.id) {
+      setAcceptError('You cannot accept your own order.');
+      return;
+    }
     setAcceptError('');
     const now = new Date().toISOString();
     const { data, error } = await supabase

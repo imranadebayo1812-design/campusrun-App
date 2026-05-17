@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { ensurePaystack, PAYSTACK_PUBLIC_KEY } from '@/lib/paystack';
@@ -105,6 +105,27 @@ export default function WalletPage() {
   const [success, setSuccess] = useState('');
   const [showWithdraw, setShowWithdraw] = useState(false);
 
+  // Track tx count at the moment Paystack is opened so we can detect
+  // a new incoming topup via the realtime subscription (webhook path).
+  const txCountRef = useRef(null);
+  const pendingAmountRef = useRef(0);
+  const timeoutRef = useRef(null);
+
+  useEffect(() => {
+    if (!loading || txCountRef.current === null) return;
+    if (walletTransactions.length > txCountRef.current) {
+      const newest = walletTransactions[0];
+      if (newest?.type === 'topup') {
+        clearTimeout(timeoutRef.current);
+        txCountRef.current = null;
+        setLoading(false);
+        setTopupAmount('');
+        setSuccess(`₦${newest.amount.toLocaleString()} added to your wallet!`);
+        refreshProfile();
+      }
+    }
+  }, [walletTransactions, loading]);
+
   async function topUp() {
     const amount = parseFloat(topupAmount);
     if (!amount || amount < 100) { setError('Minimum top-up is ₦100'); return; }
@@ -114,54 +135,54 @@ export default function WalletPage() {
     try {
       await ensurePaystack();
       const ref = `topup_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      pendingAmountRef.current = Math.round(amount);
+      txCountRef.current = walletTransactions.length;
+
+      // 90-second safety timeout in case webhook never fires
+      timeoutRef.current = setTimeout(() => {
+        txCountRef.current = null;
+        setLoading(false);
+        setError('Payment timed out. If you were charged, your balance will update shortly.');
+      }, 90000);
+
       window.PaystackPop.setup({
         key: PAYSTACK_PUBLIC_KEY,
         email: session.user.email,
         amount: amount * 100,
         ref,
         currency: 'NGN',
+        metadata: { type: 'wallet_topup', user_id: session.user.id },
         onSuccess: async (txn) => {
+          // Callbacks still work on desktop — keep them as a fast path
+          clearTimeout(timeoutRef.current);
+          txCountRef.current = null;
           const roundedAmount = Math.round(amount);
-          // Optimistic update immediately so the user sees the new balance
           updateProfileLocally({ wallet_balance: (profile?.wallet_balance || 0) + roundedAmount });
           setTopupAmount('');
           setSuccess(`₦${roundedAmount.toLocaleString()} added to your wallet!`);
           setLoading(false);
-          // Sync RPC + DB in background
-          const { error: rpcErr } = await supabase.rpc('record_topup', {
-            p_reference: txn.reference,
-            p_amount: roundedAmount,
-          });
-          if (rpcErr) {
-            setSuccess('');
-            setError(`Payment received but wallet update failed: ${rpcErr.message}`);
-            refreshProfile(); // revert optimistic update with real DB value
-          } else {
-            refreshProfile();
-          }
+          supabase.rpc('record_topup', { p_reference: txn.reference, p_amount: roundedAmount })
+            .then(({ error: rpcErr }) => {
+              if (!rpcErr) refreshProfile();
+            });
         },
-        onCancel: async () => {
-          // On mobile Paystack sometimes calls onCancel after a successful payment.
-          // Check if a new topup transaction was actually created.
-          const { data } = await supabase
-            .from('wallet_transactions')
-            .select('amount')
-            .eq('user_id', session.user.id)
-            .eq('type', 'topup')
-            .eq('reference', ref)
-            .maybeSingle();
-          if (data) {
-            updateProfileLocally({ wallet_balance: (profile?.wallet_balance || 0) + Math.round(amount) });
-            setTopupAmount('');
-            setSuccess(`₦${Math.round(amount).toLocaleString()} added to your wallet!`);
-            refreshProfile();
-          } else {
-            setError('Payment cancelled.');
-          }
-          setLoading(false);
+        onCancel: () => {
+          // On mobile this fires even after successful payment — don't reset
+          // loading here; let the realtime subscription or timeout handle it.
+          // Only cancel if the tx count hasn't changed after a short delay.
+          setTimeout(() => {
+            if (txCountRef.current !== null) {
+              clearTimeout(timeoutRef.current);
+              txCountRef.current = null;
+              setLoading(false);
+              setError('Payment cancelled.');
+            }
+          }, 5000);
         },
       }).openIframe();
     } catch {
+      clearTimeout(timeoutRef.current);
+      txCountRef.current = null;
       setError('Could not load payment. Check your connection and try again.');
       setLoading(false);
     }

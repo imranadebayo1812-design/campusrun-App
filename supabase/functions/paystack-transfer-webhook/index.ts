@@ -25,6 +25,57 @@ serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
 
+  // ── Wallet top-up via card/bank payment ─────────────────────
+  if (event.event === 'charge.success') {
+    const meta = event.data?.metadata as Record<string, string> | null;
+    const reference = event.data?.reference as string;
+    const amountKobo = event.data?.amount as number;
+    const amountNaira = Math.round(amountKobo / 100);
+
+    if (meta?.type === 'wallet_topup' && meta.user_id) {
+      // Idempotency check
+      const { data: existing } = await supabase
+        .from('wallet_transactions')
+        .select('id')
+        .eq('reference', reference)
+        .maybeSingle();
+
+      if (!existing) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('wallet_balance')
+          .eq('id', meta.user_id)
+          .single();
+
+        const newBalance = ((prof?.wallet_balance as number) || 0) + amountNaira;
+
+        await supabase
+          .from('profiles')
+          .update({ wallet_balance: newBalance })
+          .eq('id', meta.user_id);
+
+        await supabase
+          .from('wallet_transactions')
+          .insert({
+            user_id:      meta.user_id,
+            type:         'topup',
+            amount:       amountNaira,
+            balance_after: newBalance,
+            description:  'Wallet top-up',
+            reference,
+          });
+      }
+    }
+
+    if (meta?.type === 'delivery_payment' && meta.delivery_id) {
+      await supabase
+        .from('deliveries')
+        .update({ payment_verified: true, payment_method: 'paystack', payment_reference: reference })
+        .eq('id', meta.delivery_id);
+    }
+  }
+
+  // ── Courier bank transfer events ────────────────────────────
   if (event.event === 'transfer.success') {
     await supabase
       .from('courier_withdrawals')

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
@@ -16,6 +16,30 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [paid, setPaid] = useState(false);
+  const pollRef = useRef(null);
+
+  // Poll for payment_verified while loading (handles mobile where onSuccess doesn't fire)
+  useEffect(() => {
+    if (!loading) { clearInterval(pollRef.current); return; }
+    pollRef.current = setInterval(async () => {
+      const { data } = await supabase
+        .from('deliveries')
+        .select('payment_verified')
+        .eq('id', deliveryId)
+        .single();
+      if (data?.payment_verified) {
+        clearInterval(pollRef.current);
+        setLoading(false);
+        setPaid(true);
+      }
+    }, 3000);
+    const timeout = setTimeout(() => {
+      clearInterval(pollRef.current);
+      setLoading(false);
+      setError('Payment verification timed out. If you were charged, your order is being confirmed.');
+    }, 90000);
+    return () => { clearInterval(pollRef.current); clearTimeout(timeout); };
+  }, [loading, deliveryId]);
   const total = delivery?.total_amount || 0;
   const walletBalance = profile?.wallet_balance || 0;
   const canUseWallet = walletBalance >= total;
@@ -53,6 +77,7 @@ export default function PaymentPage() {
           email: session.user.email,
           amount: total * 100,
           ref: `cr_${deliveryId}_${Date.now()}`,
+          metadata: { type: 'delivery_payment', delivery_id: deliveryId },
           onSuccess: async () => {
             await supabase.from('deliveries')
               .update({ payment_verified: true, payment_method: 'paystack' })

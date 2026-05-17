@@ -69,52 +69,42 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!session?.user?.id) return;
     const userId = session.user.id;
-    let txChannel, notifChannel;
 
-    async function loadUserData() {
-      const [{ data: txs }, { data: notifs }] = await Promise.all([
-        supabase
-          .from('wallet_transactions')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(50),
-      ]);
-      setWalletTransactions(txs || []);
-      setNotifications(notifs || []);
-
-      txChannel = supabase.channel(`wallet-tx:${userId}`)
-        .on('postgres_changes', {
-          event: 'INSERT', schema: 'public', table: 'wallet_transactions',
-          filter: `user_id=eq.${userId}`,
-        }, payload =>
-          setWalletTransactions(prev =>
-            prev.some(t => t.id === payload.new.id) ? prev : [payload.new, ...prev]
-          )
+    // Subscribe synchronously so cleanup always holds valid references
+    const txChannel = supabase.channel(`wallet-tx:${userId}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'wallet_transactions',
+        filter: `user_id=eq.${userId}`,
+      }, payload =>
+        setWalletTransactions(prev =>
+          prev.some(t => t.id === payload.new.id) ? prev : [payload.new, ...prev]
         )
-        .subscribe();
+      )
+      .subscribe();
 
-      notifChannel = supabase.channel(`notifs:${userId}`)
-        .on('postgres_changes', {
-          event: 'INSERT', schema: 'public', table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        }, payload =>
-          setNotifications(prev =>
-            prev.some(n => n.id === payload.new.id) ? prev : [payload.new, ...prev]
-          )
+    const notifChannel = supabase.channel(`notifs:${userId}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+      }, payload =>
+        setNotifications(prev =>
+          prev.some(n => n.id === payload.new.id) ? prev : [payload.new, ...prev]
         )
-        .subscribe();
-    }
+      )
+      .subscribe();
 
-    loadUserData();
+    // Fetch initial data (fire-and-forget — channels above handle live updates)
+    supabase.from('wallet_transactions').select('*').eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { if (data) setWalletTransactions(data); });
+
+    supabase.from('notifications').select('*').eq('user_id', userId)
+      .order('created_at', { ascending: false }).limit(50)
+      .then(({ data }) => { if (data) setNotifications(data); });
+
     return () => {
-      if (txChannel) supabase.removeChannel(txChannel);
-      if (notifChannel) supabase.removeChannel(notifChannel);
+      supabase.removeChannel(txChannel);
+      supabase.removeChannel(notifChannel);
     };
   }, [session?.user?.id]);
 

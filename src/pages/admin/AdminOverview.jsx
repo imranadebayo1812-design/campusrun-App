@@ -124,15 +124,15 @@ export default function AdminOverview() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
         {STAT_CARDS.map(card => (
           <StatCard key={card.label} {...card} loading={loading} />
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid xl:grid-cols-3 gap-6">
         {/* Recent deliveries */}
-        <div className="lg:col-span-2 bg-surface-900 border border-white/[0.06] rounded-2xl overflow-hidden">
+        <div className="xl:col-span-2 bg-surface-900 border border-white/[0.06] rounded-2xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
             <p className="text-sm font-semibold text-white">Recent Deliveries</p>
             <button onClick={() => navigate('/admin/deliveries')} className="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1">
@@ -214,7 +214,7 @@ export default function AdminOverview() {
       </div>
 
       {/* Quick actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: 'Manage Deliveries', desc: 'View & update orders', path: '/admin/deliveries', color: 'from-blue-500/10 to-cyan-500/10 border-blue-500/20' },
           { label: 'Review Withdrawals', desc: `${stats.pendingWithdrawals || 0} pending`, path: '/admin/withdrawals', color: 'from-red-500/10 to-pink-500/10 border-red-500/20' },

@@ -115,9 +115,9 @@ export default function AdminNotifications() {
         <p className="text-sm text-gray-500 mt-0.5">Send broadcast messages to all users or specific groups</p>
       </div>
 
-      <div className="grid lg:grid-cols-5 gap-6">
+      <div className="grid md:grid-cols-5 gap-6">
         {/* Compose panel */}
-        <div className="lg:col-span-3 space-y-5">
+        <div className="md:col-span-3 space-y-5">
           <div className="bg-surface-900 border border-white/[0.06] rounded-2xl p-5 space-y-4">
             <div className="flex items-center gap-2 mb-1">
               <Megaphone className="w-4.5 h-4.5 text-brand-400" />
@@ -201,7 +201,7 @@ export default function AdminNotifications() {
         </div>
 
         {/* Templates + history */}
-        <div className="lg:col-span-2 space-y-5">
+        <div className="md:col-span-2 space-y-5">
           {/* Templates */}
           <div className="bg-surface-900 border border-white/[0.06] rounded-2xl p-5">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Quick Templates</p>

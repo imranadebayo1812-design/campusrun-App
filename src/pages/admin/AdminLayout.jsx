@@ -33,14 +33,14 @@ export default function AdminLayout() {
     <div className="flex h-screen bg-[#080812] overflow-hidden font-sans">
       {/* Mobile overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-20 bg-black/60 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 z-20 bg-black/60 md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Sidebar */}
       <aside className={`
-        fixed lg:relative inset-y-0 left-0 z-30 w-64 flex flex-col
+        fixed md:relative inset-y-0 left-0 z-30 w-60 flex flex-col shrink-0
         bg-surface-900 border-r border-white/[0.06] transition-transform duration-300
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         {/* Logo */}
         <div className="px-5 py-5 border-b border-white/[0.06]">
@@ -54,7 +54,7 @@ export default function AdminLayout() {
                 <p className="text-[10px] text-brand-400 font-semibold uppercase tracking-[0.15em]">Admin Console</p>
               </div>
             </div>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-gray-500 hover:text-white">
+            <button onClick={() => setSidebarOpen(false)} className="md:hidden text-gray-500 hover:text-white">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -107,7 +107,7 @@ export default function AdminLayout() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
         <header className="shrink-0 h-14 flex items-center gap-4 px-6 border-b border-white/[0.06] bg-surface-900/50 backdrop-blur-sm">
-          <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-gray-400 hover:text-white">
+          <button onClick={() => setSidebarOpen(true)} className="md:hidden text-gray-400 hover:text-white">
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex-1 min-w-0">

@@ -228,7 +228,7 @@ export default function AdminCouriers() {
       </div>
 
       {/* Summary stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-3">
         {[
           { label: 'Total Couriers', value: couriers.length, color: 'from-brand-500 to-indigo-500' },
           { label: 'Currently Active', value: Object.values(stats.activeMap || {}).filter(n => n > 0).length, color: 'from-green-500 to-emerald-500' },
@@ -255,7 +255,7 @@ export default function AdminCouriers() {
 
       {/* Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {Array(6).fill(0).map((_, i) => (
             <div key={i} className="bg-surface-900 border border-white/[0.06] rounded-2xl p-5 animate-pulse">
               <div className="flex items-center gap-3 mb-4">
@@ -277,7 +277,7 @@ export default function AdminCouriers() {
           <p className="text-gray-500">No couriers found</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {couriers.map(c => {
             const active = stats.activeMap?.[c.id] || 0;
             const completed = stats.totalMap?.[c.id] || 0;

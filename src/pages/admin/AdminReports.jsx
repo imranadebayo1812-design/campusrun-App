@@ -152,7 +152,7 @@ export default function AdminReports() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         {[
           { label: `Revenue (${period}d)`, value: `₦${((data?.totals.totalRevenue || 0) / 1000).toFixed(1)}k`, sub: `₦${(data?.totals.totalServiceFees || 0).toLocaleString()} in fees`, icon: DollarSign, color: 'from-green-500 to-emerald-500' },
           { label: `Orders (${period}d)`, value: data?.totals.completedCount ?? '–', sub: `${data?.totals.completionRate ?? 0}% completion rate`, icon: Package, color: 'from-blue-500 to-cyan-500' },
@@ -198,7 +198,7 @@ export default function AdminReports() {
         )}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 gap-6">
         {/* Daily orders bar */}
         <div className="bg-surface-900 border border-white/[0.06] rounded-2xl p-5">
           <p className="text-sm font-semibold text-white mb-4">Daily Completed Deliveries</p>

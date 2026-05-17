@@ -231,7 +231,7 @@ export default function AdminWithdrawals() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {[
           { label: 'Pending', value: totals.counts?.pending || 0, sub: `₦${(totals.amounts?.pending || 0).toLocaleString()}`, color: 'bg-gradient-to-r from-yellow-500 to-orange-500', icon: Clock },
           { label: 'Completed', value: totals.counts?.completed || 0, sub: `₦${(totals.amounts?.completed || 0).toLocaleString()}`, color: 'bg-gradient-to-r from-green-500 to-emerald-500', icon: CheckCircle },

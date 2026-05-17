@@ -15,13 +15,14 @@ const TX_ICON = {
 };
 
 function WithdrawToBankModal({ maxAmount, onSuccess, onClose }) {
+  const { session, profile, updateProfileLocally } = useAuth();
   const [form, setForm] = useState({ bank_name: '', account_number: '', account_name: '' });
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
-  const amt = parseFloat(amount) || 0;
+  const amt = Math.round(parseFloat(amount) || 0);
 
   async function submit() {
     if (!amt || amt < 500) { setError('Minimum withdrawal is ₦500'); return; }
@@ -29,7 +30,40 @@ function WithdrawToBankModal({ maxAmount, onSuccess, onClose }) {
     if (!form.bank_name || !form.account_number || !form.account_name) { setError('Fill in all bank details'); return; }
     setError('');
     setSubmitting(true);
-    await new Promise(r => setTimeout(r, 800));
+
+    const newBalance = (profile?.wallet_balance || 0) - amt;
+
+    // Deduct from wallet
+    const { error: balErr } = await supabase
+      .from('profiles')
+      .update({ wallet_balance: newBalance })
+      .eq('id', session.user.id);
+
+    if (balErr) { setError('Failed to process withdrawal. Try again.'); setSubmitting(false); return; }
+
+    // Record withdrawal request
+    const { error: wErr } = await supabase.from('courier_withdrawals').insert({
+      courier_id:     session.user.id,
+      type:           'wallet',
+      destination:    'bank',
+      gross_amount:   amt,
+      net_amount:     amt,
+      commission:     0,
+      status:         'pending',
+      bank_name:      form.bank_name,
+      account_number: form.account_number,
+      account_name:   form.account_name,
+    });
+
+    if (wErr) {
+      // Refund if withdrawal record failed
+      await supabase.from('profiles').update({ wallet_balance: profile?.wallet_balance }).eq('id', session.user.id);
+      setError('Could not submit withdrawal request. Try again.');
+      setSubmitting(false);
+      return;
+    }
+
+    updateProfileLocally({ wallet_balance: newBalance });
     onSuccess(amt);
     setSubmitting(false);
     setDone(true);

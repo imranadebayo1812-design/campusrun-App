@@ -361,7 +361,7 @@ export default function CourierDashboard() {
     if (STATUS_NEXT[delivery.status]?.requiresCode) { setVerifyDelivery(delivery); return; }
     const gl = graceLeft(delivery);
     if (delivery.status === 'placed' && gl > 0) return;
-    if (priceEditState.pendingApproval) return;
+    if (delivery.price_edit_flag) return;
     setUpdating(delivery.id);
     const updates = { status: nextStatus };
     if (nextStatus === 'delivered') updates.delivered_at = new Date().toISOString();

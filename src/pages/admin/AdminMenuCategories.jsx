@@ -145,23 +145,28 @@ export default function AdminMenuCategories() {
     setError('');
     let catCount = 0;
     let itemCount = 0;
+    let firstItemError = '';
 
     for (const vendor of MOCK_VENDORS) {
       const groups = vendor.menuGroups
         ? vendor.menuGroups
-        : [{ label: 'Menu', names: vendor.items.map(i => i.name) }];
+        : [{ label: 'Menu', names: null }];
 
       for (let order = 0; order < groups.length; order++) {
         const group = groups[order];
-        const label = group.label.replace(/^[\p{Emoji}\s]+/u, '').trim() || group.label;
-        setImportProgress(`Importing ${vendor.name} › ${label}…`);
+        // Strip leading emoji/spaces from group label
+        const label = group.label.replace(/^[^\w\s]*\s*/u, '').trim() || group.label;
+        setImportProgress(`${vendor.name} › ${label}…`);
 
         const { data: cat, error: catErr } = await supabase
           .from('menu_categories')
           .insert({ vendor_name: vendor.name, name: label, display_order: order })
           .select().single();
 
-        if (catErr || !cat) continue;
+        if (catErr || !cat) {
+          if (!firstItemError) firstItemError = `Category error (${vendor.name}): ${catErr?.message}`;
+          continue;
+        }
         catCount++;
 
         const groupItems = group.names
@@ -170,16 +175,21 @@ export default function AdminMenuCategories() {
 
         if (groupItems.length === 0) continue;
 
-        const { error: itemErr } = await supabase.from('menu_items').insert(
-          groupItems.map(item => ({
+        // Insert items one by one to surface individual errors
+        for (const item of groupItems) {
+          const { error: itemErr } = await supabase.from('menu_items').insert({
             vendor_name: vendor.name,
             category_id: cat.id,
             name: item.name,
-            price: item.price,
+            price: Number(item.price),
             is_available: item.available !== false,
-          }))
-        );
-        if (!itemErr) itemCount += groupItems.length;
+          });
+          if (itemErr) {
+            if (!firstItemError) firstItemError = `Item error (${item.name}): ${itemErr.message}`;
+          } else {
+            itemCount++;
+          }
+        }
       }
     }
 
@@ -189,7 +199,11 @@ export default function AdminMenuCategories() {
     setExpandedVendors(
       MOCK_VENDORS.reduce((acc, v) => ({ ...acc, [v.name]: true }), {})
     );
-    alert(`Done! Imported ${catCount} categories and ${itemCount} items.`);
+
+    if (firstItemError) {
+      setError(`Import finished with errors. First error: ${firstItemError}`);
+    }
+    alert(`Done! Imported ${catCount} categories and ${itemCount} items.${firstItemError ? '\n\nNote: some items failed — check the error message on the page.' : ''}`);
   }
 
   const catsByVendor = groupBy(categories, 'vendor_name');

@@ -39,20 +39,14 @@ function WithdrawalModal({ withdrawal, onClose, onUpdate }) {
   async function reject() {
     if (!rejectReason.trim()) return;
     setActionLoading(true);
-    await supabase
-      .from('courier_withdrawals')
-      .update({ status: 'rejected', failure_reason: rejectReason, completed_at: new Date().toISOString() })
-      .eq('id', withdrawal.id);
-    // Refund wallet
-    const { data: courier } = await supabase
-      .from('profiles')
-      .select('wallet_balance')
-      .eq('id', withdrawal.courier_id)
-      .single();
-    if (courier) {
-      await supabase.from('profiles')
-        .update({ wallet_balance: (courier.wallet_balance || 0) + withdrawal.net_amount })
-        .eq('id', withdrawal.courier_id);
+    const { error } = await supabase.rpc('admin_reject_withdrawal', {
+      p_withdrawal_id: withdrawal.id,
+      p_reason:        rejectReason,
+    });
+    if (error) {
+      setApproveError('Rejection failed: ' + error.message);
+      setActionLoading(false);
+      return;
     }
     setActionLoading(false);
     onUpdate();

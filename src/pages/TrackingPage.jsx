@@ -212,6 +212,7 @@ export default function TrackingPage() {
   const [delivery, setDelivery] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
@@ -313,8 +314,24 @@ export default function TrackingPage() {
 
   async function cancelOrder() {
     setCancelling(true);
-    setDelivery(prev => ({ ...prev, status: 'cancelled' })); // optimistic
-    await supabase.rpc('cancel_delivery', { p_delivery_id: deliveryId, p_cancelled_by: 'buyer' });
+    setCancelError(null);
+    const { error: rpcError } = await supabase.rpc('cancel_delivery', {
+      p_delivery_id: deliveryId,
+      p_cancelled_by: 'buyer',
+    });
+    if (rpcError) {
+      // Fallback: direct status update so the cancellation still goes through
+      const { error: updateError } = await supabase
+        .from('deliveries')
+        .update({ status: 'cancelled', cancelled_by: 'buyer' })
+        .eq('id', deliveryId);
+      if (updateError) {
+        setCancelError('Cancellation failed. Please try again or contact support.');
+        setCancelling(false);
+        return;
+      }
+    }
+    setDelivery(prev => ({ ...prev, status: 'cancelled' }));
     setCancelling(false);
   }
 
@@ -661,6 +678,13 @@ export default function TrackingPage() {
                 <Star className="w-4 h-4" aria-hidden="true" /> Rate your runner
               </button>
             )}
+          </div>
+        )}
+
+        {/* Cancel error */}
+        {cancelError && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
+            <p className="text-sm text-red-400">{cancelError}</p>
           </div>
         )}
 

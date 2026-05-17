@@ -317,6 +317,8 @@ export default function TrackingPage() {
     await supabase.rpc('cancel_delivery', { p_delivery_id: deliveryId, p_cancelled_by: 'buyer' });
     setCancelling(false);
   }
+
+  let etaText = null;
   try {
     const { distance_m } = calculateDeliveryFee(delivery.pickup_location, delivery.dropoff_location);
     if (distance_m && !isDelivered && !isCancelled) {

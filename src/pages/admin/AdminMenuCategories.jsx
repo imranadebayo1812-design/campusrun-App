@@ -201,9 +201,9 @@ export default function AdminMenuCategories() {
     );
 
     if (firstItemError) {
-      setError(`Import finished with errors. First error: ${firstItemError}`);
+      setError(`Import error: ${firstItemError}`);
     }
-    alert(`Done! Imported ${catCount} categories and ${itemCount} items.${firstItemError ? '\n\nNote: some items failed — check the error message on the page.' : ''}`);
+    alert(`Done! Imported ${catCount} categories and ${itemCount} items.${firstItemError ? `\n\nFirst error:\n${firstItemError}` : ''}`);
   }
 
   const catsByVendor = groupBy(categories, 'vendor_name');

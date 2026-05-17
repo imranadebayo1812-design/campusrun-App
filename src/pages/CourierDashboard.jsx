@@ -236,10 +236,7 @@ const STATUS_LABEL = {
 
 /* ── Main component ─────────────────────────────────────────────── */
 export default function CourierDashboard() {
-  const {
-    profile, session,
-    priceEditState, submitPriceEdits, clearRejectedOrder,
-  } = useAuth();
+  const { profile, session } = useAuth();
   const navigate = useNavigate();
   const [isOnline, setIsOnline] = useState(false);
   const [tick, setTick] = useState(0);
@@ -321,14 +318,6 @@ export default function CourierDashboard() {
     };
   }, [session?.user?.id, profile?.is_courier]);
 
-  // Handle buyer cancellation due to price rejection
-  useEffect(() => {
-    if (priceEditState.rejectedOrderId) {
-      setActiveOrders(prev => prev.filter(o => o.id !== priceEditState.rejectedOrderId));
-      clearRejectedOrder();
-    }
-  }, [priceEditState.rejectedOrderId]);
-
   if (!profile?.is_courier) {
     return (
       <div className="bg-surface-950 min-h-full p-4 text-center py-20">
@@ -390,27 +379,49 @@ export default function CourierDashboard() {
     setFraudWarningTarget(null);
   }
 
-  function handleItemPriceSubmit({ orderId, itemIndex, itemName, originalPrice, newPrice, diff, qty }) {
-    // Update item price in local order state
-    setActiveOrders(prev => prev.map(o => {
-      if (o.id !== orderId) return o;
-      const items = o.items.map((item, i) => {
-        if (i !== itemIndex) return item;
-        return {
-          ...item,
-          original_price: item.original_price ?? item.price,
-          price: String(newPrice),
-        };
-      });
-      return { ...o, items };
-    }));
+  async function handleItemPriceSubmit({ orderId, itemIndex, itemName, originalPrice, newPrice }) {
+    const order = activeOrders.find(o => o.id === orderId);
+    if (!order) return;
 
-    // Submit to shared context → triggers buyer notification
-    submitPriceEdits(
-      orderId,
-      [{ orderId, itemIndex, itemName, originalPrice, newPrice, diff, qty }],
-      profile?.full_name
-    );
+    const updatedItems = order.items.map((item, i) => {
+      if (i !== itemIndex) return item;
+      return {
+        ...item,
+        original_price: String(item.original_price ?? item.price),
+        price: String(newPrice),
+      };
+    });
+
+    const { error: updateErr } = await supabase
+      .from('deliveries')
+      .update({ items: updatedItems, price_edit_flag: true })
+      .eq('id', orderId);
+
+    if (!updateErr) {
+      // Audit log
+      supabase.from('price_edit_logs').insert({
+        delivery_id: orderId,
+        courier_id: session.user.id,
+        item_name: itemName,
+        original_price: originalPrice,
+        new_price: newPrice,
+      });
+
+      // Notify buyer
+      if (order.buyer_id) {
+        supabase.from('notifications').insert({
+          user_id: order.buyer_id,
+          type: 'price_edit',
+          title: 'Price Updated by Runner',
+          body: `"${itemName}" changed from ₦${Math.round(originalPrice).toLocaleString()} → ₦${Math.round(newPrice).toLocaleString()}. Open your order to accept or cancel.`,
+        });
+      }
+
+      setActiveOrders(prev => prev.map(o =>
+        o.id === orderId ? { ...o, items: updatedItems, price_edit_flag: true } : o
+      ));
+    }
+
     setEditingItem(null);
   }
 
@@ -420,14 +431,14 @@ export default function CourierDashboard() {
   const activeCount = inProgress.filter(o => ['bought', 'on_the_way'].includes(o.status)).length;
   const doneCount = done.length;
 
+  // No longer reading global priceEditState — each delivery has its own price_edit_flag
+
   const stats = [
     { label: 'Total Deliveries', value: 14, sub: '3 today', icon: CheckCircle, iconColor: 'text-green-400', iconBg: 'bg-green-500/15' },
     { label: 'Earned This Week', value: `₦${MOCK_EARNINGS.earned.toLocaleString()}`, sub: 'fees + tips', icon: Wallet, iconColor: 'text-brand-400', iconBg: 'bg-brand-500/15' },
     { label: 'Daily Average', value: `₦${Math.round(MOCK_EARNINGS.earned / 7).toLocaleString()}`, sub: 'per day this week', icon: TrendingUp, iconColor: 'text-blue-400', iconBg: 'bg-blue-500/15' },
     { label: 'Reimbursement', value: `₦${MOCK_EARNINGS.food_reimbursed.toLocaleString()}`, sub: 'pending payout', icon: Star, iconColor: 'text-yellow-400', iconBg: 'bg-yellow-500/15' },
   ];
-
-  const awaitingApproval = priceEditState.pendingApproval;
 
   return (
     <div className="bg-surface-950 min-h-full">
@@ -508,7 +519,8 @@ export default function CourierDashboard() {
               const gracePeriodActive = gl > 0 && delivery.status === 'placed';
               const eta = getEta(delivery);
               const isBlocked = delivery.status === 'placed' && gl > 0;
-              const priceEditPending = awaitingApproval;
+              // Per-order flag — only blocks THIS delivery, not others
+              const priceEditPending = !!delivery.price_edit_flag;
               const canEditPrices = delivery.status === 'placed' && !isBlocked && !priceEditPending && delivery.order_type === 'purchase';
               void tick;
 

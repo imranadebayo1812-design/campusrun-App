@@ -58,6 +58,7 @@ export default function App() {
                 <Route path="deliveries" element={<AdminDeliveries />} />
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="couriers" element={<AdminCouriers />} />
+                <Route path="menu" element={<AdminMenuCategories />} />
                 <Route path="withdrawals" element={<AdminWithdrawals />} />
                 <Route path="disputes" element={<AdminDisputes />} />
                 <Route path="notifications" element={<AdminNotifications />} />
@@ -123,6 +124,7 @@ const AdminDeliveries         = lazy(() => import('@/pages/admin/AdminDeliveries
 const AdminUsers              = lazy(() => import('@/pages/admin/AdminUsers'));
 const AdminCouriers           = lazy(() => import('@/pages/admin/AdminCouriers'));
 const AdminWithdrawals        = lazy(() => import('@/pages/admin/AdminWithdrawals'));
+const AdminMenuCategories     = lazy(() => import('@/pages/admin/AdminMenuCategories'));
 const AdminNotifications      = lazy(() => import('@/pages/admin/AdminNotifications'));
 const AdminReports            = lazy(() => import('@/pages/admin/AdminReports'));
 const AdminDisputes           = lazy(() => import('@/pages/admin/AdminDisputes'));

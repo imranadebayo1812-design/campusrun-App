@@ -1,10 +1,69 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { MOCK_VENDORS } from '@/lib/mockData';
 import {
   Plus, Trash2, ChevronDown, ChevronRight,
-  Save, X, Package, Tag, ToggleLeft, ToggleRight, Download,
+  Save, X, Package, Tag, ToggleLeft, ToggleRight, Download, Upload,
 } from 'lucide-react';
+
+/* ── CSV helpers ─────────────────────────────────────────────────── */
+function escapeCSV(val) {
+  const s = String(val ?? '');
+  return s.includes(',') || s.includes('"') || s.includes('\n')
+    ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function buildTemplateCSV() {
+  const rows = ['Vendor Name,Category,Item Name,Price,Available'];
+  for (const vendor of MOCK_VENDORS) {
+    const groups = vendor.menuGroups
+      ? vendor.menuGroups
+      : [{ label: 'Menu', names: null }];
+    for (const group of groups) {
+      const label = group.label.replace(/^[^\w\s]*\s*/u, '').trim() || group.label;
+      const groupItems = group.names
+        ? vendor.items.filter(i => group.names.includes(i.name))
+        : vendor.items;
+      for (const item of groupItems) {
+        rows.push([
+          escapeCSV(vendor.name),
+          escapeCSV(label),
+          escapeCSV(item.name),
+          item.price,
+          item.available === false ? 'no' : 'yes',
+        ].join(','));
+      }
+    }
+  }
+  return rows.join('\n');
+}
+
+function parseCSV(text) {
+  // Simple CSV parser — handles quoted fields
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const result = [];
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const fields = [];
+    let cur = '';
+    let inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuote) {
+        if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+        else if (ch === '"') { inQuote = false; }
+        else { cur += ch; }
+      } else {
+        if (ch === '"') { inQuote = true; }
+        else if (ch === ',') { fields.push(cur.trim()); cur = ''; }
+        else { cur += ch; }
+      }
+    }
+    fields.push(cur.trim());
+    result.push(fields);
+  }
+  return result;
+}
 
 /* ── helpers ─────────────────────────────────────────────────────── */
 function groupBy(arr, key) {
@@ -125,6 +184,7 @@ export default function AdminMenuCategories() {
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState('');
   const [error, setError] = useState('');
+  const fileInputRef = useRef(null);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -139,71 +199,100 @@ export default function AdminMenuCategories() {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  async function importDefaultMenu() {
-    if (!window.confirm('This will import all vendors and menu items from the built-in list. Existing data will NOT be deleted. Continue?')) return;
+  function downloadTemplate() {
+    const csv = buildTemplateCSV();
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'campusrun_menu_template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleCSVImport(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    const text = await file.text();
+    const rows = parseCSV(text);
+    if (rows.length < 2) { setError('CSV is empty or has no data rows.'); return; }
+
+    // Detect header row
+    const header = rows[0].map(h => h.toLowerCase());
+    const vendorCol  = header.indexOf('vendor name');
+    const catCol     = header.indexOf('category');
+    const nameCol    = header.indexOf('item name');
+    const priceCol   = header.indexOf('price');
+    const availCol   = header.indexOf('available');
+
+    if ([vendorCol, catCol, nameCol, priceCol].includes(-1)) {
+      setError('CSV must have columns: Vendor Name, Category, Item Name, Price, Available');
+      return;
+    }
+
+    if (!window.confirm(`Import ${rows.length - 1} rows from "${file.name}"?\n\nExisting data will NOT be deleted — duplicates may be created if you import the same file twice.`)) return;
+
     setImporting(true);
     setError('');
     let catCount = 0;
     let itemCount = 0;
-    let firstItemError = '';
+    let firstErr = '';
 
-    for (const vendor of MOCK_VENDORS) {
-      const groups = vendor.menuGroups
-        ? vendor.menuGroups
-        : [{ label: 'Menu', names: null }];
+    // Build a category cache so we don't re-insert same vendor+category combos
+    const catCache = {}; // key: `${vendorName}||${catName}`
 
-      for (let order = 0; order < groups.length; order++) {
-        const group = groups[order];
-        // Strip leading emoji/spaces from group label
-        const label = group.label.replace(/^[^\w\s]*\s*/u, '').trim() || group.label;
-        setImportProgress(`${vendor.name} › ${label}…`);
+    const dataRows = rows.slice(1);
+    for (let i = 0; i < dataRows.length; i++) {
+      const row = dataRows[i];
+      const vendorName = row[vendorCol]?.trim();
+      const catName    = row[catCol]?.trim();
+      const itemName   = row[nameCol]?.trim();
+      const price      = parseFloat(row[priceCol]);
+      const available  = availCol === -1 ? true : (row[availCol]?.trim().toLowerCase() !== 'no');
 
+      if (!vendorName || !catName || !itemName || isNaN(price)) continue;
+
+      setImportProgress(`Row ${i + 1}/${dataRows.length}: ${vendorName} › ${itemName}…`);
+
+      // Get or create category
+      const cacheKey = `${vendorName}||${catName}`;
+      let catId = catCache[cacheKey];
+      if (!catId) {
         const { data: cat, error: catErr } = await supabase
           .from('menu_categories')
-          .insert({ vendor_name: vendor.name, name: label, display_order: order })
-          .select().single();
-
+          .insert({ vendor_name: vendorName, name: catName, display_order: Object.keys(catCache).filter(k => k.startsWith(vendorName + '||')).length })
+          .select('id').single();
         if (catErr || !cat) {
-          if (!firstItemError) firstItemError = `Category error (${vendor.name}): ${catErr?.message}`;
+          if (!firstErr) firstErr = `Category "${catName}": ${catErr?.message}`;
           continue;
         }
+        catCache[cacheKey] = cat.id;
+        catId = cat.id;
         catCount++;
+      }
 
-        const groupItems = group.names
-          ? vendor.items.filter(i => group.names.includes(i.name))
-          : vendor.items;
-
-        if (groupItems.length === 0) continue;
-
-        // Insert items one by one to surface individual errors
-        for (const item of groupItems) {
-          const { error: itemErr } = await supabase.from('menu_items').insert({
-            vendor_name: vendor.name,
-            category_id: cat.id,
-            name: item.name,
-            price: Number(item.price),
-            is_available: item.available !== false,
-          });
-          if (itemErr) {
-            if (!firstItemError) firstItemError = `Item error (${item.name}): ${itemErr.message}`;
-          } else {
-            itemCount++;
-          }
-        }
+      // Insert item
+      const { error: itemErr } = await supabase.from('menu_items').insert({
+        vendor_name: vendorName,
+        category_id: catId,
+        name: itemName,
+        price,
+        is_available: available,
+      });
+      if (itemErr) {
+        if (!firstErr) firstErr = `Item "${itemName}": ${itemErr.message}`;
+      } else {
+        itemCount++;
       }
     }
 
     setImportProgress('');
     setImporting(false);
+    if (firstErr) setError(`Import finished with errors. First error: ${firstErr}`);
     await loadAll();
-    setExpandedVendors(
-      MOCK_VENDORS.reduce((acc, v) => ({ ...acc, [v.name]: true }), {})
-    );
-
-    if (firstItemError) {
-      setError(`Import error: ${firstItemError}`);
-    }
-    alert(`Done! Imported ${catCount} categories and ${itemCount} items.${firstItemError ? `\n\nFirst error:\n${firstItemError}` : ''}`);
+    alert(`Done! Imported ${catCount} categories and ${itemCount} items.${firstErr ? `\n\nFirst error:\n${firstErr}` : ''}`);
   }
 
   const catsByVendor = groupBy(categories, 'vendor_name');
@@ -302,15 +391,29 @@ export default function AdminMenuCategories() {
           <h2 className="text-xl font-bold text-white">Menu Categories</h2>
           <p className="text-sm text-gray-400 mt-0.5">{vendors.length} vendors · {categories.length} categories · {items.length} items</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <button
-            onClick={importDefaultMenu}
+            onClick={downloadTemplate}
+            className="flex items-center gap-2 bg-surface-800 border border-white/[0.08] hover:bg-surface-700 text-gray-300 text-sm font-semibold px-4 py-2 rounded-xl"
+          >
+            <Download className="w-4 h-4" />
+            Download Template
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
             disabled={importing}
             className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2 rounded-xl"
           >
-            <Download className="w-4 h-4" />
-            {importing ? importProgress || 'Importing…' : 'Import Default Menu'}
+            <Upload className="w-4 h-4" />
+            {importing ? importProgress || 'Importing…' : 'Import from CSV'}
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={handleCSVImport}
+          />
           <button
             onClick={() => setShowAddVendor(v => !v)}
             className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold px-4 py-2 rounded-xl"
@@ -569,13 +672,13 @@ export default function AdminMenuCategories() {
 
       {/* Tips */}
       <div className="mt-6 bg-surface-900/50 border border-white/[0.06] rounded-xl p-4">
-        <p className="text-xs font-semibold text-gray-400 mb-1.5">Tips</p>
-        <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
-          <li>Click any item name or price to edit it inline — click elsewhere to save.</li>
-          <li>Toggle availability without deleting items — unavailable items won't show in the menu.</li>
-          <li>Changes are saved immediately to the database.</li>
-          <li>To seed vendors from the app's existing menu, run <code className="bg-white/[0.08] px-1 rounded">supabase/seed-menu.sql</code> in the SQL Editor.</li>
-        </ul>
+        <p className="text-xs font-semibold text-gray-400 mb-1.5">How to import</p>
+        <ol className="text-xs text-gray-600 space-y-1 list-decimal list-inside">
+          <li>Click <strong className="text-gray-400">Download Template</strong> — opens a pre-filled spreadsheet in Excel or Google Sheets.</li>
+          <li>Edit prices, add/remove items, set Available to <em>yes</em> or <em>no</em>.</li>
+          <li>Save as CSV and click <strong className="text-gray-400">Import from CSV</strong> to upload.</li>
+          <li>Click any item name or price below to edit it inline after import.</li>
+        </ol>
       </div>
     </div>
   );

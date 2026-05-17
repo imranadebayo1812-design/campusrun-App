@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import {
   LayoutDashboard, Package, Users, Bike, Banknote,
-  Bell, BarChart2, LogOut, ChevronRight, Menu, X,
+  Bell, BarChart2, LogOut, ChevronRight, Menu, X, AlertTriangle,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -12,6 +12,7 @@ const NAV = [
   { to: '/admin/users',         label: 'Users',          icon: Users },
   { to: '/admin/couriers',      label: 'Couriers',       icon: Bike },
   { to: '/admin/withdrawals',   label: 'Withdrawals',    icon: Banknote },
+  { to: '/admin/disputes',      label: 'Disputes',       icon: AlertTriangle },
   { to: '/admin/notifications', label: 'Notifications',  icon: Bell },
   { to: '/admin/reports',       label: 'Reports',        icon: BarChart2 },
 ];

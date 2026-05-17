@@ -22,12 +22,14 @@ function fmt(secs) {
 }
 
 /* ── Report Issue Modal ─────────────────────────────────────────── */
-function ReportIssueModal({ onClose }) {
+function ReportIssueModal({ onClose, deliveryId, courierId, reporterId }) {
   const [issueType, setIssueType] = useState('');
   const [callsMade, setCallsMade] = useState(0);
   const [details, setDetails] = useState('');
   const [calling, setCalling] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
 
   const ISSUES = [
     'Courier arrived at wrong location',
@@ -39,6 +41,27 @@ function ReportIssueModal({ onClose }) {
     if (callsMade >= 3 || calling) return;
     setCalling(true);
     setTimeout(() => { setCallsMade(n => Math.min(n + 1, 3)); setCalling(false); }, 1500);
+  }
+
+  async function handleSubmit() {
+    if (callsMade < 3 || !issueType) return;
+    setSubmitting(true);
+    setError('');
+    const { error: dbErr } = await supabase.from('reported_orders').insert({
+      delivery_id:  deliveryId,
+      reporter_id:  reporterId,
+      courier_id:   courierId,
+      issue_type:   issueType,
+      details:      details.trim() || null,
+      calls_made:   callsMade,
+    });
+    if (dbErr) {
+      setError('Failed to submit report. Please try again.');
+      setSubmitting(false);
+      return;
+    }
+    setSubmitted(true);
+    setSubmitting(false);
   }
 
   return (
@@ -54,7 +77,7 @@ function ReportIssueModal({ onClose }) {
         {submitted ? (
           <div className="text-center py-8">
             <p className="text-green-400 font-semibold text-base">Report submitted!</p>
-            <p className="text-gray-400 text-sm mt-1">Our team will review and respond within 1 hour.</p>
+            <p className="text-gray-400 text-sm mt-1">Our team will review and respond within 1 hour. The courier's earnings have been frozen pending review.</p>
             <button onClick={onClose} className="mt-4 bg-brand-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">Done</button>
           </div>
         ) : (
@@ -107,15 +130,16 @@ function ReportIssueModal({ onClose }) {
               className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 resize-none"
             />
 
+            {error && <p className="text-xs text-red-400">{error}</p>}
             {callsMade < 3 && (
               <p className="text-xs text-gray-500 text-center">Make all 3 call attempts to enable submission</p>
             )}
             <button
-              onClick={() => setSubmitted(true)}
-              disabled={callsMade < 3 || !issueType}
+              onClick={handleSubmit}
+              disabled={callsMade < 3 || !issueType || submitting}
               className="w-full bg-red-500 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm"
             >
-              Submit Report
+              {submitting ? 'Submitting…' : 'Submit Report'}
             </button>
           </>
         )}
@@ -184,7 +208,7 @@ function RatingModal({ onClose, onSubmit }) {
 export default function TrackingPage() {
   const { deliveryId } = useParams();
   const navigate = useNavigate();
-  const { priceEditState, buyerAcceptsPriceEdit, buyerRejectsPriceEdit } = useAuth();
+  const { priceEditState, buyerAcceptsPriceEdit, buyerRejectsPriceEdit, session } = useAuth();
   const [delivery, setDelivery] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -617,7 +641,12 @@ export default function TrackingPage() {
         <RatingModal onClose={() => setShowRatingModal(false)} onSubmit={() => setRatingSubmitted(true)} />
       )}
       {showReportModal && (
-        <ReportIssueModal onClose={() => setShowReportModal(false)} />
+        <ReportIssueModal
+          onClose={() => setShowReportModal(false)}
+          deliveryId={deliveryId}
+          courierId={delivery?.courier_id}
+          reporterId={session?.user?.id}
+        />
       )}
     </div>
   );

@@ -249,6 +249,7 @@ export default function CourierDashboard() {
   const [updating, setUpdating] = useState(null);
   const [fraudWarningTarget, setFraudWarningTarget] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
+  const [acceptError, setAcceptError] = useState('');
 
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 1000);
@@ -344,15 +345,20 @@ export default function CourierDashboard() {
   }
 
   async function acceptOrder(order) {
+    setAcceptError('');
     const now = new Date().toISOString();
     const { data, error } = await supabase
       .from('deliveries')
       .update({ courier_id: session.user.id, courier_accepted: true, accepted_at: now })
       .eq('id', order.id)
-      .is('courier_id', null) // ensure not already taken
+      .is('courier_id', null)
       .select()
       .single();
-    if (!error && data) {
+    if (error) {
+      setAcceptError('Could not accept order. It may have been taken. ' + error.message);
+      return;
+    }
+    if (data) {
       setAvailable(prev => prev.filter(o => o.id !== order.id));
       setActiveOrders(prev => [...prev, data]);
     }
@@ -673,6 +679,11 @@ export default function CourierDashboard() {
       )}
 
       {/* Available Orders */}
+      {acceptError && (
+        <div className="mx-4 mb-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+          <p className="text-xs text-red-400">{acceptError}</p>
+        </div>
+      )}
       {isOnline && available.length > 0 && (
         <div className="px-4 mb-6">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Available Orders</p>

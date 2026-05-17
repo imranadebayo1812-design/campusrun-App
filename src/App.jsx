@@ -45,6 +45,31 @@ export default function App() {
     );
   }
 
+  // Admin dashboard — desktop-only, no mobile shell
+  if (location.pathname.startsWith('/admin')) {
+    if (!profile?.is_admin) return <Navigate to="/" replace />;
+    return (
+      <ToastProvider>
+        <ErrorBoundary>
+          <Suspense fallback={<LoadingScreen />}>
+            <Routes>
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminOverview />} />
+                <Route path="deliveries" element={<AdminDeliveries />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="couriers" element={<AdminCouriers />} />
+                <Route path="withdrawals" element={<AdminWithdrawals />} />
+                <Route path="notifications" element={<AdminNotifications />} />
+                <Route path="reports" element={<AdminReports />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/admin" replace />} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
+      </ToastProvider>
+    );
+  }
+
   return (
     <ToastProvider>
       <MobileShell>
@@ -91,6 +116,14 @@ const CourierDashboard        = lazy(() => import('@/pages/CourierDashboard'));
 const CourierEarningsPage     = lazy(() => import('@/pages/CourierEarningsPage'));
 const CampusMapPage           = lazy(() => import('@/pages/CampusMapPage'));
 const ReferralPage            = lazy(() => import('@/pages/ReferralPage'));
+const AdminLayout             = lazy(() => import('@/pages/admin/AdminLayout'));
+const AdminOverview           = lazy(() => import('@/pages/admin/AdminOverview'));
+const AdminDeliveries         = lazy(() => import('@/pages/admin/AdminDeliveries'));
+const AdminUsers              = lazy(() => import('@/pages/admin/AdminUsers'));
+const AdminCouriers           = lazy(() => import('@/pages/admin/AdminCouriers'));
+const AdminWithdrawals        = lazy(() => import('@/pages/admin/AdminWithdrawals'));
+const AdminNotifications      = lazy(() => import('@/pages/admin/AdminNotifications'));
+const AdminReports            = lazy(() => import('@/pages/admin/AdminReports'));
 
 class ErrorBoundary extends Component {
   state = { crashed: false };

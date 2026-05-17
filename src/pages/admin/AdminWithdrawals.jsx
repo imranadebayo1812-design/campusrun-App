@@ -23,7 +23,7 @@ function WithdrawalModal({ withdrawal, onClose, onUpdate }) {
   async function approve() {
     setActionLoading(true);
     setApproveError('');
-    const { data, error } = await supabase.functions.invoke('admin-approve-payout', {
+    const { data, error } = await supabase.functions.invoke('quick-function', {
       body: { withdrawal_id: withdrawal.id },
     });
     if (error || !data?.success) {

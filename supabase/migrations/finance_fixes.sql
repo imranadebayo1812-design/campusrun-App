@@ -91,27 +91,29 @@ create or replace function public.on_delivery_completed()
 returns trigger language plpgsql security definer as $$
 begin
   if new.status = 'delivered' and (old.status is null or old.status != 'delivered') then
-
-    if new.courier_id is not null and coalesce(new.delivery_fee, 0) > 0 then
-      if not exists (
-        select 1 from public.courier_earnings
-        where delivery_id = new.id and type = 'delivery_fee'
-      ) then
-        insert into public.courier_earnings (courier_id, delivery_id, type, amount, status)
-        values (new.courier_id, new.id, 'delivery_fee', new.delivery_fee::integer, 'pending');
+    begin
+      if new.courier_id is not null and coalesce(new.delivery_fee, 0) > 0 then
+        if not exists (
+          select 1 from public.courier_earnings
+          where delivery_id = new.id and type = 'delivery_fee'
+        ) then
+          insert into public.courier_earnings (courier_id, delivery_id, type, amount, status)
+          values (new.courier_id, new.id, 'delivery_fee', new.delivery_fee::integer, 'pending');
+        end if;
       end if;
-    end if;
 
-    if new.courier_id is not null and coalesce(new.tip, 0) > 0 then
-      if not exists (
-        select 1 from public.courier_earnings
-        where delivery_id = new.id and type = 'tip'
-      ) then
-        insert into public.courier_earnings (courier_id, delivery_id, type, amount, status)
-        values (new.courier_id, new.id, 'tip', new.tip::integer, 'pending');
+      if new.courier_id is not null and coalesce(new.tip, 0) > 0 then
+        if not exists (
+          select 1 from public.courier_earnings
+          where delivery_id = new.id and type = 'tip'
+        ) then
+          insert into public.courier_earnings (courier_id, delivery_id, type, amount, status)
+          values (new.courier_id, new.id, 'tip', new.tip::integer, 'pending');
+        end if;
       end if;
-    end if;
-
+    exception when others then
+      null; -- never block the delivery status update
+    end;
   end if;
   return new;
 end;

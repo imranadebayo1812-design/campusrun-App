@@ -170,21 +170,12 @@ export default function WalletPage() {
         ref,
         currency: 'NGN',
         metadata: { type: 'wallet_topup', user_id: session.user.id },
-        onSuccess: async (txn) => {
+        onSuccess: (txn) => {
           clearTimeout(timeoutRef.current);
           txCountRef.current = null;
           const roundedAmount = Math.round(amount);
-          const { error: rpcErr } = await supabase.rpc('record_topup', {
-            p_reference: txn.reference,
-            p_amount: roundedAmount,
-          });
-          if (rpcErr) {
-            setError(`Payment received but wallet update failed: ${rpcErr.message}`);
-            setLoading(false);
-            return;
-          }
           const newBalance = (profile?.wallet_balance || 0) + roundedAmount;
-          // Add optimistic row immediately — realtime deduplicates by reference if it fires too
+          // Update state synchronously so it renders before any async work
           addWalletTransaction({
             id: `optimistic_${txn.reference}`,
             user_id: session.user.id,
@@ -200,7 +191,12 @@ export default function WalletPage() {
           setTopupAmount('');
           setSuccess(`₦${roundedAmount.toLocaleString()} added to your wallet!`);
           setLoading(false);
-          refreshProfile();
+          // Record in DB in the background
+          supabase.rpc('record_topup', { p_reference: txn.reference, p_amount: roundedAmount })
+            .then(({ error }) => {
+              if (error) setError(`Wallet updated locally but DB sync failed: ${error.message}`);
+              else refreshProfile();
+            });
         },
         onCancel: () => {
           // On mobile this fires even after successful payment — don't reset

@@ -32,7 +32,7 @@ export default function App() {
     </div>
   );
   if (!session) return <LoginPage />;
-  if (!profile?.terms_accepted) return <TermsModal />;
+  if (!profile?.terms_accepted && !profile?.onboarding_complete) return <TermsModal />;
   if (!profile?.onboarding_complete) return <OnboardingForm />;
   if (profile?.is_blacklisted) {
     return (

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
-import { MOCK_EARNINGS } from '@/lib/mockData';
+
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
 import {
   Bike, MapPin, Package, Lock, CheckCircle, Wallet, TrendingUp,
@@ -247,6 +247,7 @@ export default function CourierDashboard() {
   const [fraudWarningTarget, setFraudWarningTarget] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [acceptError, setAcceptError] = useState('');
+  const [earningsSummary, setEarningsSummary] = useState({ earned: 0, reimbursed: 0, totalDeliveries: 0 });
 
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 1000);
@@ -317,6 +318,27 @@ export default function CourierDashboard() {
       if (availCh) supabase.removeChannel(availCh);
     };
   }, [session?.user?.id, profile?.is_courier]);
+
+  // Load real earnings summary from courier_earnings
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    supabase
+      .from('courier_earnings')
+      .select('type, amount, created_at')
+      .eq('courier_id', session.user.id)
+      .then(({ data }) => {
+        if (!data) return;
+        const weekEarned = data
+          .filter(e => ['delivery_fee', 'tip'].includes(e.type) && e.created_at >= weekAgo)
+          .reduce((s, e) => s + e.amount, 0);
+        const reimbursed = data
+          .filter(e => e.type === 'reimbursement')
+          .reduce((s, e) => s + e.amount, 0);
+        const deliveryIds = new Set(data.map(e => e.delivery_id).filter(Boolean));
+        setEarningsSummary({ earned: weekEarned, reimbursed, totalDeliveries: deliveryIds.size });
+      });
+  }, [session?.user?.id]);
 
   if (!profile?.is_courier) {
     return (
@@ -434,10 +456,10 @@ export default function CourierDashboard() {
   // No longer reading global priceEditState — each delivery has its own price_edit_flag
 
   const stats = [
-    { label: 'Total Deliveries', value: 14, sub: '3 today', icon: CheckCircle, iconColor: 'text-green-400', iconBg: 'bg-green-500/15' },
-    { label: 'Earned This Week', value: `₦${MOCK_EARNINGS.earned.toLocaleString()}`, sub: 'fees + tips', icon: Wallet, iconColor: 'text-brand-400', iconBg: 'bg-brand-500/15' },
-    { label: 'Daily Average', value: `₦${Math.round(MOCK_EARNINGS.earned / 7).toLocaleString()}`, sub: 'per day this week', icon: TrendingUp, iconColor: 'text-blue-400', iconBg: 'bg-blue-500/15' },
-    { label: 'Reimbursement', value: `₦${MOCK_EARNINGS.food_reimbursed.toLocaleString()}`, sub: 'pending payout', icon: Star, iconColor: 'text-yellow-400', iconBg: 'bg-yellow-500/15' },
+    { label: 'Total Deliveries', value: earningsSummary.totalDeliveries, sub: `${doneCount} today`, icon: CheckCircle, iconColor: 'text-green-400', iconBg: 'bg-green-500/15' },
+    { label: 'Earned This Week', value: `₦${earningsSummary.earned.toLocaleString()}`, sub: 'fees + tips', icon: Wallet, iconColor: 'text-brand-400', iconBg: 'bg-brand-500/15' },
+    { label: 'Daily Average', value: `₦${Math.round(earningsSummary.earned / 7).toLocaleString()}`, sub: 'per day this week', icon: TrendingUp, iconColor: 'text-blue-400', iconBg: 'bg-blue-500/15' },
+    { label: 'Reimbursement', value: `₦${earningsSummary.reimbursed.toLocaleString()}`, sub: 'pending payout', icon: Star, iconColor: 'text-yellow-400', iconBg: 'bg-yellow-500/15' },
   ];
 
   return (

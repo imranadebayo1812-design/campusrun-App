@@ -154,7 +154,7 @@ export default function HomePage() {
           {open ? (
             <span className="flex items-center gap-1 text-xs font-semibold text-green-400">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-              Open · closes 9:30 PM
+              Open · 8 AM – 9:30 PM
             </span>
           ) : (
             <span className="flex items-center gap-1 text-xs font-semibold text-red-400">

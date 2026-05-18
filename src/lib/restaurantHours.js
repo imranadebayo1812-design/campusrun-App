@@ -1,17 +1,18 @@
 /**
  * CampusRun — Ordering Hours (WAT = UTC+1)
- * New orders: midnight to 9:30 PM WAT
- * Restaurants close: 10:00 PM WAT
+ * New orders: 8:00 AM – 9:30 PM WAT
  */
 
 export function isOrderingOpen() {
-  // WAT = UTC+1; cutoff is 21:30 WAT (20:30 UTC)
+  // WAT = UTC+1
   const now = new Date();
   const watHour = (now.getUTCHours() + 1) % 24;
   const watMin  = now.getUTCMinutes();
-  return !(watHour > 21 || (watHour === 21 && watMin >= 30));
+  const afterOpen  = watHour >= 8;
+  const beforeClose = watHour < 21 || (watHour === 21 && watMin < 30);
+  return afterOpen && beforeClose;
 }
 
 export function orderingClosedMessage() {
-  return 'Ordering closes at 9:30 PM. New orders can be placed from midnight.';
+  return 'Ordering is closed (9:30 PM – 8:00 AM). Opens again at 8 AM.';
 }

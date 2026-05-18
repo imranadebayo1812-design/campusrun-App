@@ -282,6 +282,9 @@ export default function CourierDashboard() {
 
   // Returns visibility info for an available order based on the four matching rules
   function getOrderVisibility(order) {
+    // Couriers cannot pick up their own orders
+    if (order.buyer_id === session?.user?.id) return { visible: false };
+
     const ageS = (Date.now() - new Date(order.created_at)) / 1000;
 
     // Rule 1 — broadcast: order is old enough for everyone
@@ -317,6 +320,7 @@ export default function CourierDashboard() {
           .is('courier_id', null)
           .eq('status', 'placed')
           .eq('payment_verified', true)
+          .neq('buyer_id', userId)
           .order('created_at', { ascending: false }),
       ]);
       setActiveOrders(active || []);

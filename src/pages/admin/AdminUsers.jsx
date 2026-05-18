@@ -14,6 +14,11 @@ function UserDetailModal({ user, onClose, onUpdate }) {
   const [blacklistReason, setBlacklistReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [tab, setTab] = useState('info');
+  const [showTopup, setShowTopup] = useState(false);
+  const [topupAmount, setTopupAmount] = useState('');
+  const [topupReason, setTopupReason] = useState('');
+  const [topupLoading, setTopupLoading] = useState(false);
+  const [topupMsg, setTopupMsg] = useState({ error: '', success: '' });
 
   useEffect(() => {
     async function load() {
@@ -40,6 +45,25 @@ function UserDetailModal({ user, onClose, onUpdate }) {
     setActionLoading(false);
     onUpdate();
     onClose();
+  }
+
+  async function doTopup() {
+    const amt = Math.round(parseFloat(topupAmount));
+    if (!amt || amt < 1) { setTopupMsg({ error: 'Enter a valid amount', success: '' }); return; }
+    setTopupLoading(true);
+    const { error } = await supabase.rpc('admin_topup', {
+      p_user_id: profile.id, p_amount: amt,
+      p_reason: topupReason || 'Admin manual top-up',
+    });
+    if (error) {
+      setTopupMsg({ error: error.message, success: '' });
+    } else {
+      setTopupMsg({ error: '', success: `₦${amt.toLocaleString()} added` });
+      setTopupAmount(''); setTopupReason('');
+      const { data } = await supabase.from('profiles').select('wallet_balance').eq('id', profile.id).single();
+      if (data) setProfile(p => ({ ...p, wallet_balance: data.wallet_balance }));
+    }
+    setTopupLoading(false);
   }
 
   async function toggleCourier() {
@@ -111,7 +135,6 @@ function UserDetailModal({ user, onClose, onUpdate }) {
                 { icon: Mail, label: 'Email', value: profile?.email },
                 { icon: Phone, label: 'Phone', value: profile?.phone || '–' },
                 { icon: Calendar, label: 'Joined', value: profile?.created_at ? format(new Date(profile.created_at), 'PPP') : '–' },
-                { icon: Wallet, label: 'Wallet Balance', value: `₦${(profile?.wallet_balance || 0).toLocaleString()}` },
                 { icon: Package, label: 'Referral Code', value: profile?.referral_code || '–' },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex items-center gap-3 bg-white/[0.03] rounded-xl px-4 py-3">
@@ -122,6 +145,50 @@ function UserDetailModal({ user, onClose, onUpdate }) {
                   </div>
                 </div>
               ))}
+
+              {/* Wallet Balance + Top Up */}
+              <div className="bg-white/[0.03] rounded-xl px-4 py-3 space-y-2">
+                <div className="flex items-center gap-3">
+                  <Wallet className="w-4 h-4 text-gray-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Wallet Balance</p>
+                    <p className="text-sm text-white">₦{(profile?.wallet_balance || 0).toLocaleString()}</p>
+                  </div>
+                  <button
+                    onClick={() => { setShowTopup(t => !t); setTopupMsg({ error: '', success: '' }); }}
+                    className="text-xs font-semibold px-3 py-1.5 bg-brand-500/15 text-brand-400 border border-brand-500/20 rounded-lg hover:bg-brand-500/25"
+                  >
+                    Top Up
+                  </button>
+                </div>
+                {showTopup && (
+                  <div className="space-y-2 pt-1">
+                    <input
+                      type="number"
+                      placeholder="Amount (₦)"
+                      value={topupAmount}
+                      onChange={e => setTopupAmount(e.target.value)}
+                      className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-500/50"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Reason (optional)"
+                      value={topupReason}
+                      onChange={e => setTopupReason(e.target.value)}
+                      className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-500/50"
+                    />
+                    {topupMsg.error && <p className="text-xs text-red-400">{topupMsg.error}</p>}
+                    {topupMsg.success && <p className="text-xs text-green-400">{topupMsg.success}</p>}
+                    <button
+                      onClick={doTopup}
+                      disabled={topupLoading}
+                      className="w-full bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white font-semibold py-2 rounded-xl text-sm"
+                    >
+                      {topupLoading ? 'Processing…' : 'Confirm Top Up'}
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
           ) : tab === 'orders' ? (
             <div className="space-y-2">

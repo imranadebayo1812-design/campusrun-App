@@ -221,6 +221,8 @@ export default function TrackingPage() {
   ]);
   const [chatInput, setChatInput] = useState('');
   const [graceLeft, setGraceLeft] = useState(0);
+  const [accepting, setAccepting] = useState(false);
+  const [priceEditError, setPriceEditError] = useState('');
 
   // Load delivery from DB + subscribe to realtime updates
   useEffect(() => {
@@ -289,11 +291,16 @@ export default function TrackingPage() {
     : [];
 
   async function acceptPriceEdit() {
+    setAccepting(true);
+    setPriceEditError('');
     const { error } = await supabase.rpc('accept_price_edit', { p_delivery_id: deliveryId });
-    if (!error) {
+    if (error) {
+      setPriceEditError(error.message);
+    } else {
       const updatedItems = (delivery.items || []).map(({ original_price, ...rest }) => rest);
       setDelivery(prev => ({ ...prev, items: updatedItems, price_edit_flag: false }));
     }
+    setAccepting(false);
   }
 
   async function cancelOrder() {
@@ -486,11 +493,13 @@ export default function TrackingPage() {
               </button>
               <button
                 onClick={acceptPriceEdit}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl text-sm"
+                disabled={accepting}
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm"
               >
-                Accept &amp; Continue
+                {accepting ? 'Accepting…' : 'Accept & Continue'}
               </button>
             </div>
+            {priceEditError && <p className="text-xs text-red-400 text-center">{priceEditError}</p>}
           </div>
         )}
 

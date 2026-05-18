@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { MOCK_VENDORS } from '@/lib/mockData';
 import { supabase } from '@/api/supabaseClient';
 import { calculateDeliveryFee, DEFAULT_SERVICE_FEE, isResidentialZone, getZoneKey } from '@/lib/deliveryPricing';
+import { isOrderingOpen } from '@/lib/restaurantHours';
 import { getCoordsForVenue } from '@/lib/venueCoords';
 import { ChevronLeft, ChevronRight, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, Search, Navigation, Upload, Bookmark, FileText, Hash } from 'lucide-react';
 
@@ -347,6 +348,10 @@ export default function CreateDeliveryPage() {
   async function submitOrder() {
     if (!pickupLocation || !dropoffLocation) {
       setError('Please select pickup and dropoff locations.');
+      return;
+    }
+    if (orderType === 'purchase' && !isOrderingOpen()) {
+      setError('Campus vendors are closed after 9:30 PM. Orders open again at midnight.');
       return;
     }
     if (orderType === 'purchase' && items.some(i => !i.name || !i.price)) {

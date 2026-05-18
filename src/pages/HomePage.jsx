@@ -147,12 +147,13 @@ export default function HomePage() {
           <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Order from Campus</p>
           <span className="text-xs text-gray-600">{MOCK_VENDORS.length} vendors</span>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className={`grid grid-cols-2 gap-3 ${!open ? 'opacity-50 pointer-events-none select-none' : ''}`}>
           {MOCK_VENDORS.map(vendor => (
             <button
               key={vendor.id}
               onClick={() => openVendor(vendor)}
-              className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4 text-left active:scale-[0.97] transition-transform"
+              disabled={!open}
+              className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4 text-left active:scale-[0.97] transition-transform disabled:cursor-not-allowed"
             >
               <div className={`w-10 h-10 ${vendor.color} rounded-xl flex items-center justify-center mb-3 text-lg`}>
                 {vendor.emoji}
@@ -165,6 +166,9 @@ export default function HomePage() {
             </button>
           ))}
         </div>
+        {!open && (
+          <p className="text-center text-xs text-gray-600 mt-3">Vendors reopen at midnight</p>
+        )}
       </div>
 
       <div className="h-6" />

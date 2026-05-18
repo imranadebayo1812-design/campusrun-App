@@ -32,7 +32,7 @@ export default function AdminPriceEdits() {
       .order('created_at', { ascending: false })
       .limit(200);
 
-    if (error) {
+    if (error || !data) {
       // Fallback: join manually if FK names differ
       const { data: rawLogs } = await supabase
         .from('price_edit_logs')
@@ -40,7 +40,7 @@ export default function AdminPriceEdits() {
         .order('created_at', { ascending: false })
         .limit(200);
 
-      if (rawLogs?.length) {
+      if (rawLogs && rawLogs.length > 0) {
         const deliveryIds = [...new Set(rawLogs.map(l => l.delivery_id))];
         const courierIds  = [...new Set(rawLogs.map(l => l.courier_id))];
 

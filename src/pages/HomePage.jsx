@@ -6,7 +6,6 @@ import { MOCK_VENDORS } from '@/lib/mockData';
 import { isOrderingOpen, orderingClosedMessage } from '@/lib/restaurantHours';
 import { ChevronRight, Package, AlertCircle, Wallet } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-
 const STATUS_LABEL = {
   placed: 'Waiting for courier',
   bought: 'Bought',
@@ -46,8 +45,14 @@ const ACTIVE_STATUSES = ['placed', 'bought', 'on_the_way', 'arrived'];
 export default function HomePage() {
   const navigate = useNavigate();
   const { profile, session } = useAuth();
-  const open = isOrderingOpen();
+  const [open, setOpen] = useState(() => isOrderingOpen());
   const [activeOrders, setActiveOrders] = useState([]);
+
+  // Re-evaluate ordering hours every minute so the UI updates at exactly 9:30 PM
+  useEffect(() => {
+    const id = setInterval(() => setOpen(isOrderingOpen()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (!session?.user?.id) return;
@@ -65,6 +70,7 @@ export default function HomePage() {
   const balance = profile?.wallet_balance || 0;
 
   function openVendor(vendor) {
+    if (!open) return;
     navigate('/create-order', {
       state: { type: 'purchase', vendor: vendor.zone, vendorId: vendor.id },
     });
@@ -147,13 +153,12 @@ export default function HomePage() {
           <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Order from Campus</p>
           <span className="text-xs text-gray-600">{MOCK_VENDORS.length} vendors</span>
         </div>
-        <div className={`grid grid-cols-2 gap-3 ${!open ? 'opacity-50 pointer-events-none select-none' : ''}`}>
+        <div className="grid grid-cols-2 gap-3" style={!open ? { opacity: 0.45, pointerEvents: 'none', userSelect: 'none' } : undefined}>
           {MOCK_VENDORS.map(vendor => (
             <button
               key={vendor.id}
               onClick={() => openVendor(vendor)}
-              disabled={!open}
-              className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4 text-left active:scale-[0.97] transition-transform disabled:cursor-not-allowed"
+              className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4 text-left active:scale-[0.97] transition-transform"
             >
               <div className={`w-10 h-10 ${vendor.color} rounded-xl flex items-center justify-center mb-3 text-lg`}>
                 {vendor.emoji}

@@ -5,12 +5,29 @@ import { User, Phone, BookOpen, Home, LogOut, Bike, Trash2, Shield, Star, Gift, 
 import { useNavigate } from 'react-router-dom';
 
 function DeleteAccountModal({ onClose }) {
+  const { session, profile } = useAuth();
   const [confirm, setConfirm] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
 
-  function handleDelete() {
+  async function handleDelete() {
     if (confirm !== 'DELETE') return;
+    setSubmitting(true);
+    setError('');
+    const { error: dbErr } = await supabase.from('deletion_requests').insert({
+      user_id:    session.user.id,
+      email:      session.user.email,
+      full_name:  profile?.full_name || '',
+      status:     'pending',
+    });
+    if (dbErr) {
+      setError('Could not submit request. Please try again.');
+      setSubmitting(false);
+      return;
+    }
     setSubmitted(true);
+    setSubmitting(false);
   }
 
   return (
@@ -30,7 +47,7 @@ function DeleteAccountModal({ onClose }) {
         {submitted ? (
           <div className="text-center py-6">
             <p className="text-green-400 font-semibold">Request submitted.</p>
-            <p className="text-gray-400 text-sm mt-1">Your account will be permanently deleted within 24 hours.</p>
+            <p className="text-gray-400 text-sm mt-1">Our team will review and process your request shortly.</p>
             <button onClick={onClose} className="mt-4 bg-brand-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">Done</button>
           </div>
         ) : (
@@ -51,14 +68,15 @@ function DeleteAccountModal({ onClose }) {
                 className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/50"
               />
             </div>
+            {error && <p className="text-xs text-red-400">{error}</p>}
             <div className="flex gap-2 pt-1">
               <button onClick={onClose} className="flex-1 bg-surface-800 border border-white/[0.08] text-gray-400 font-medium py-3 rounded-xl text-sm">Cancel</button>
               <button
                 onClick={handleDelete}
-                disabled={confirm !== 'DELETE'}
+                disabled={confirm !== 'DELETE' || submitting}
                 className="flex-1 bg-red-500 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm"
               >
-                Delete Account
+                {submitting ? 'Submitting…' : 'Delete Account'}
               </button>
             </div>
           </>
@@ -69,7 +87,7 @@ function DeleteAccountModal({ onClose }) {
 }
 
 export default function ProfilePage() {
-  const { profile, session, updateProfileLocally } = useAuth();
+  const { profile, session, signOut, updateProfileLocally } = useAuth();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ full_name: profile?.full_name || '', phone_number: profile?.phone_number || '', course: profile?.course || '', hostel: profile?.hostel || '' });
@@ -93,8 +111,8 @@ export default function ProfilePage() {
     setSaving(false);
   }
 
-  function handleSignOut() {
-    navigate('/');
+  async function handleSignOut() {
+    await signOut();
   }
 
   const isCourier = profile?.is_courier;

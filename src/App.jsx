@@ -64,6 +64,7 @@ export default function App() {
                 <Route path="price-edits" element={<AdminPriceEdits />} />
                 <Route path="notifications" element={<AdminNotifications />} />
                 <Route path="reports" element={<AdminReports />} />
+                <Route path="deletions" element={<AdminDeletions />} />
               </Route>
               <Route path="*" element={<Navigate to="/admin" replace />} />
             </Routes>
@@ -130,6 +131,7 @@ const AdminNotifications      = lazy(() => import('@/pages/admin/AdminNotificati
 const AdminReports            = lazy(() => import('@/pages/admin/AdminReports'));
 const AdminDisputes           = lazy(() => import('@/pages/admin/AdminDisputes'));
 const AdminPriceEdits         = lazy(() => import('@/pages/admin/AdminPriceEdits'));
+const AdminDeletions          = lazy(() => import('@/pages/admin/AdminDeletions'));
 
 class ErrorBoundary extends Component {
   state = { crashed: false };

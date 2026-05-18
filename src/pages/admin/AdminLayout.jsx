@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import {
   LayoutDashboard, Package, Users, Bike, Banknote,
-  Bell, BarChart2, LogOut, ChevronRight, Menu, X, AlertTriangle, UtensilsCrossed, PencilLine,
+  Bell, BarChart2, LogOut, ChevronRight, Menu, X, AlertTriangle, UtensilsCrossed, PencilLine, Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -17,6 +17,7 @@ const NAV = [
   { to: '/admin/price-edits',  label: 'Price Edits',    icon: PencilLine },
   { to: '/admin/notifications', label: 'Notifications',  icon: Bell },
   { to: '/admin/reports',       label: 'Reports',        icon: BarChart2 },
+  { to: '/admin/deletions',     label: 'Deletions',      icon: Trash2 },
 ];
 
 export default function AdminLayout() {

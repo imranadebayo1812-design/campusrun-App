@@ -4,7 +4,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import {
   Search, Filter, RefreshCw, ChevronDown, ChevronUp,
   Package, MapPin, User, Clock, CheckCircle, XCircle,
-  ArrowRight, Eye, MoreVertical,
+  ArrowRight, Eye, MoreVertical, UserCheck,
 } from 'lucide-react';
 
 const STATUS_COLORS = {
@@ -21,9 +21,79 @@ const STATUS_LABELS = {
 };
 const ALL_STATUSES = ['placed', 'bought', 'on_the_way', 'arrived', 'delivered', 'cancelled'];
 
+function AssignCourierModal({ delivery, onClose, onAssigned }) {
+  const [couriers, setCouriers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [assigning, setAssigning] = useState(null);
+
+  useEffect(() => {
+    supabase.from('profiles')
+      .select('id, full_name, email, avg_rating, total_ratings')
+      .eq('is_courier', true)
+      .eq('is_blacklisted', false)
+      .order('avg_rating', { ascending: false })
+      .then(({ data }) => { setCouriers(data || []); setLoading(false); });
+  }, []);
+
+  async function assign(courier) {
+    setAssigning(courier.id);
+    await supabase.from('deliveries').update({
+      courier_id: courier.id,
+      courier_accepted: true,
+      accepted_at: new Date().toISOString(),
+    }).eq('id', delivery.id);
+    onAssigned();
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
+      <div className="bg-[#0d0d1f] border border-white/[0.08] rounded-2xl w-full max-w-md overflow-hidden max-h-[80vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] shrink-0">
+          <div>
+            <p className="font-bold text-white">Assign Courier</p>
+            <p className="text-xs text-gray-500 mt-0.5">Order #{delivery.id.slice(0, 8)} · {delivery.pickup_location}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white text-xl font-bold">×</button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {loading ? (
+            Array(4).fill(0).map((_, i) => <div key={i} className="h-14 bg-white/[0.04] rounded-xl animate-pulse" />)
+          ) : couriers.length === 0 ? (
+            <p className="text-center text-gray-500 py-8 text-sm">No active couriers found</p>
+          ) : couriers.map(c => (
+            <button
+              key={c.id}
+              onClick={() => assign(c)}
+              disabled={!!assigning}
+              className="w-full flex items-center gap-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] rounded-xl px-4 py-3 text-left disabled:opacity-50 transition-colors"
+            >
+              <div className="w-9 h-9 rounded-xl bg-brand-500/20 flex items-center justify-center shrink-0">
+                <span className="text-sm font-bold text-brand-300">{(c.full_name || c.email || '?')[0].toUpperCase()}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">{c.full_name || c.email}</p>
+                {c.avg_rating ? (
+                  <p className="text-xs text-yellow-400">★ {Number(c.avg_rating).toFixed(1)} · {c.total_ratings} ratings</p>
+                ) : (
+                  <p className="text-xs text-gray-600">No ratings yet</p>
+                )}
+              </div>
+              {assigning === c.id
+                ? <div className="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                : <UserCheck className="w-4 h-4 text-gray-500" />}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DeliveryDetailModal({ delivery, onClose, onStatusChange }) {
   const [updating, setUpdating] = useState(false);
   const [newStatus, setNewStatus] = useState(delivery.status);
+  const [showAssign, setShowAssign] = useState(false);
 
   async function saveStatus() {
     if (newStatus === delivery.status) { onClose(); return; }
@@ -136,7 +206,15 @@ function DeliveryDetailModal({ delivery, onClose, onStatusChange }) {
           </div>
         </div>
 
-        <div className="flex gap-3 px-6 pb-6">
+        <div className="flex gap-3 px-6 pb-6 flex-wrap">
+          {!delivery.courier_id && delivery.status === 'placed' && (
+            <button
+              onClick={() => setShowAssign(true)}
+              className="flex-1 flex items-center justify-center gap-2 bg-brand-500/15 border border-brand-500/30 text-brand-400 font-semibold py-3 rounded-xl text-sm hover:bg-brand-500/25"
+            >
+              <UserCheck className="w-4 h-4" /> Assign Courier
+            </button>
+          )}
           <button onClick={onClose} className="flex-1 bg-white/[0.05] border border-white/[0.08] text-gray-400 font-medium py-3 rounded-xl text-sm">
             Cancel
           </button>
@@ -149,6 +227,13 @@ function DeliveryDetailModal({ delivery, onClose, onStatusChange }) {
           </button>
         </div>
       </div>
+      {showAssign && (
+        <AssignCourierModal
+          delivery={delivery}
+          onClose={() => setShowAssign(false)}
+          onAssigned={() => { onStatusChange(); onClose(); }}
+        />
+      )}
     </div>
   );
 }

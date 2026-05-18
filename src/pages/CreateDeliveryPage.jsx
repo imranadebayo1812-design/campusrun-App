@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { MOCK_VENDORS } from '@/lib/mockData';
 import { supabase } from '@/api/supabaseClient';
 import { calculateDeliveryFee, DEFAULT_SERVICE_FEE, isResidentialZone, getZoneKey } from '@/lib/deliveryPricing';
+import { getCoordsForVenue } from '@/lib/venueCoords';
 import { ChevronLeft, ChevronRight, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, Search, Navigation, Upload, Bookmark, FileText, Hash } from 'lucide-react';
 
 const LOCATION_GROUPS = [
@@ -360,11 +361,14 @@ export default function CreateDeliveryPage() {
       ? `${dropoffLocation} — Room ${roomNumber.trim()}`
       : dropoffLocation;
 
+    const pickupName = vendor ? vendor.name : pickupLocation;
     const orderData = {
       buyer_id: session.user.id,
       order_type: orderType,
-      pickup_location: vendor ? vendor.name : pickupLocation,
+      pickup_location: pickupName,
       dropoff_location: dropoff,
+      pickup_coords:  getCoordsForVenue(pickupName),
+      dropoff_coords: getCoordsForVenue(dropoff),
       items: orderType === 'purchase'
         ? items.map(i => ({ name: i.name, qty: i.qty, price: String(i.price) }))
         : [],

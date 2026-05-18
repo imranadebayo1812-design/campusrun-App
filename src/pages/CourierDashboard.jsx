@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
-
+import { haversineDistance as _haversine } from '@/lib/venueCoords';
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
 import {
   Bike, MapPin, Package, Lock, CheckCircle, Wallet, TrendingUp,
@@ -248,11 +248,58 @@ export default function CourierDashboard() {
   const [editingItem, setEditingItem] = useState(null);
   const [acceptError, setAcceptError] = useState('');
   const [earningsSummary, setEarningsSummary] = useState({ earned: 0, reimbursed: 0, totalDeliveries: 0 });
+  const [courierCoords, setCourierCoords] = useState(null);
+  const [locationStatus, setLocationStatus] = useState('pending'); // pending | ok | denied
+
+  // Matching constants
+  const PROXIMITY_RADIUS_M  = 800;  // metres — nearby courier
+  const BROADCAST_TIMEOUT_S = 60;   // seconds before order opens to all
+  const MIN_RATING_PRIORITY = 4.0;  // rating threshold for instant access
 
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Get GPS when going online; save to profile for admin dispatch visibility
+  useEffect(() => {
+    if (!isOnline || !session?.user?.id) return;
+    if (!navigator.geolocation) { setLocationStatus('denied'); return; }
+    setLocationStatus('pending');
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setCourierCoords(coords);
+        setLocationStatus('ok');
+        supabase.from('profiles')
+          .update({ courier_lat: coords.lat, courier_lng: coords.lng })
+          .eq('id', session.user.id);
+      },
+      () => setLocationStatus('denied'),
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60_000 }
+    );
+  }, [isOnline, session?.user?.id]);
+
+  // Returns visibility info for an available order based on the four matching rules
+  function getOrderVisibility(order) {
+    const ageS = (Date.now() - new Date(order.created_at)) / 1000;
+
+    // Rule 1 — broadcast: order is old enough for everyone
+    if (ageS >= BROADCAST_TIMEOUT_S) return { visible: true, reason: 'broadcast' };
+
+    // Rule 2 — rating priority: high-rated couriers see all orders immediately
+    if ((profile?.avg_rating || 0) >= MIN_RATING_PRIORITY)
+      return { visible: true, reason: 'priority' };
+
+    // Rule 3 — proximity: courier is near the pickup
+    if (courierCoords && order.pickup_coords) {
+      const dist = _haversine(courierCoords, order.pickup_coords);
+      if (dist <= PROXIMITY_RADIUS_M) return { visible: true, reason: 'nearby', dist };
+    }
+
+    // Not yet visible — show countdown
+    return { visible: false, opensIn: Math.ceil(BROADCAST_TIMEOUT_S - ageS) };
+  }
 
   // Load orders from DB + realtime subscriptions
   useEffect(() => {
@@ -733,44 +780,84 @@ export default function CourierDashboard() {
       )}
       {isOnline && available.length > 0 && (
         <div className="px-4 mb-6">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Available Orders</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Available Orders</p>
+            <div className="flex items-center gap-2">
+              {profile?.avg_rating >= MIN_RATING_PRIORITY && (
+                <span className="flex items-center gap-1 text-[10px] font-bold text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 px-2 py-0.5 rounded-full">
+                  <Star className="w-2.5 h-2.5" /> Priority Access
+                </span>
+              )}
+              <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${
+                locationStatus === 'ok' ? 'text-green-400 bg-green-400/10 border-green-400/20' :
+                locationStatus === 'denied' ? 'text-gray-500 bg-white/[0.04] border-white/[0.08]' :
+                'text-amber-400 bg-amber-400/10 border-amber-400/20'
+              }`}>
+                <MapPin className="w-2.5 h-2.5" />
+                {locationStatus === 'ok' ? 'Located' : locationStatus === 'denied' ? 'No GPS' : 'Locating…'}
+              </span>
+            </div>
+          </div>
           <div className="space-y-3">
-            {available.map(order => (
-              <div key={order.id} className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-gray-500 uppercase">{order.order_type}</span>
-                  <span className="text-sm font-bold text-green-400">₦{order.delivery_fee?.toLocaleString()}</span>
-                </div>
-                <div className="space-y-2 mb-3">
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-4 h-4 text-brand-400 mt-0.5 shrink-0" aria-hidden="true" />
-                    <p className="text-sm text-white">{order.pickup_location}</p>
+            {available.map(order => {
+              // eslint-disable-next-line react-hooks/rules-of-hooks -- tick is stable
+              const vis = getOrderVisibility(order);
+              const locked = !vis.visible;
+              return (
+                <div key={order.id} className={`bg-surface-900 border rounded-2xl p-4 transition-opacity ${locked ? 'opacity-60 border-white/[0.05]' : 'border-white/[0.08]'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-gray-500 uppercase">{order.order_type}</span>
+                      {!locked && vis.reason === 'nearby' && (
+                        <span className="text-[10px] text-brand-400 bg-brand-400/10 border border-brand-400/20 px-1.5 py-0.5 rounded-full">Nearby</span>
+                      )}
+                      {!locked && vis.reason === 'priority' && (
+                        <span className="text-[10px] text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 px-1.5 py-0.5 rounded-full">Priority</span>
+                      )}
+                      {!locked && vis.reason === 'broadcast' && (
+                        <span className="text-[10px] text-green-400 bg-green-400/10 border border-green-400/20 px-1.5 py-0.5 rounded-full">Open</span>
+                      )}
+                    </div>
+                    <span className="text-sm font-bold text-green-400">₦{order.delivery_fee?.toLocaleString()}</span>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-4 h-4 text-green-400 mt-0.5 shrink-0" aria-hidden="true" />
-                    <p className="text-sm text-white">{order.dropoff_location}</p>
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-4 h-4 text-brand-400 mt-0.5 shrink-0" aria-hidden="true" />
+                      <p className="text-sm text-white">{order.pickup_location}</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-4 h-4 text-green-400 mt-0.5 shrink-0" aria-hidden="true" />
+                      <p className="text-sm text-white">{order.dropoff_location}</p>
+                    </div>
                   </div>
+                  {order.order_type === 'purchase' && order.food_cost > 0 && (
+                    <p className="text-xs text-gray-500 mb-3">
+                      Food cost to reimburse: <span className="text-green-400 font-semibold">₦{order.food_cost.toLocaleString()}</span>
+                    </p>
+                  )}
+                  {order.order_type === 'errand' && order.item_description && (
+                    <p className="text-xs text-gray-400 bg-surface-800 rounded-lg px-3 py-2 mb-3">{order.item_description}</p>
+                  )}
+                  <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
+                    <Clock className="w-3 h-3" aria-hidden="true" />
+                    {formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}
+                  </div>
+                  {locked ? (
+                    <div className="w-full bg-surface-800 border border-white/[0.06] rounded-xl py-2.5 flex items-center justify-center gap-2 text-sm text-gray-500">
+                      <Lock className="w-3.5 h-3.5" />
+                      Opens in {vis.opensIn}s
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => acceptOrder(order)}
+                      className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-lg shadow-brand-500/20"
+                    >
+                      Accept Order
+                    </button>
+                  )}
                 </div>
-                {order.order_type === 'purchase' && order.food_cost > 0 && (
-                  <p className="text-xs text-gray-500 mb-3">
-                    Food cost to reimburse: <span className="text-green-400 font-semibold">₦{order.food_cost.toLocaleString()}</span>
-                  </p>
-                )}
-                {order.order_type === 'errand' && order.item_description && (
-                  <p className="text-xs text-gray-400 bg-surface-800 rounded-lg px-3 py-2 mb-3">{order.item_description}</p>
-                )}
-                <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
-                  <Clock className="w-3 h-3" aria-hidden="true" />
-                  {formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}
-                </div>
-                <button
-                  onClick={() => acceptOrder(order)}
-                  className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-lg shadow-brand-500/20"
-                >
-                  Accept Order
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

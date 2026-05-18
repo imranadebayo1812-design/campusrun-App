@@ -364,15 +364,17 @@ export default function CourierDashboard() {
       .eq('id', order.id)
       .is('courier_id', null)
       .select()
-      .single();
+      .maybeSingle();
     if (error) {
-      setAcceptError('Could not accept order. It may have been taken. ' + error.message);
+      setAcceptError('Could not accept order. ' + error.message);
       return;
     }
-    if (data) {
-      setAvailable(prev => prev.filter(o => o.id !== order.id));
-      setActiveOrders(prev => [...prev, data]);
+    if (!data) {
+      setAcceptError('Order already taken by another courier.');
+      return;
     }
+    setAvailable(prev => prev.filter(o => o.id !== order.id));
+    setActiveOrders(prev => [...prev, data]);
   }
 
   async function updateStatus(delivery, nextStatus) {

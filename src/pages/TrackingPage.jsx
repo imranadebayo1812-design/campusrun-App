@@ -247,7 +247,13 @@ export default function TrackingPage() {
     return () => { if (channel) supabase.removeChannel(channel); };
   }, [deliveryId]);
 
-  // Grace period countdown timer
+  // Auto-show rating modal when delivery is confirmed
+  useEffect(() => {
+    if (delivery?.status === 'delivered' && !ratingSubmitted) {
+      const t = setTimeout(() => setShowRatingModal(true), 1500);
+      return () => clearTimeout(t);
+    }
+  }, [delivery?.status, ratingSubmitted]);
   useEffect(() => {
     if (!delivery?.courier_accepted) return;
     const ref = delivery.accepted_at || delivery.created_at;

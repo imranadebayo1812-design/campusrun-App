@@ -9,18 +9,24 @@ export default function FeedbackModal({ delivery, onClose }) {
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   async function submit() {
     if (!rating) return;
     setLoading(true);
-    await supabase.from('delivery_feedback').insert({
+    setSubmitError('');
+    const { error } = await supabase.from('delivery_feedback').insert({
       delivery_id: delivery.id,
       buyer_id: session.user.id,
       courier_id: delivery.courier_id,
       rating,
       comment,
     });
-    setDone(true);
+    if (error) {
+      setSubmitError('Could not save your rating. Please try again.');
+    } else {
+      setDone(true);
+    }
     setLoading(false);
   }
 
@@ -59,6 +65,7 @@ export default function FeedbackModal({ delivery, onClose }) {
               rows={3}
               className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 resize-none"
             />
+            {submitError && <p className="text-xs text-red-400 text-center">{submitError}</p>}
             <button
               onClick={submit}
               disabled={!rating || loading}

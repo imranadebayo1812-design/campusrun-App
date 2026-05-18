@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
+import { formatDistanceToNow } from 'date-fns';
 import {
   ChevronLeft, Package, Clock, CheckCircle, MapPin, Star,
   MessageSquare, Send, AlertTriangle, Phone, Lock, ShoppingBag, Truck,
@@ -225,10 +226,9 @@ export default function TrackingPage() {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
-  const [chatMessages, setChatMessages] = useState([
-    { from: 'courier', text: "I've picked up your order!", time: '15m ago' },
-  ]);
+  const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
+  const [chatSending, setChatSending] = useState(false);
   const [graceLeft, setGraceLeft] = useState(0);
   const [accepting, setAccepting] = useState(false);
   const [priceEditError, setPriceEditError] = useState('');
@@ -255,6 +255,30 @@ export default function TrackingPage() {
 
     return () => { if (channel) supabase.removeChannel(channel); };
   }, [deliveryId]);
+
+  // Load chat messages + realtime subscription
+  useEffect(() => {
+    if (!deliveryId || !delivery?.courier_accepted) return;
+    let chatChannel;
+
+    supabase.from('chat_messages').select('*')
+      .eq('delivery_id', deliveryId)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => setChatMessages(data || []));
+
+    chatChannel = supabase.channel(`chat:${deliveryId}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'chat_messages',
+        filter: `delivery_id=eq.${deliveryId}`,
+      }, payload => {
+        setChatMessages(prev =>
+          prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new]
+        );
+      })
+      .subscribe();
+
+    return () => { if (chatChannel) supabase.removeChannel(chatChannel); };
+  }, [deliveryId, delivery?.courier_accepted]);
 
   // Auto-show rating modal when delivery is confirmed (buyer only)
   useEffect(() => {
@@ -382,11 +406,18 @@ export default function TrackingPage() {
     }
   } catch {}
 
-  function sendChat() {
+  async function sendChat() {
     const text = chatInput.trim();
-    if (!text) return;
-    setChatMessages(prev => [...prev, { from: 'buyer', text, time: 'Just now' }]);
+    if (!text || chatSending) return;
+    setChatSending(true);
     setChatInput('');
+    await supabase.from('chat_messages').insert({
+      delivery_id: deliveryId,
+      sender_id:   session.user.id,
+      sender_role: 'buyer',
+      message:     text,
+    });
+    setChatSending(false);
   }
 
   return (
@@ -660,18 +691,23 @@ export default function TrackingPage() {
               {chatMessages.length === 0 && (
                 <p className="text-center text-sm text-gray-500 py-4">No messages yet. Start the conversation!</p>
               )}
-              {chatMessages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.from === 'buyer' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
-                    msg.from === 'buyer'
-                      ? 'bg-brand-500 text-white rounded-br-sm'
-                      : 'bg-surface-800 text-gray-300 rounded-bl-sm'
-                  }`}>
-                    <p>{msg.text}</p>
-                    <p className={`text-xs mt-0.5 ${msg.from === 'buyer' ? 'text-white/60' : 'text-gray-500'}`}>{msg.time}</p>
+              {chatMessages.map(msg => {
+                const isMine = msg.sender_id === session?.user?.id;
+                return (
+                  <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
+                      isMine
+                        ? 'bg-brand-500 text-white rounded-br-sm'
+                        : 'bg-surface-800 text-gray-300 rounded-bl-sm'
+                    }`}>
+                      <p>{msg.message}</p>
+                      <p className={`text-xs mt-0.5 ${isMine ? 'text-white/60' : 'text-gray-500'}`}>
+                        {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="px-3 py-2 border-t border-white/[0.06] flex gap-2">
               <input
@@ -680,12 +716,14 @@ export default function TrackingPage() {
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && sendChat()}
                 placeholder="Type a message…"
-                className="flex-1 bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                disabled={chatSending}
+                className="flex-1 bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 disabled:opacity-60"
               />
               <button
                 onClick={sendChat}
+                disabled={chatSending}
                 aria-label="Send message"
-                className="w-9 h-9 bg-brand-500 rounded-xl flex items-center justify-center shrink-0 active:scale-95 transition-transform"
+                className="w-9 h-9 bg-brand-500 rounded-xl flex items-center justify-center shrink-0 active:scale-95 transition-transform disabled:opacity-50"
               >
                 <Send className="w-4 h-4 text-white" aria-hidden="true" />
               </button>

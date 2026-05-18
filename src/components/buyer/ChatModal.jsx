@@ -40,7 +40,7 @@ export default function ChatModal({ deliveryId, onClose }) {
       message: message.trim(),
     });
     setMessage('');
-    queryClient.invalidateQueries(['chat', deliveryId]);
+    queryClient.invalidateQueries({ queryKey: ['chat', deliveryId] });
     setSending(false);
   }
 

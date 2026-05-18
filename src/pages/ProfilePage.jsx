@@ -74,15 +74,19 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ full_name: profile?.full_name || '', phone_number: profile?.phone_number || '', course: profile?.course || '', hostel: profile?.hostel || '' });
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   async function saveProfile() {
     setSaving(true);
+    setSaveError('');
     const { error } = await supabase
       .from('profiles')
       .update(form)
       .eq('id', session.user.id);
-    if (!error) {
+    if (error) {
+      setSaveError('Could not save changes. Please try again.');
+    } else {
       updateProfileLocally(form);
       setEditing(false);
     }
@@ -182,6 +186,9 @@ export default function ProfilePage() {
             </p>
           </div>
         </div>
+        {saveError && (
+          <p className="px-4 pb-3 text-xs text-red-400">{saveError}</p>
+        )}
       </div>
 
       {/* Settings */}

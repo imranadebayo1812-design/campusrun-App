@@ -10,6 +10,7 @@ function WithdrawModal({ title, maxAmount, isEarnings, type, onSuccess, onClose 
   const [dest, setDest]               = useState('wallet');
   const [banks, setBanks]             = useState([]);
   const [banksLoading, setBanksLoading] = useState(false);
+  const [banksError, setBanksError] = useState('');
   const [bankCode, setBankCode]       = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [verifiedName, setVerifiedName]   = useState('');
@@ -29,8 +30,16 @@ function WithdrawModal({ title, maxAmount, isEarnings, type, onSuccess, onClose 
   useEffect(() => {
     if (dest !== 'bank' || banks.length > 0) return;
     setBanksLoading(true);
+    setBanksError('');
     supabase.functions.invoke('hyper-responder')
-      .then(({ data }) => setBanks(data?.data ?? []))
+      .then(({ data, error }) => {
+        if (error || !data?.data?.length) {
+          setBanksError('Could not load bank list. Try again.');
+        } else {
+          setBanks(data.data);
+        }
+      })
+      .catch(() => setBanksError('Could not load bank list. Check your connection.'))
       .finally(() => setBanksLoading(false));
   }, [dest]);
 
@@ -187,6 +196,8 @@ function WithdrawModal({ title, maxAmount, isEarnings, type, onSuccess, onClose 
                       <div className="w-3 h-3 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
                       Loading banks…
                     </div>
+                  ) : banksError ? (
+                    <p className="text-xs text-red-400 py-2">{banksError}</p>
                   ) : (
                     <select
                       value={bankCode}

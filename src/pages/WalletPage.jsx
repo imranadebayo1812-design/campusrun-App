@@ -172,19 +172,24 @@ export default function WalletPage() {
         currency: 'NGN',
         metadata: { type: 'wallet_topup', user_id: session.user.id },
         onSuccess: async (txn) => {
-          // Callbacks still work on desktop — keep them as a fast path
           clearTimeout(timeoutRef.current);
           txCountRef.current = null;
           const roundedAmount = Math.round(amount);
+          const { error: rpcErr } = await supabase.rpc('record_topup', {
+            p_reference: txn.reference,
+            p_amount: roundedAmount,
+          });
+          if (rpcErr) {
+            setError(`Payment received but wallet update failed: ${rpcErr.message}`);
+            setLoading(false);
+            return;
+          }
           updateProfileLocally({ wallet_balance: (profile?.wallet_balance || 0) + roundedAmount });
           setTopupAmount('');
           setSuccess(`₦${roundedAmount.toLocaleString()} added to your wallet!`);
           setLoading(false);
-          supabase.rpc('record_topup', { p_reference: txn.reference, p_amount: roundedAmount })
-            .then(() => {
-              refreshProfile();
-              refreshTransactions();
-            });
+          refreshProfile();
+          refreshTransactions();
         },
         onCancel: () => {
           // On mobile this fires even after successful payment — don't reset

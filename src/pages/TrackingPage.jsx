@@ -289,11 +289,11 @@ export default function TrackingPage() {
     : [];
 
   async function acceptPriceEdit() {
-    const updatedItems = (delivery.items || []).map(({ original_price, ...rest }) => rest);
-    await supabase.from('deliveries')
-      .update({ items: updatedItems, price_edit_flag: false, price_edit_buyer_response: 'accepted' })
-      .eq('id', deliveryId);
-    setDelivery(prev => ({ ...prev, items: updatedItems, price_edit_flag: false }));
+    const { error } = await supabase.rpc('accept_price_edit', { p_delivery_id: deliveryId });
+    if (!error) {
+      const updatedItems = (delivery.items || []).map(({ original_price, ...rest }) => rest);
+      setDelivery(prev => ({ ...prev, items: updatedItems, price_edit_flag: false }));
+    }
   }
 
   async function cancelOrder() {

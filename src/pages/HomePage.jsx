@@ -151,7 +151,17 @@ export default function HomePage() {
       <div className="px-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Order from Campus</p>
-          <span className="text-xs text-gray-600">{MOCK_VENDORS.length} vendors</span>
+          {open ? (
+            <span className="flex items-center gap-1 text-xs font-semibold text-green-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+              Open · closes 9:30 PM
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-xs font-semibold text-red-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+              Closed
+            </span>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-3" style={!open ? { opacity: 0.45, pointerEvents: 'none', userSelect: 'none' } : undefined}>
           {MOCK_VENDORS.map(vendor => (

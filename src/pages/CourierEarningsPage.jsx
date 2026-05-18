@@ -72,7 +72,7 @@ function WithdrawModal({ title, maxAmount, isEarnings, type, onSuccess, onClose 
         p_type:   type,
       });
       setSubmitting(false);
-      if (rpcErr) { setError('Transfer failed. Please try again.'); return; }
+      if (rpcErr) { setError('Transfer failed: ' + rpcErr.message); return; }
     } else {
       const selectedBank = banks.find(b => b.code === bankCode);
       const { data, error: fnErr } = await supabase.functions.invoke('bright-service', {

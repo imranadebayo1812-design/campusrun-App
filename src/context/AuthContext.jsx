@@ -136,6 +136,9 @@ export function AuthProvider({ children }) {
   // ── Auth actions ───────────────────────────────────────────
 
   async function signUp(email, password, fullName, referralCode = '') {
+    if (!isNileEmail(email)) {
+      return { error: { message: 'Only @nileuniversity.edu.ng email addresses can sign up.' } };
+    }
     const metadata = { full_name: fullName };
     if (referralCode) metadata.referral_code = referralCode;
     const { error } = await supabase.auth.signUp({

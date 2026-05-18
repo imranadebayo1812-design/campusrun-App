@@ -3,6 +3,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useLocation } from 'react-router-dom';
 import Logo from '@/components/ui/Logo';
 
+const NILE_EMAIL_RE = /^[^\s@]+@([a-z0-9-]+\.)*nileuniversity\.edu\.ng$/i;
+
 export default function LoginPage() {
   const { signIn, signUp } = useAuth();
   const location = useLocation();
@@ -32,6 +34,11 @@ export default function LoginPage() {
     setLoading(true);
 
     if (mode === 'signup') {
+      if (!NILE_EMAIL_RE.test(email)) {
+        setError('Only @nileuniversity.edu.ng email addresses can sign up.');
+        setLoading(false);
+        return;
+      }
       const { error } = await signUp(email, password, fullName, referralCode.trim().toUpperCase());
       if (error) {
         setError(error.message);

@@ -116,7 +116,7 @@ function WithdrawToBankModal({ maxAmount, onSuccess, onClose }) {
 }
 
 export default function WalletPage() {
-  const { session, profile, refreshProfile, refreshTransactions, updateProfileLocally, walletTransactions } = useAuth();
+  const { session, profile, refreshProfile, updateProfileLocally, walletTransactions, addWalletTransaction } = useAuth();
   const [topupAmount, setTopupAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -140,7 +140,6 @@ export default function WalletPage() {
         setTopupAmount('');
         setSuccess(`₦${newest.amount.toLocaleString()} added to your wallet!`);
         refreshProfile();
-        refreshTransactions();
       }
     }
   }, [walletTransactions, loading]);
@@ -184,12 +183,19 @@ export default function WalletPage() {
             setLoading(false);
             return;
           }
+          // Fetch the inserted row and add directly to state so the list
+          // updates immediately without a full refresh (which can race with realtime).
+          const { data: newTx } = await supabase
+            .from('wallet_transactions')
+            .select('*')
+            .eq('reference', txn.reference)
+            .maybeSingle();
+          if (newTx) addWalletTransaction(newTx);
           updateProfileLocally({ wallet_balance: (profile?.wallet_balance || 0) + roundedAmount });
           setTopupAmount('');
           setSuccess(`₦${roundedAmount.toLocaleString()} added to your wallet!`);
           setLoading(false);
           refreshProfile();
-          refreshTransactions();
         },
         onCancel: () => {
           // On mobile this fires even after successful payment — don't reset

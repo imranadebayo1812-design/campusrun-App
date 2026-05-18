@@ -1,5 +1,6 @@
-import { lazy, Suspense, Component } from 'react';
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import * as Sentry from '@sentry/react';
 import { useAuth } from '@/context/AuthContext';
 import LoginPage from '@/components/auth/LoginPage';
 import TermsModal from '@/components/auth/TermsModal';
@@ -131,22 +132,22 @@ const AdminReports            = lazy(() => import('@/pages/admin/AdminReports'))
 const AdminDisputes           = lazy(() => import('@/pages/admin/AdminDisputes'));
 const AdminPriceEdits         = lazy(() => import('@/pages/admin/AdminPriceEdits'));
 
-class ErrorBoundary extends Component {
-  state = { crashed: false };
-  static getDerivedStateFromError() { return { crashed: true }; }
-  render() {
-    if (this.state.crashed) return (
-      <div className="min-h-screen bg-surface-950 flex items-center justify-center p-4">
-        <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-6 text-center max-w-sm">
-          <p className="text-red-400 font-bold text-lg mb-2">Something went wrong</p>
-          <p className="text-gray-400 text-sm mb-4">The app ran into an error. Tap Reload to continue.</p>
-          <button onClick={() => window.location.reload()} className="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-6 py-2.5 rounded-xl text-sm">Reload</button>
-        </div>
+function ErrorFallback() {
+  return (
+    <div className="min-h-screen bg-surface-950 flex items-center justify-center p-4">
+      <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-6 text-center max-w-sm">
+        <p className="text-red-400 font-bold text-lg mb-2">Something went wrong</p>
+        <p className="text-gray-400 text-sm mb-4">The app ran into an error. Tap Reload to continue.</p>
+        <button onClick={() => window.location.reload()} className="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-6 py-2.5 rounded-xl text-sm">Reload</button>
       </div>
-    );
-    return this.props.children;
-  }
+    </div>
+  );
 }
+const ErrorBoundary = ({ children }) => (
+  <Sentry.ErrorBoundary fallback={<ErrorFallback />} showDialog={false}>
+    {children}
+  </Sentry.ErrorBoundary>
+);
 
 function Spinner() {
   return (

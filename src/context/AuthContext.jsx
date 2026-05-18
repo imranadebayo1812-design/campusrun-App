@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/api/supabaseClient';
+import * as Sentry from '@sentry/react';
 
 const NILE_EMAIL_RE = /^[^\s@]+@([a-z0-9-]+\.)*nileuniversity\.edu\.ng$/i;
 
@@ -52,10 +53,12 @@ export function AuthProvider({ children }) {
       setSession(newSession ?? null);
       if (newSession) {
         loadProfile(newSession.user.id);
+        Sentry.setUser({ id: newSession.user.id, email: newSession.user.email });
       } else {
         setProfile(null);
         setWalletTransactions([]);
         setNotifications([]);
+        Sentry.setUser(null);
       }
     });
 

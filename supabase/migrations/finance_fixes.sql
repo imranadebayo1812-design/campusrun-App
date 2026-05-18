@@ -3,26 +3,30 @@
 -- ============================================================
 
 -- ── 1. Fix record_topup ──────────────────────────────────────
--- Was inserting into column named 'reference' which doesn't exist.
--- Correct column name is 'paystack_reference'.
+-- Uses correct live-DB column names: reference (NOT NULL), balance_before (NOT NULL)
 
 create or replace function public.record_topup(p_reference text, p_amount integer)
 returns void language plpgsql security definer as $$
-declare v_balance numeric;
+declare
+  v_before numeric;
+  v_after  numeric;
 begin
   if exists (
-    select 1 from public.wallet_transactions where paystack_reference = p_reference
+    select 1 from public.wallet_transactions where reference = p_reference
   ) then return; end if;
+
+  select wallet_balance into v_before
+  from public.profiles where id = auth.uid();
 
   update public.profiles
   set wallet_balance = wallet_balance + p_amount
   where id = auth.uid()
-  returning wallet_balance into v_balance;
+  returning wallet_balance into v_after;
 
   insert into public.wallet_transactions (
-    user_id, type, amount, balance_after, description, paystack_reference
+    user_id, type, amount, balance_before, balance_after, reference, description
   ) values (
-    auth.uid(), 'topup', p_amount, v_balance, 'Wallet top-up via Paystack', p_reference
+    auth.uid(), 'topup', p_amount, v_before, v_after, p_reference, 'Wallet top-up via Paystack'
   );
 end;
 $$;

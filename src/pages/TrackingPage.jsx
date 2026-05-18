@@ -149,14 +149,23 @@ function ReportIssueModal({ onClose, deliveryId, courierId, reporterId }) {
 }
 
 /* ── Rating Modal ───────────────────────────────────────────────── */
-function RatingModal({ onClose, onSubmit }) {
+function RatingModal({ delivery, session, onClose, onSubmit }) {
   const [stars, setStars] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
   const labels = ['', 'Poor', 'Fair', 'Good', 'Great!', 'Excellent!'];
 
-  function submit() {
+  async function submit() {
     if (!stars) return;
+    setSaving(true);
+    await supabase.from('delivery_feedback').insert({
+      delivery_id: delivery.id,
+      buyer_id:    session.user.id,
+      courier_id:  delivery.courier_id,
+      rating:      stars,
+      comment:     comment || null,
+    });
     setSubmitted(true);
     setTimeout(() => { onSubmit(stars, comment); onClose(); }, 900);
   }
@@ -192,10 +201,10 @@ function RatingModal({ onClose, onSubmit }) {
             />
             <button
               onClick={submit}
-              disabled={!stars}
+              disabled={!stars || saving}
               className="w-full bg-brand-500 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm"
             >
-              Submit Rating
+              {saving ? 'Saving…' : 'Submit Rating'}
             </button>
           </>
         )}
@@ -247,13 +256,13 @@ export default function TrackingPage() {
     return () => { if (channel) supabase.removeChannel(channel); };
   }, [deliveryId]);
 
-  // Auto-show rating modal when delivery is confirmed
+  // Auto-show rating modal when delivery is confirmed (buyer only)
   useEffect(() => {
-    if (delivery?.status === 'delivered' && !ratingSubmitted) {
+    if (delivery?.status === 'delivered' && !ratingSubmitted && session?.user?.id === delivery?.buyer_id) {
       const t = setTimeout(() => setShowRatingModal(true), 1500);
       return () => clearTimeout(t);
     }
-  }, [delivery?.status, ratingSubmitted]);
+  }, [delivery?.status, ratingSubmitted, session?.user?.id, delivery?.buyer_id]);
   useEffect(() => {
     if (!delivery?.courier_accepted) return;
     const ref = delivery.accepted_at || delivery.created_at;
@@ -733,7 +742,12 @@ export default function TrackingPage() {
       </div>
 
       {showRatingModal && (
-        <RatingModal onClose={() => setShowRatingModal(false)} onSubmit={() => setRatingSubmitted(true)} />
+        <RatingModal
+          delivery={delivery}
+          session={session}
+          onClose={() => setShowRatingModal(false)}
+          onSubmit={() => setRatingSubmitted(true)}
+        />
       )}
       {showReportModal && (
         <ReportIssueModal

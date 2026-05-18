@@ -208,7 +208,7 @@ function RatingModal({ onClose, onSubmit }) {
 export default function TrackingPage() {
   const { deliveryId } = useParams();
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { session, refreshProfile } = useAuth();
   const [delivery, setDelivery] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -300,13 +300,12 @@ export default function TrackingPage() {
     setCancelling(true);
     setCancelError(null);
     try {
-      // Try the RPC first (handles wallet refund)
-      const { error: rpcError } = await supabase.rpc('cancel_delivery', {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('cancel_delivery', {
         p_delivery_id: deliveryId,
         p_cancelled_by: 'buyer',
       });
       if (rpcError) {
-        // RPC not deployed or failed — fall back to direct status update
+        // RPC not deployed — fall back to direct status update (no refund)
         const { error: updateError } = await supabase
           .from('deliveries')
           .update({ status: 'cancelled' })
@@ -316,8 +315,13 @@ export default function TrackingPage() {
           setCancelling(false);
           return;
         }
+        setCancelError('Order cancelled. Wallet refund could not be processed automatically — contact support.');
+      } else if (rpcData?.refund_error) {
+        // RPC ran but refund step failed — show what went wrong
+        setCancelError(`Order cancelled. Refund error: ${rpcData.refund_error}`);
       }
       setDelivery(prev => ({ ...prev, status: 'cancelled' }));
+      refreshProfile();
     } catch (err) {
       setCancelError(`Unexpected error: ${err?.message || err}`);
     }
@@ -345,6 +349,7 @@ export default function TrackingPage() {
         .eq('id', deliveryId);
     }
     setDelivery(prev => ({ ...prev, items: restoredItems, price_edit_flag: false, status: 'cancelled' }));
+    refreshProfile();
   }
 
   let etaText = null;

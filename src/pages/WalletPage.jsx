@@ -183,15 +183,20 @@ export default function WalletPage() {
             setLoading(false);
             return;
           }
-          // Fetch the inserted row and add directly to state so the list
-          // updates immediately without a full refresh (which can race with realtime).
-          const { data: newTx } = await supabase
-            .from('wallet_transactions')
-            .select('*')
-            .eq('reference', txn.reference)
-            .maybeSingle();
-          if (newTx) addWalletTransaction(newTx);
-          updateProfileLocally({ wallet_balance: (profile?.wallet_balance || 0) + roundedAmount });
+          const newBalance = (profile?.wallet_balance || 0) + roundedAmount;
+          // Add optimistic row immediately — realtime deduplicates by reference if it fires too
+          addWalletTransaction({
+            id: `optimistic_${txn.reference}`,
+            user_id: session.user.id,
+            type: 'topup',
+            amount: roundedAmount,
+            balance_before: profile?.wallet_balance || 0,
+            balance_after: newBalance,
+            reference: txn.reference,
+            description: 'Wallet top-up via Paystack',
+            created_at: new Date().toISOString(),
+          });
+          updateProfileLocally({ wallet_balance: newBalance });
           setTopupAmount('');
           setSuccess(`₦${roundedAmount.toLocaleString()} added to your wallet!`);
           setLoading(false);

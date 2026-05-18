@@ -77,7 +77,9 @@ export function AuthProvider({ children }) {
         filter: `user_id=eq.${userId}`,
       }, payload =>
         setWalletTransactions(prev =>
-          prev.some(t => t.id === payload.new.id) ? prev : [payload.new, ...prev]
+          prev.some(t => t.id === payload.new.id || (payload.new.reference && t.reference === payload.new.reference))
+            ? prev
+            : [payload.new, ...prev]
         )
       )
       .subscribe();

@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { haversineDistance as _haversine } from '@/lib/venueCoords';
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
 import {
-  Bike, MapPin, Package, Lock, CheckCircle, Wallet, TrendingUp,
-  Star, Power, Clock, ShoppingBag, Truck, AlertCircle, AlertTriangle,
-  Pencil, ShieldAlert,
+  Bike, MapPin, Lock, CheckCircle, Wallet, TrendingUp,
+  Star, Power, Clock, AlertCircle, AlertTriangle,
+  Pencil, ShieldAlert, MessageSquare, Send,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -194,6 +194,130 @@ function ItemPriceEditModal({ target, onSubmit, onClose }) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── Courier chat panel ─────────────────────────────────────────── */
+function CourierChatPanel({ deliveryId, session }) {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
+  const [unread, setUnread] = useState(0);
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    supabase.from('chat_messages').select('*')
+      .eq('delivery_id', deliveryId)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        const msgs = data || [];
+        setMessages(msgs);
+        setUnread(msgs.filter(m => m.sender_role !== 'courier').length);
+      });
+
+    const channel = supabase.channel(`courier-chat:${deliveryId}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'chat_messages',
+        filter: `delivery_id=eq.${deliveryId}`,
+      }, payload => {
+        setMessages(prev =>
+          prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new]
+        );
+        if (payload.new.sender_role !== 'courier') {
+          setUnread(u => u + 1);
+        }
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [deliveryId]);
+
+  useEffect(() => {
+    if (open) {
+      setUnread(0);
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    }
+  }, [open, messages.length]);
+
+  async function send() {
+    const text = input.trim();
+    if (!text || sending) return;
+    setSending(true);
+    setInput('');
+    await supabase.from('chat_messages').insert({
+      delivery_id: deliveryId,
+      sender_id:   session.user.id,
+      sender_role: 'courier',
+      message:     text,
+    });
+    setSending(false);
+  }
+
+  return (
+    <div className="border-t border-white/[0.06] mt-3 pt-3">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center justify-between w-full"
+      >
+        <div className="flex items-center gap-2">
+          <MessageSquare className="w-4 h-4 text-brand-400" aria-hidden="true" />
+          <p className="text-sm font-medium text-gray-300">Chat with buyer</p>
+          {unread > 0 && !open && (
+            <span className="min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+              {unread}
+            </span>
+          )}
+        </div>
+        <span className="text-xs text-gray-500">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="mt-3">
+          <div className="max-h-48 overflow-y-auto space-y-2 mb-2">
+            {messages.length === 0 && (
+              <p className="text-center text-xs text-gray-500 py-4">No messages yet. Start the conversation!</p>
+            )}
+            {messages.map(msg => {
+              const isMine = msg.sender_role === 'courier';
+              return (
+                <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
+                    isMine
+                      ? 'bg-brand-500 text-white rounded-br-sm'
+                      : 'bg-surface-800 text-gray-200 rounded-bl-sm'
+                  }`}>
+                    <p>{msg.message}</p>
+                    <p className={`text-xs mt-0.5 ${isMine ? 'text-white/60' : 'text-gray-500'}`}>
+                      {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+            <div ref={bottomRef} />
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && send()}
+              placeholder="Reply to buyer…"
+              disabled={sending}
+              className="flex-1 bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 disabled:opacity-60"
+            />
+            <button
+              onClick={send}
+              disabled={!input.trim() || sending}
+              aria-label="Send message"
+              className="w-9 h-9 bg-brand-500 rounded-xl flex items-center justify-center shrink-0 disabled:opacity-50"
+            >
+              <Send className="w-4 h-4 text-white" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -742,7 +866,11 @@ export default function CourierDashboard() {
                       </p>
                     )}
 
+                    {/* Chat with buyer */}
+                    <CourierChatPanel deliveryId={delivery.id} session={session} />
+
                     {/* Action button */}
+                    {action && <div className="mt-3" />}
                     {action && (
                       <button
                         onClick={() => updateStatus(delivery, action.next)}

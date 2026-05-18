@@ -121,6 +121,16 @@ export function AuthProvider({ children }) {
     if (session?.user?.id) await loadProfile(session.user.id);
   }
 
+  async function refreshTransactions() {
+    if (!session?.user?.id) return;
+    const { data } = await supabase
+      .from('wallet_transactions')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false });
+    if (data) setWalletTransactions(data);
+  }
+
   // ── Auth actions ───────────────────────────────────────────
 
   async function signUp(email, password, fullName, referralCode = '') {
@@ -242,6 +252,7 @@ export function AuthProvider({ children }) {
       updateProfileLocally,
       walletTransactions,
       addWalletTransaction,
+      refreshTransactions,
       priceEditState,
       submitPriceEdits,
       buyerAcceptsPriceEdit,

@@ -116,7 +116,7 @@ function WithdrawToBankModal({ maxAmount, onSuccess, onClose }) {
 }
 
 export default function WalletPage() {
-  const { session, profile, refreshProfile, updateProfileLocally, walletTransactions } = useAuth();
+  const { session, profile, refreshProfile, refreshTransactions, updateProfileLocally, walletTransactions } = useAuth();
   const [topupAmount, setTopupAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -140,6 +140,7 @@ export default function WalletPage() {
         setTopupAmount('');
         setSuccess(`₦${newest.amount.toLocaleString()} added to your wallet!`);
         refreshProfile();
+        refreshTransactions();
       }
     }
   }, [walletTransactions, loading]);
@@ -180,8 +181,9 @@ export default function WalletPage() {
           setSuccess(`₦${roundedAmount.toLocaleString()} added to your wallet!`);
           setLoading(false);
           supabase.rpc('record_topup', { p_reference: txn.reference, p_amount: roundedAmount })
-            .then(({ error: rpcErr }) => {
-              if (!rpcErr) refreshProfile();
+            .then(() => {
+              refreshProfile();
+              refreshTransactions();
             });
         },
         onCancel: () => {

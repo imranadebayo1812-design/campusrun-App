@@ -95,6 +95,18 @@ export function AuthProvider({ children }) {
       )
       .subscribe();
 
+    // Auto sign-out when admin approves a deletion request for this user
+    const deletionChannel = supabase.channel(`deletion:${userId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'deletion_requests',
+        filter: `user_id=eq.${userId}`,
+      }, payload => {
+        if (payload.new.status === 'approved') {
+          supabase.auth.signOut();
+        }
+      })
+      .subscribe();
+
     // Fetch initial data (fire-and-forget — channels above handle live updates)
     supabase.from('wallet_transactions').select('*').eq('user_id', userId)
       .order('created_at', { ascending: false })
@@ -107,6 +119,7 @@ export function AuthProvider({ children }) {
     return () => {
       supabase.removeChannel(txChannel);
       supabase.removeChannel(notifChannel);
+      supabase.removeChannel(deletionChannel);
     };
   }, [session?.user?.id]);
 

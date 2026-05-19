@@ -29,8 +29,28 @@ export default function AdminDeletions() {
 
   useEffect(() => { load(); }, []);
 
+  const [actingError, setActingError] = useState('');
+
   async function updateStatus(id, status) {
     setActing(id);
+    setActingError('');
+
+    if (status === 'approved') {
+      const req = requests.find(r => r.id === id);
+      if (req?.user_id) {
+        const { error } = await supabase.rpc('admin_delete_user', { p_user_id: req.user_id });
+        if (error) {
+          setActingError(error.message);
+          setActing(null);
+          return;
+        }
+        // Record is deleted — remove from local list
+        setRequests(prev => prev.filter(r => r.id !== id));
+        setActing(null);
+        return;
+      }
+    }
+
     await supabase
       .from('deletion_requests')
       .update({ status, reviewed_at: new Date().toISOString() })
@@ -84,6 +104,12 @@ export default function AdminDeletions() {
           </button>
         ))}
       </div>
+
+      {actingError && (
+        <div className="mb-4 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400">
+          {actingError}
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">

@@ -343,13 +343,15 @@ export default function ProfilePage() {
           <Shield className="w-4 h-4" aria-hidden="true" />
           Privacy Policy
         </button>
-        <button
-          onClick={() => setShowDeleteModal(true)}
-          className="w-full flex items-center justify-center gap-2 bg-surface-900 border border-white/[0.08] text-gray-600 font-medium py-3 rounded-2xl text-sm"
-        >
-          <Trash2 className="w-4 h-4" aria-hidden="true" />
-          Delete Account
-        </button>
+        {!profile?.is_admin && (
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="w-full flex items-center justify-center gap-2 bg-surface-900 border border-white/[0.08] text-gray-600 font-medium py-3 rounded-2xl text-sm"
+          >
+            <Trash2 className="w-4 h-4" aria-hidden="true" />
+            Delete Account
+          </button>
+        )}
       </div>
 
       <div className="h-4" />

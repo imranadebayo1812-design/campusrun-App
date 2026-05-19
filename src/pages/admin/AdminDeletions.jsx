@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/api/supabaseClient';
+import { useAuth } from '@/context/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { Trash2, CheckCircle, XCircle, Clock, RefreshCw } from 'lucide-react';
 
@@ -10,6 +11,7 @@ const STATUS_STYLE = {
 };
 
 export default function AdminDeletions() {
+  const { session } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [acting, setActing]     = useState(null);
@@ -126,14 +128,20 @@ export default function AdminDeletions() {
                       <XCircle className="w-3.5 h-3.5" />
                       Reject
                     </button>
-                    <button
-                      onClick={() => updateStatus(req.id, 'approved')}
-                      disabled={acting === req.id}
-                      className="flex items-center gap-1.5 px-3 py-2 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold rounded-xl hover:bg-red-500/20 disabled:opacity-50 transition-colors"
-                    >
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      Approve
-                    </button>
+                    {req.user_id === session?.user?.id ? (
+                      <span className="flex items-center px-3 py-2 text-xs text-gray-600 italic">
+                        Can't self-approve
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => updateStatus(req.id, 'approved')}
+                        disabled={acting === req.id}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold rounded-xl hover:bg-red-500/20 disabled:opacity-50 transition-colors"
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        Approve
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

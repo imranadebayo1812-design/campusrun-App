@@ -5,9 +5,12 @@ import { useAuth } from '@/context/AuthContext';
 import { User, Phone, BookOpen, Home } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 
-const HOSTELS = [
-  'Moat Heaven', 'Victoria Falls', 'Student Quarters', 'Other',
-];
+const HOSTEL_BLOCKS = {
+  'Moat Heaven':    ['Zambezi', 'Moat Orange', 'Black Volta', 'Red Volta', 'Blue Nile', 'Lake Chad', 'Moat Heaven Cafeteria'],
+  'Victoria Falls': ['Mississippi', 'White Nile', 'Lake Tana', 'Shebelle', 'Nile Delta', 'Lake Victoria', 'Victoria Falls Cafeteria'],
+};
+
+const HOSTELS = ['Moat Heaven', 'Victoria Falls', 'Student Quarters', 'Other'];
 
 export default function OnboardingForm() {
   const { session, refreshProfile } = useAuth();
@@ -16,6 +19,7 @@ export default function OnboardingForm() {
   const [data, setData] = useState({
     full_name: '', phone_number: '', course: '', campus_status: '', hostel: '',
   });
+  const [estate, setEstate] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -141,20 +145,43 @@ export default function OnboardingForm() {
                 </div>
               </div>
               {data.campus_status === 'resident' && (
-                <div>
-                  <label htmlFor="ob-hostel" className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1">
-                    <Home className="w-4 h-4" aria-hidden="true" /> Hostel
-                  </label>
-                  <select
-                    id="ob-hostel"
-                    value={data.hostel}
-                    onChange={e => update('hostel', e.target.value)}
-                    className={`${inputClass} bg-surface-800`}
-                  >
-                    <option value="">Select hostel…</option>
-                    {HOSTELS.map(h => <option key={h} value={h}>{h}</option>)}
-                  </select>
-                </div>
+                <>
+                  <div>
+                    <label htmlFor="ob-estate" className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1">
+                      <Home className="w-4 h-4" aria-hidden="true" /> Hostel / Estate
+                    </label>
+                    <select
+                      id="ob-estate"
+                      value={estate}
+                      onChange={e => {
+                        setEstate(e.target.value);
+                        // If no blocks, store directly; otherwise wait for block selection
+                        update('hostel', HOSTEL_BLOCKS[e.target.value] ? '' : e.target.value);
+                      }}
+                      className={`${inputClass} bg-surface-800`}
+                    >
+                      <option value="">Select estate…</option>
+                      {HOSTELS.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+
+                  {HOSTEL_BLOCKS[estate] && (
+                    <div>
+                      <label htmlFor="ob-block" className="block text-sm font-medium text-gray-300 mb-1.5">
+                        Block / Building
+                      </label>
+                      <select
+                        id="ob-block"
+                        value={data.hostel}
+                        onChange={e => update('hostel', e.target.value)}
+                        className={`${inputClass} bg-surface-800`}
+                      >
+                        <option value="">Select block…</option>
+                        {HOSTEL_BLOCKS[estate].map(b => <option key={b} value={`${estate} — ${b}`}>{b}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </>
               )}
 
               {error && (

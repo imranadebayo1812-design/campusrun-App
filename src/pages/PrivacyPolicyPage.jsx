@@ -5,7 +5,7 @@ import Logo from '@/components/ui/Logo';
 const SECTIONS = [
   {
     title: '1. Who We Are',
-    body: `CampusRun is a campus delivery service operated for Nile University students. We connect buyers with student couriers to deliver food, packages, and errands within the campus. Our support contact is support@campusrun.ng.`,
+    body: `CampusRun is a campus delivery service operated for Nile University students. We connect buyers with student couriers to deliver food, packages, and errands within the campus. Our support contact is support@campusrun.online.`,
   },
   {
     title: '2. Information We Collect',
@@ -25,7 +25,7 @@ const SECTIONS = [
   },
   {
     title: '6. Your Rights',
-    body: `Under the Nigeria Data Protection Regulation (NDPR), you have the right to:\n\n• Access: request a copy of the personal data we hold about you.\n• Correction: request that we correct inaccurate data.\n• Deletion: request that we delete your account and personal data.\n• Portability: request your data in a structured, machine-readable format.\n• Objection: object to certain types of processing.\n\nTo exercise any of these rights, contact us at support@campusrun.ng. We will respond within 30 days.`,
+    body: `Under the Nigeria Data Protection Regulation (NDPR), you have the right to:\n\n• Access: request a copy of the personal data we hold about you.\n• Correction: request that we correct inaccurate data.\n• Deletion: request that we delete your account and personal data.\n• Portability: request your data in a structured, machine-readable format.\n• Objection: object to certain types of processing.\n\nTo exercise any of these rights, contact us at support@campusrun.online. We will respond within 30 days.`,
   },
   {
     title: '7. Account Deletion',
@@ -33,7 +33,7 @@ const SECTIONS = [
   },
   {
     title: '8. Security',
-    body: `We use industry-standard security measures including TLS encryption in transit, bcrypt password hashing, and row-level security policies on our database. Despite these measures, no system is 100% secure. If you believe your account has been compromised, contact us immediately at support@campusrun.ng.`,
+    body: `We use industry-standard security measures including TLS encryption in transit, bcrypt password hashing, and row-level security policies on our database. Despite these measures, no system is 100% secure. If you believe your account has been compromised, contact us immediately at support@campusrun.online.`,
   },
   {
     title: '9. Children',
@@ -49,7 +49,7 @@ const SECTIONS = [
   },
   {
     title: '12. Contact Us',
-    body: `For privacy questions, data requests, or to report a concern:\n\nEmail: support@campusrun.ng\nCampusRun, Nile University of Nigeria, Abuja, Nigeria.`,
+    body: `For privacy questions, data requests, or to report a concern:\n\nEmail: support@campusrun.online\nCampusRun, Nile University of Nigeria, Abuja, Nigeria.`,
   },
 ];
 

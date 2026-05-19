@@ -6,8 +6,7 @@ import { User, Phone, BookOpen, Home } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 
 const HOSTELS = [
-  'Nile Hall A', 'Nile Hall B', 'Nile Hall C', 'Nile Hall D',
-  'Victoria Falls', 'Most Heaven', 'Other',
+  'Moat Heaven', 'Victoria Falls', 'Student Quarters', 'Other',
 ];
 
 export default function OnboardingForm() {
@@ -124,8 +123,8 @@ export default function OnboardingForm() {
                 <label className="block text-sm font-medium text-gray-300 mb-2">Campus Status</label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { value: 'resident', label: 'Residential' },
-                    { value: 'day_student', label: 'Commuter' },
+                    { value: 'resident', label: 'On-Campus' },
+                    { value: 'day_student', label: 'Off-Campus' },
                   ].map(({ value, label }) => (
                     <button
                       key={value}

@@ -18,6 +18,7 @@ export const VENUE_COORDS = {
   'Victoria Falls':            { lat: 9.0770, lng: 7.4005 },
   'Nile Clinic':               { lat: 9.0742, lng: 7.4008 },
   'Nile Laboratory':           { lat: 9.0738, lng: 7.4000 },
+  'Student Quarters':          { lat: 9.0738, lng: 7.4000 },
   'OpenTech':                  { lat: 9.0735, lng: 7.3995 },
   'Female Shopping Complex':   { lat: 9.0758, lng: 7.4010 },
   'Male Shopping Complex':     { lat: 9.0753, lng: 7.4015 },

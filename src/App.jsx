@@ -156,7 +156,7 @@ class ErrorBoundary extends Component {
 function Spinner() {
   return (
     <div className="flex-1 flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-brand-800 border-t-brand-500 rounded-full animate-spin" />
+      <img src="/logo.png" alt="Loading" className="w-10 h-10 rounded-xl animate-pulse" />
     </div>
   );
 }
@@ -164,7 +164,7 @@ function Spinner() {
 function LoadingScreen() {
   return (
     <div className="min-h-screen bg-surface-950 flex items-center justify-center">
-      <div className="w-10 h-10 border-4 border-brand-800 border-t-brand-500 rounded-full animate-spin" />
+      <img src="/logo.png" alt="Loading" className="w-14 h-14 rounded-2xl animate-pulse" />
     </div>
   );
 }

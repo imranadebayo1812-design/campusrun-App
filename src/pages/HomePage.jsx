@@ -6,6 +6,9 @@ import { MOCK_VENDORS } from '@/lib/mockData';
 import { isOrderingOpen, orderingClosedMessage } from '@/lib/restaurantHours';
 import { ChevronRight, Package, AlertCircle, Wallet } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+
+// Metadata-only lookup — emoji/color/zone not stored in DB
+const VENDOR_META = Object.fromEntries(MOCK_VENDORS.map(v => [v.name, v]));
 const STATUS_LABEL = {
   placed: 'Waiting for courier',
   bought: 'Bought',
@@ -47,11 +50,50 @@ export default function HomePage() {
   const { profile, session } = useAuth();
   const [open, setOpen] = useState(() => isOrderingOpen());
   const [activeOrders, setActiveOrders] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [vendorsLoading, setVendorsLoading] = useState(true);
 
   // Re-evaluate ordering hours every minute so the UI updates at exactly 9:30 PM
   useEffect(() => {
     const id = setInterval(() => setOpen(isOrderingOpen()), 60_000);
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    async function loadVendors() {
+      const { data: cats } = await supabase
+        .from('menu_categories')
+        .select('vendor_name')
+        .order('vendor_name');
+
+      if (!cats?.length) {
+        setVendors(MOCK_VENDORS);
+        setVendorsLoading(false);
+        return;
+      }
+
+      const names = [...new Set(cats.map(c => c.vendor_name))];
+
+      const { data: firstItems } = await supabase
+        .from('menu_items')
+        .select('vendor_name, name, price')
+        .eq('is_available', true)
+        .order('vendor_name')
+        .order('name');
+
+      const firstByVendor = {};
+      for (const item of (firstItems || [])) {
+        if (!firstByVendor[item.vendor_name]) firstByVendor[item.vendor_name] = item;
+      }
+
+      setVendors(names.map(name => {
+        const meta = VENDOR_META[name] || { id: name, zone: 'Campus', category: 'food', color: 'bg-brand-500', emoji: '🏪' };
+        const first = firstByVendor[name];
+        return { ...meta, name, items: first ? [{ name: first.name, price: first.price }] : meta.items || [] };
+      }));
+      setVendorsLoading(false);
+    }
+    loadVendors();
   }, []);
 
   useEffect(() => {
@@ -164,7 +206,9 @@ export default function HomePage() {
           )}
         </div>
         <div className="grid grid-cols-2 gap-3" style={!open ? { opacity: 0.45, pointerEvents: 'none', userSelect: 'none' } : undefined}>
-          {MOCK_VENDORS.map(vendor => (
+          {vendorsLoading
+            ? [1,2,3,4,5,6].map(i => <div key={i} className="h-28 bg-surface-900 rounded-2xl animate-pulse border border-white/[0.06]" />)
+            : vendors.map(vendor => (
             <button
               key={vendor.id}
               onClick={() => openVendor(vendor)}
@@ -175,11 +219,14 @@ export default function HomePage() {
               </div>
               <p className="font-semibold text-white text-sm leading-tight">{vendor.name}</p>
               <p className="text-xs text-gray-500 mt-0.5 truncate">{vendor.zone}</p>
-              <p className="text-xs text-gray-600 mt-2 truncate">
-                {vendor.items[0].name} · <span className="text-gray-500">₦{vendor.items[0].price.toLocaleString()}</span>
-              </p>
+              {vendor.items?.[0] && (
+                <p className="text-xs text-gray-600 mt-2 truncate">
+                  {vendor.items[0].name} · <span className="text-gray-500">₦{vendor.items[0].price.toLocaleString()}</span>
+                </p>
+              )}
             </button>
           ))}
+
         </div>
         {!open && (
           <p className="text-center text-xs text-gray-600 mt-3">Vendors reopen at midnight</p>

@@ -16,7 +16,7 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file("keystore/campusrun-release.keystore")
+            storeFile file("../keystore/campusrun-release.keystore")
             storePassword "vPIRg2ajIk6ROTNP3mAt"
             keyAlias "campusrun"
             keyPassword "vPIRg2ajIk6ROTNP3mAt"

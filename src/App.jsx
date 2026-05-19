@@ -2,7 +2,6 @@ import { lazy, Suspense, Component } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import LoginPage from '@/components/auth/LoginPage';
-import TermsModal from '@/components/auth/TermsModal';
 import OnboardingForm from '@/components/auth/OnboardingForm';
 import MobileShell from '@/components/layout/MobileShell';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
@@ -32,7 +31,6 @@ export default function App() {
     </div>
   );
   if (!session) return <LoginPage />;
-  if (!profile?.terms_accepted && !profile?.onboarding_complete) return <TermsModal />;
   if (!profile?.onboarding_complete) return <OnboardingForm />;
   if (profile?.is_blacklisted) {
     return (

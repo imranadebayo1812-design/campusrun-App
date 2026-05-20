@@ -39,9 +39,16 @@ export default function OnboardingForm() {
       return;
     }
     // Navigate first — App's early return for /welcome shows the page immediately.
-    // Refresh profile in background so the auth guards update without racing the navigation.
     navigate('/welcome', { replace: true, state: { name: data.full_name } });
     refreshProfile();
+    // Fire welcome email in background — don't await
+    supabase.functions.invoke('send-email', {
+      body: {
+        type: 'welcome',
+        to: session.user.email,
+        data: { name: data.full_name.split(' ')[0], referral_code: '' },
+      },
+    });
   }
 
   const inputClass = "w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50";

@@ -140,6 +140,18 @@ export default function WalletPage() {
         setTopupAmount('');
         setSuccess(`₦${newest.amount.toLocaleString()} added to your wallet!`);
         refreshProfile();
+        supabase.functions.invoke('send-email', {
+          body: {
+            type: 'topup_receipt',
+            to: session.user.email,
+            data: {
+              name: profile?.full_name?.split(' ')[0] || 'there',
+              amount: newest.amount,
+              new_balance: newest.balance_after || ((profile?.wallet_balance || 0) + newest.amount),
+              reference: newest.reference || '',
+            },
+          },
+        });
       }
     }
   }, [walletTransactions, loading]);
@@ -183,6 +195,18 @@ export default function WalletPage() {
             .then(({ error: rpcErr }) => {
               if (!rpcErr) refreshProfile();
             });
+          supabase.functions.invoke('send-email', {
+            body: {
+              type: 'topup_receipt',
+              to: session.user.email,
+              data: {
+                name: profile?.full_name?.split(' ')[0] || 'there',
+                amount: roundedAmount,
+                new_balance: (profile?.wallet_balance || 0) + roundedAmount,
+                reference: txn.reference,
+              },
+            },
+          });
         },
         onCancel: () => {
           // On mobile this fires even after successful payment — wait longer

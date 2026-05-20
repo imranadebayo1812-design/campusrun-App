@@ -44,6 +44,24 @@ export default function PaymentPage() {
   const walletBalance = profile?.wallet_balance || 0;
   const canUseWallet = walletBalance >= total;
 
+  // Send order receipt email once payment is confirmed
+  useEffect(() => {
+    if (!paid || !session?.user?.email || !delivery) return;
+    supabase.functions.invoke('send-email', {
+      body: {
+        type: 'order_receipt',
+        to: session.user.email,
+        data: {
+          name: profile?.full_name?.split(' ')[0] || 'there',
+          pickup: delivery.pickup_location || '',
+          dropoff: delivery.dropoff_location || '',
+          total,
+          delivery_id: deliveryId,
+        },
+      },
+    });
+  }, [paid]);
+
   async function handlePay() {
     setLoading(true);
     setError('');

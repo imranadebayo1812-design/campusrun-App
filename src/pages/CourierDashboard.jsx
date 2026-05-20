@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { MOCK_EARNINGS } from '@/lib/mockData';
-import { calculateDeliveryFee } from '@/lib/deliveryPricing';
+import { calculateDeliveryFee, getPickupCoords } from '@/lib/deliveryPricing';
 import {
   Bike, MapPin, Package, Lock, CheckCircle, Wallet, TrendingUp,
   Star, Power, Clock, ShoppingBag, Truck, AlertCircle, AlertTriangle,
@@ -242,6 +242,7 @@ export default function CourierDashboard() {
   const [tick, setTick] = useState(0);
   const [activeOrders, setActiveOrders] = useState([]);
   const [available, setAvailable] = useState([]);
+  const [courierLocation, setCourierLocation] = useState(null);
   const [verifyDelivery, setVerifyDelivery] = useState(null);
   const [updating, setUpdating] = useState(null);
   const [fraudWarningTarget, setFraudWarningTarget] = useState(null);
@@ -252,6 +253,31 @@ export default function CourierDashboard() {
     const id = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Silent background location tracking — updates courier position every 60s
+  useEffect(() => {
+    if (!isOnline || !session?.user?.id || !navigator.geolocation) return;
+    const userId = session.user.id;
+
+    function push() {
+      navigator.geolocation.getCurrentPosition(
+        async pos => {
+          const { latitude: lat, longitude: lng } = pos.coords;
+          setCourierLocation({ lat, lng });
+          await supabase.from('profiles').update({
+            last_lat: lat, last_lng: lng,
+            location_updated_at: new Date().toISOString(),
+          }).eq('id', userId);
+        },
+        null,
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 30000 },
+      );
+    }
+
+    push();
+    const id = setInterval(push, 60000);
+    return () => clearInterval(id);
+  }, [isOnline, session?.user?.id]);
 
   // Load orders from DB + realtime subscriptions
   useEffect(() => {
@@ -317,6 +343,21 @@ export default function CourierDashboard() {
       if (availCh) supabase.removeChannel(availCh);
     };
   }, [session?.user?.id, profile?.is_courier]);
+
+  function distanceKm(pickupLocation) {
+    if (!courierLocation) return null;
+    const coord = getPickupCoords(pickupLocation);
+    if (!coord) return null;
+    const R = 6371;
+    const dLat = (coord.lat - courierLocation.lat) * Math.PI / 180;
+    const dLng = (coord.lng - courierLocation.lng) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(courierLocation.lat*Math.PI/180)*Math.cos(coord.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  const sortedAvailable = courierLocation
+    ? [...available].sort((a, b) => (distanceKm(a.pickup_location) ?? 99) - (distanceKm(b.pickup_location) ?? 99))
+    : available;
 
   if (!profile?.is_courier) {
     return (
@@ -706,14 +747,23 @@ export default function CourierDashboard() {
           <p className="text-xs text-red-400">{acceptError}</p>
         </div>
       )}
-      {isOnline && available.length > 0 && (
+      {isOnline && sortedAvailable.length > 0 && (
         <div className="px-4 mb-6">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Available Orders</p>
           <div className="space-y-3">
-            {available.map(order => (
+            {sortedAvailable.map(order => {
+              const km = distanceKm(order.pickup_location);
+              return (
               <div key={order.id} className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-gray-500 uppercase">{order.order_type}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-gray-500 uppercase">{order.order_type}</span>
+                    {km !== null && (
+                      <span className="text-[10px] font-semibold bg-brand-500/15 text-brand-400 px-2 py-0.5 rounded-full">
+                        {km < 1 ? `${Math.round(km * 1000)}m away` : `${km.toFixed(1)}km away`}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-sm font-bold text-green-400">₦{order.delivery_fee?.toLocaleString()}</span>
                 </div>
                 <div className="space-y-2 mb-3">
@@ -745,7 +795,7 @@ export default function CourierDashboard() {
                   Accept Order
                 </button>
               </div>
-            ))}
+            );})}
           </div>
         </div>
       )}

@@ -58,6 +58,11 @@ function distanceToFee(metres) {
   return 1000;
 }
 
+export function getPickupCoords(location) {
+  const key = getZoneKey(location);
+  return key ? ZONE_COORDS[key] : null;
+}
+
 export function getZoneKey(location) {
   if (!location) return null;
   const l = location.toLowerCase();

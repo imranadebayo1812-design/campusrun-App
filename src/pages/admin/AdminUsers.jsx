@@ -4,7 +4,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import {
   Search, RefreshCw, Users, Shield, Bike,
   Ban, CheckCircle, Eye, Mail, Phone, Calendar,
-  Wallet, Package,
+  Wallet, Package, Trash2, BookOpen, Home,
 } from 'lucide-react';
 
 function UserDetailModal({ user, onClose, onUpdate }) {
@@ -19,6 +19,9 @@ function UserDetailModal({ user, onClose, onUpdate }) {
   const [topupReason, setTopupReason] = useState('');
   const [topupLoading, setTopupLoading] = useState(false);
   const [topupMsg, setTopupMsg] = useState({ error: '', success: '' });
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -51,6 +54,31 @@ function UserDetailModal({ user, onClose, onUpdate }) {
     setActionLoading(true);
     await supabase.from('profiles').update({ is_courier: !profile?.is_courier }).eq('id', user.id);
     setActionLoading(false);
+    onUpdate();
+    onClose();
+  }
+
+  async function toggleAdmin() {
+    setActionLoading(true);
+    await supabase.from('profiles').update({ is_admin: !profile?.is_admin }).eq('id', user.id);
+    setActionLoading(false);
+    onUpdate();
+    onClose();
+  }
+
+  async function deleteUser() {
+    if (deleteConfirm !== 'DELETE') { setDeleteError('Type DELETE to confirm'); return; }
+    setDeleteLoading(true);
+    setDeleteError('');
+    const { error } = await supabase.auth.admin.deleteUser(user.id).catch(() => ({ error: { message: 'Admin API not available from client — delete via Supabase dashboard.' } }));
+    if (error) {
+      // Fallback: mark account as blacklisted with deletion note so it can't be used
+      await supabase.from('profiles').update({ is_blacklisted: true, blacklist_reason: 'Pending deletion — requested by admin' }).eq('id', user.id);
+      setDeleteError('Account flagged for deletion. To fully remove, use Supabase Dashboard → Authentication → Users.');
+      setDeleteLoading(false);
+      return;
+    }
+    setDeleteLoading(false);
     onUpdate();
     onClose();
   }
@@ -133,8 +161,10 @@ function UserDetailModal({ user, onClose, onUpdate }) {
             <>
               {[
                 { icon: Mail, label: 'Email', value: profile?.email },
-                { icon: Phone, label: 'Phone', value: profile?.phone || '–' },
+                { icon: Phone, label: 'Phone', value: profile?.phone_number || profile?.phone || '–' },
                 { icon: Calendar, label: 'Joined', value: profile?.created_at ? format(new Date(profile.created_at), 'PPP') : '–' },
+                { icon: BookOpen, label: 'Course', value: profile?.course || '–' },
+                { icon: Home, label: 'Campus Status', value: profile?.campus_status === 'resident' ? `Residential${profile?.hostel ? ` — ${profile.hostel}` : ''}` : profile?.campus_status === 'day_student' ? 'Commuter' : '–' },
                 { icon: Wallet, label: 'Wallet Balance', value: `₦${(profile?.wallet_balance || 0).toLocaleString()}`, isWallet: true },
                 { icon: Package, label: 'Referral Code', value: profile?.referral_code || '–' },
               ].map(({ icon: Icon, label, value, isWallet }) => (
@@ -221,6 +251,26 @@ function UserDetailModal({ user, onClose, onUpdate }) {
                 </button>
               </div>
 
+              {/* Toggle admin */}
+              <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+                <p className="text-sm font-medium text-white mb-1">Admin Access</p>
+                <p className="text-xs text-gray-500 mb-3">
+                  {profile?.is_admin ? 'This user has admin access.' : 'Grant admin access to this user.'}
+                </p>
+                <button
+                  onClick={toggleAdmin}
+                  disabled={actionLoading}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50 transition-all ${
+                    profile?.is_admin
+                      ? 'bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20'
+                      : 'bg-yellow-500/15 text-yellow-400 hover:bg-yellow-500/25 border border-yellow-500/20'
+                  }`}
+                >
+                  <Shield className="w-4 h-4" />
+                  {profile?.is_admin ? 'Revoke Admin' : 'Grant Admin'}
+                </button>
+              </div>
+
               {/* Blacklist */}
               <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
                 <p className="text-sm font-medium text-white mb-1">Account Status</p>
@@ -247,6 +297,27 @@ function UserDetailModal({ user, onClose, onUpdate }) {
                   }`}
                 >
                   {profile?.is_blacklisted ? <><CheckCircle className="w-4 h-4" /> Restore Access</> : <><Ban className="w-4 h-4" /> Ban User</>}
+                </button>
+              </div>
+
+              {/* Delete account */}
+              <div className="bg-red-500/5 border border-red-500/15 rounded-xl p-4">
+                <p className="text-sm font-medium text-red-400 mb-1">Delete Account</p>
+                <p className="text-xs text-gray-500 mb-3">Permanently removes this user and all their data. This cannot be undone.</p>
+                <input
+                  value={deleteConfirm}
+                  onChange={e => { setDeleteConfirm(e.target.value); setDeleteError(''); }}
+                  placeholder='Type DELETE to confirm'
+                  className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500/30 mb-2"
+                />
+                {deleteError && <p className="text-xs text-red-400 mb-2">{deleteError}</p>}
+                <button
+                  onClick={deleteUser}
+                  disabled={deleteLoading || deleteConfirm !== 'DELETE'}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {deleteLoading ? 'Deleting…' : 'Delete Account'}
                 </button>
               </div>
             </div>

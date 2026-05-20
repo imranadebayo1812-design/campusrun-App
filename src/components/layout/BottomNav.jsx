@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useMode } from '@/context/ModeContext';
-import { Home, Clock, Wallet, Bike, Map, User, Plus } from 'lucide-react';
+import { Home, Clock, Wallet, Bike, User, Plus } from 'lucide-react';
 
 export default function BottomNav() {
   const { mode } = useMode();
@@ -9,7 +9,6 @@ export default function BottomNav() {
 
   const courierTabs = [
     { to: '/courier', icon: Bike, label: 'Deliveries' },
-    { to: '/courier/map', icon: Map, label: 'Map' },
     { to: '/courier/earnings', icon: Wallet, label: 'Wallet' },
     { to: '/profile', icon: User, label: 'Profile' },
   ];

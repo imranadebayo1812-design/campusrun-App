@@ -92,7 +92,6 @@ export default function App() {
 
             {/* Courier */}
             <Route path="/courier" element={<CourierDashboard />} />
-            <Route path="/courier/map" element={<CampusMapPage />} />
             <Route path="/courier/earnings" element={<CourierEarningsPage />} />
 
             {/* Referral */}
@@ -116,7 +115,6 @@ const PaymentPage             = lazy(() => import('@/pages/PaymentPage'));
 const TrackingPage            = lazy(() => import('@/pages/TrackingPage'));
 const CourierDashboard        = lazy(() => import('@/pages/CourierDashboard'));
 const CourierEarningsPage     = lazy(() => import('@/pages/CourierEarningsPage'));
-const CampusMapPage           = lazy(() => import('@/pages/CampusMapPage'));
 const ReferralPage            = lazy(() => import('@/pages/ReferralPage'));
 const AdminLayout             = lazy(() => import('@/pages/admin/AdminLayout'));
 const AdminOverview           = lazy(() => import('@/pages/admin/AdminOverview'));

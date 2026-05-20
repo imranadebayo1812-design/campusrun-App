@@ -80,7 +80,7 @@ export default function HomePage() {
   const vendors = useMemo(() =>
     MOCK_VENDORS.map(v => ({
       ...v,
-      previewItem: dbItems[v.name] || v.items[0],
+      previewItem: dbItems[v.name] || v.items?.[0] || null,
     })),
   [dbItems]);
 
@@ -182,9 +182,11 @@ export default function HomePage() {
               </div>
               <p className="font-semibold text-white text-sm leading-tight">{vendor.name}</p>
               <p className="text-xs text-gray-500 mt-0.5 truncate">{vendor.zone}</p>
-              <p className="text-xs text-gray-600 mt-2 truncate">
-                {vendor.previewItem.name} · <span className="text-gray-500">₦{vendor.previewItem.price.toLocaleString()}</span>
-              </p>
+              {vendor.previewItem && (
+                <p className="text-xs text-gray-600 mt-2 truncate">
+                  {vendor.previewItem.name} · <span className="text-gray-500">₦{Number(vendor.previewItem.price).toLocaleString()}</span>
+                </p>
+              )}
             </button>
           ))}
         </div>

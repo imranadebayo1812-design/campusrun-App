@@ -5,11 +5,28 @@ import { User, Phone, BookOpen, Home, LogOut, Bike, Trash2, Shield, Star, Gift, 
 import { useNavigate } from 'react-router-dom';
 
 function DeleteAccountModal({ onClose }) {
+  const { session, profile } = useAuth();
   const [confirm, setConfirm] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  function handleDelete() {
+  async function handleDelete() {
     if (confirm !== 'DELETE') return;
+    setLoading(true);
+    setError('');
+    const { error: err } = await supabase.from('deletion_requests').insert({
+      user_id: session.user.id,
+      email: session.user.email,
+      full_name: profile?.full_name || '',
+      status: 'pending',
+    });
+    if (err) {
+      setError('Could not submit request. Please try again.');
+      setLoading(false);
+      return;
+    }
+    setLoading(false);
     setSubmitted(true);
   }
 
@@ -51,14 +68,15 @@ function DeleteAccountModal({ onClose }) {
                 className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/50"
               />
             </div>
+            {error && <p className="text-xs text-red-400">{error}</p>}
             <div className="flex gap-2 pt-1">
               <button onClick={onClose} className="flex-1 bg-surface-800 border border-white/[0.08] text-gray-400 font-medium py-3 rounded-xl text-sm">Cancel</button>
               <button
                 onClick={handleDelete}
-                disabled={confirm !== 'DELETE'}
+                disabled={confirm !== 'DELETE' || loading}
                 className="flex-1 bg-red-500 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm"
               >
-                Delete Account
+                {loading ? 'Submitting…' : 'Delete Account'}
               </button>
             </div>
           </>

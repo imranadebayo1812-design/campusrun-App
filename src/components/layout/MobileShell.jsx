@@ -6,6 +6,7 @@ import BottomNav from './BottomNav';
 import Logo from '@/components/ui/Logo';
 import { Bell } from 'lucide-react';
 import NotificationSheet from '@/components/ui/NotificationSheet';
+import SupportChat from '@/components/SupportChat';
 
 export default function MobileShell({ children }) {
   const { mode, toggleMode } = useMode();
@@ -79,6 +80,9 @@ export default function MobileShell({ children }) {
       <BottomNav />
 
       {showNotifications && <NotificationSheet onClose={() => setShowNotifications(false)} />}
+
+      {/* Floating AI support chat */}
+      <SupportChat />
     </div>
   );
 }

@@ -29,7 +29,7 @@ function WithdrawModal({ title, maxAmount, isEarnings, type, onSuccess, onClose 
   useEffect(() => {
     if (dest !== 'bank' || banks.length > 0) return;
     setBanksLoading(true);
-    supabase.functions.invoke('hyper-responder')
+    supabase.functions.invoke('list-banks')
       .then(({ data }) => setBanks(data?.data ?? []))
       .finally(() => setBanksLoading(false));
   }, [dest]);
@@ -46,7 +46,7 @@ function WithdrawModal({ title, maxAmount, isEarnings, type, onSuccess, onClose 
     setVerifying(true);
     setVerifyError('');
 
-    const { data, error: fnErr } = await supabase.functions.invoke('swift-service', {
+    const { data, error: fnErr } = await supabase.functions.invoke('verify-account', {
       body: { bank_code: bankCode, account_number: accountNumber },
     });
     setVerifying(false);
@@ -75,7 +75,7 @@ function WithdrawModal({ title, maxAmount, isEarnings, type, onSuccess, onClose 
       if (rpcErr) { setError('Transfer failed. Please try again.'); return; }
     } else {
       const selectedBank = banks.find(b => b.code === bankCode);
-      const { data, error: fnErr } = await supabase.functions.invoke('bright-service', {
+      const { data, error: fnErr } = await supabase.functions.invoke('initiate-payout', {
         body: {
           amount,
           type,

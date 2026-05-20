@@ -278,6 +278,18 @@ export default function CreateDeliveryPage() {
   const [documentFile, setDocumentFile] = useState(null);
   const [expandedMenuGroups, setExpandedMenuGroups] = useState(new Set());
   const [selectedItem, setSelectedItem] = useState(null);
+  const [dbMenuItems, setDbMenuItems] = useState([]);
+
+  useEffect(() => {
+    if (!activeVendor) { setDbMenuItems([]); return; }
+    supabase.from('menu_items')
+      .select('id, name, price, is_available, description')
+      .eq('vendor_name', activeVendor.name)
+      .order('name')
+      .then(({ data }) => {
+        setDbMenuItems((data || []).map(i => ({ ...i, available: i.is_available })));
+      });
+  }, [activeVendor?.name]);
 
   function toggleMenuGroup(label) {
     setExpandedMenuGroups(prev => {
@@ -517,7 +529,7 @@ export default function CreateDeliveryPage() {
             <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">
               {activeVendor.name} Menu — Tap to add
             </p>
-            {activeVendor.menuGroups ? (
+            {activeVendor.menuGroups && dbMenuItems.length === 0 ? (
               <div className="space-y-2">
                 {activeVendor.menuGroups.map(group => {
                   const groupItems = group.names.map(n => activeVendor.items.find(it => it.name === n)).filter(Boolean);
@@ -600,7 +612,7 @@ export default function CreateDeliveryPage() {
               </div>
             ) : (
               <div className="space-y-1.5">
-                {activeVendor.items.map(menuItem => {
+                {(dbMenuItems.length > 0 ? dbMenuItems : activeVendor.items).map(menuItem => {
                   const isAvailable = menuItem.available !== false;
                   const inCart = isAvailable ? items.find(it => it.name === menuItem.name) : null;
                   return (

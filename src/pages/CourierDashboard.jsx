@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
-import { MOCK_EARNINGS } from '@/lib/mockData';
 import { calculateDeliveryFee, getPickupCoords } from '@/lib/deliveryPricing';
 import {
   Bike, MapPin, Package, Lock, CheckCircle, Wallet, TrendingUp,
@@ -243,6 +242,7 @@ export default function CourierDashboard() {
   const [activeOrders, setActiveOrders] = useState([]);
   const [available, setAvailable] = useState([]);
   const [courierLocation, setCourierLocation] = useState(null);
+  const [dashStats, setDashStats] = useState({ earned: 0, reimbursed: 0, total: 0, todayCount: 0 });
   const [verifyDelivery, setVerifyDelivery] = useState(null);
   const [updating, setUpdating] = useState(null);
   const [fraudWarningTarget, setFraudWarningTarget] = useState(null);
@@ -253,6 +253,28 @@ export default function CourierDashboard() {
     const id = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Load real earnings stats for dashboard
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    const userId = session.user.id;
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    supabase.from('deliveries')
+      .select('delivery_fee, food_cost, created_at')
+      .eq('courier_id', userId)
+      .eq('status', 'delivered')
+      .gte('created_at', weekAgo)
+      .then(({ data }) => {
+        const rows = data || [];
+        setDashStats({
+          earned: rows.reduce((s, r) => s + (r.delivery_fee || 0), 0),
+          reimbursed: rows.reduce((s, r) => s + (r.food_cost || 0), 0),
+          total: rows.length,
+          todayCount: rows.filter(r => new Date(r.created_at) >= todayStart).length,
+        });
+      });
+  }, [session?.user?.id]);
 
   // Silent background location tracking — updates courier position every 60s
   useEffect(() => {
@@ -475,10 +497,10 @@ export default function CourierDashboard() {
   // No longer reading global priceEditState — each delivery has its own price_edit_flag
 
   const stats = [
-    { label: 'Total Deliveries', value: 14, sub: '3 today', icon: CheckCircle, iconColor: 'text-green-400', iconBg: 'bg-green-500/15' },
-    { label: 'Earned This Week', value: `₦${MOCK_EARNINGS.earned.toLocaleString()}`, sub: 'fees + tips', icon: Wallet, iconColor: 'text-brand-400', iconBg: 'bg-brand-500/15' },
-    { label: 'Daily Average', value: `₦${Math.round(MOCK_EARNINGS.earned / 7).toLocaleString()}`, sub: 'per day this week', icon: TrendingUp, iconColor: 'text-blue-400', iconBg: 'bg-blue-500/15' },
-    { label: 'Reimbursement', value: `₦${MOCK_EARNINGS.food_reimbursed.toLocaleString()}`, sub: 'pending payout', icon: Star, iconColor: 'text-yellow-400', iconBg: 'bg-yellow-500/15' },
+    { label: 'Total Deliveries', value: dashStats.total, sub: `${dashStats.todayCount} today`, icon: CheckCircle, iconColor: 'text-green-400', iconBg: 'bg-green-500/15' },
+    { label: 'Earned This Week', value: `₦${dashStats.earned.toLocaleString()}`, sub: 'delivery fees', icon: Wallet, iconColor: 'text-brand-400', iconBg: 'bg-brand-500/15' },
+    { label: 'Daily Average', value: `₦${Math.round(dashStats.earned / 7).toLocaleString()}`, sub: 'per day this week', icon: TrendingUp, iconColor: 'text-blue-400', iconBg: 'bg-blue-500/15' },
+    { label: 'Reimbursement', value: `₦${dashStats.reimbursed.toLocaleString()}`, sub: 'food costs this week', icon: Star, iconColor: 'text-yellow-400', iconBg: 'bg-yellow-500/15' },
   ];
 
   return (

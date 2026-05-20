@@ -5,8 +5,9 @@ import { supabase } from '@/api/supabaseClient';
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
 import {
   ChevronLeft, Package, Clock, CheckCircle, MapPin, Star,
-  MessageSquare, Send, AlertTriangle, Phone, Lock, ShoppingBag, Truck,
+  MessageSquare, AlertTriangle, Phone, Lock, ShoppingBag, Truck,
 } from 'lucide-react';
+import ChatModal from '@/components/buyer/ChatModal';
 
 const STEPS = [
   { key: 'placed',     label: 'Order Placed',  desc: 'Your order has been confirmed',  Icon: Package },
@@ -216,10 +217,7 @@ export default function TrackingPage() {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
-  const [chatMessages, setChatMessages] = useState([
-    { from: 'courier', text: "I've picked up your order!", time: '15m ago' },
-  ]);
-  const [chatInput, setChatInput] = useState('');
+  const [showChat, setShowChat] = useState(false);
   const [graceLeft, setGraceLeft] = useState(0);
 
   // Load delivery from DB + subscribe to realtime updates
@@ -342,13 +340,6 @@ export default function TrackingPage() {
       etaText = `~${Math.max(2, Math.round(distance_m / 80))} min`;
     }
   } catch {}
-
-  function sendChat() {
-    const text = chatInput.trim();
-    if (!text) return;
-    setChatMessages(prev => [...prev, { from: 'buyer', text, time: 'Just now' }]);
-    setChatInput('');
-  }
 
   return (
     <div className="bg-surface-950 min-h-full">
@@ -605,52 +596,20 @@ export default function TrackingPage() {
           </div>
         )}
 
-        {/* In-app chat */}
+        {/* Chat with courier */}
         {delivery.courier_accepted && !isCancelled && (
-          <div className="bg-surface-900 border border-white/[0.08] rounded-2xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-brand-400" aria-hidden="true" />
-                <p className="text-sm font-semibold text-white">Chat with Runner</p>
-              </div>
-              <span className="text-xs text-gray-500 bg-surface-800 px-2 py-0.5 rounded-full">Call (masked)</span>
+          <button
+            onClick={() => setShowChat(true)}
+            className="w-full flex items-center justify-between bg-surface-900 border border-white/[0.08] rounded-2xl px-4 py-3.5 active:scale-[0.98] transition-transform"
+          >
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-brand-400" aria-hidden="true" />
+              <p className="text-sm font-semibold text-white">Chat with Courier</p>
             </div>
-            <div className="p-4 space-y-3 max-h-52 overflow-y-auto">
-              {chatMessages.length === 0 && (
-                <p className="text-center text-sm text-gray-500 py-4">No messages yet. Start the conversation!</p>
-              )}
-              {chatMessages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.from === 'buyer' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
-                    msg.from === 'buyer'
-                      ? 'bg-brand-500 text-white rounded-br-sm'
-                      : 'bg-surface-800 text-gray-300 rounded-bl-sm'
-                  }`}>
-                    <p>{msg.text}</p>
-                    <p className={`text-xs mt-0.5 ${msg.from === 'buyer' ? 'text-white/60' : 'text-gray-500'}`}>{msg.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="px-3 py-2 border-t border-white/[0.06] flex gap-2">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendChat()}
-                placeholder="Type a message…"
-                className="flex-1 bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
-              />
-              <button
-                onClick={sendChat}
-                aria-label="Send message"
-                className="w-9 h-9 bg-brand-500 rounded-xl flex items-center justify-center shrink-0 active:scale-95 transition-transform"
-              >
-                <Send className="w-4 h-4 text-white" aria-hidden="true" />
-              </button>
-            </div>
-          </div>
+            <span className="text-xs text-brand-400 font-medium">Open →</span>
+          </button>
         )}
+        {showChat && <ChatModal deliveryId={deliveryId} onClose={() => setShowChat(false)} />}
 
         {/* Report Issue */}
         {delivery.courier_accepted && !isCancelled && !isDelivered && (

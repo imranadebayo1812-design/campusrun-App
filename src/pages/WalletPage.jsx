@@ -185,17 +185,17 @@ export default function WalletPage() {
             });
         },
         onCancel: () => {
-          // On mobile this fires even after successful payment — don't reset
-          // loading here; let the realtime subscription or timeout handle it.
-          // Only cancel if the tx count hasn't changed after a short delay.
+          // On mobile this fires even after successful payment — wait longer
+          // before treating it as a real cancel, to allow the realtime webhook
+          // to arrive and update walletTransactions (detected in the useEffect).
           setTimeout(() => {
             if (txCountRef.current !== null) {
               clearTimeout(timeoutRef.current);
               txCountRef.current = null;
               setLoading(false);
-              setError('Payment cancelled.');
+              setError('Payment cancelled. If you were charged, your balance will update within a minute.');
             }
-          }, 5000);
+          }, 15000);
         },
       }).openIframe();
     } catch {

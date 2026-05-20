@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { User, Phone, BookOpen, Home, LogOut, Bike, Trash2, Shield, Star, Gift, Mail, PhoneCall, ChevronRight, Camera } from 'lucide-react';
@@ -69,12 +69,14 @@ function DeleteAccountModal({ onClose }) {
 }
 
 export default function ProfilePage() {
-  const { profile, session, updateProfileLocally } = useAuth();
+  const { profile, session, updateProfileLocally, signOut } = useAuth();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ full_name: profile?.full_name || '', phone_number: profile?.phone_number || '', course: profile?.course || '', hostel: profile?.hostel || '' });
   const [saving, setSaving] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef(null);
 
   async function saveProfile() {
     setSaving(true);
@@ -89,8 +91,23 @@ export default function ProfilePage() {
     setSaving(false);
   }
 
-  function handleSignOut() {
-    navigate('/');
+  async function handleSignOut() {
+    await signOut();
+  }
+
+  async function handlePhotoUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    const ext = file.name.split('.').pop();
+    const path = `${session.user.id}/${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: true });
+    if (!uploadError) {
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', session.user.id);
+      updateProfileLocally({ avatar_url: publicUrl });
+    }
+    setUploadingPhoto(false);
   }
 
   const isCourier = profile?.is_courier;
@@ -111,12 +128,19 @@ export default function ProfilePage() {
         >
           <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/10" />
           <div className="relative w-14 h-14 shrink-0">
-            <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold text-white relative z-10">
-              {initial}
-            </div>
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="Profile" className="w-14 h-14 rounded-full object-cover relative z-10" />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold text-white relative z-10">
+                {initial}
+              </div>
+            )}
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
             <button
               aria-label="Change profile photo"
-              className="absolute -bottom-0.5 -right-0.5 w-6 h-6 bg-brand-500 rounded-full flex items-center justify-center border-2 border-[#1a0a2e] z-20"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              className="absolute -bottom-0.5 -right-0.5 w-6 h-6 bg-brand-500 rounded-full flex items-center justify-center border-2 border-[#1a0a2e] z-20 disabled:opacity-50"
             >
               <Camera className="w-3 h-3 text-white" aria-hidden="true" />
             </button>

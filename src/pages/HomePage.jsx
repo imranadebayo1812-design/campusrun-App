@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
@@ -48,6 +48,7 @@ export default function HomePage() {
   const { profile, session } = useAuth();
   const open = isOrderingOpen();
   const [activeOrders, setActiveOrders] = useState([]);
+  const [dbItems, setDbItems] = useState({});
 
   useEffect(() => {
     if (!session?.user?.id) return;
@@ -60,6 +61,28 @@ export default function HomePage() {
       .limit(3)
       .then(({ data }) => setActiveOrders(data || []));
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    supabase
+      .from('menu_items')
+      .select('vendor_name, name, price')
+      .eq('is_available', true)
+      .order('created_at')
+      .then(({ data }) => {
+        const map = {};
+        (data || []).forEach(item => {
+          if (!map[item.vendor_name]) map[item.vendor_name] = item;
+        });
+        setDbItems(map);
+      });
+  }, []);
+
+  const vendors = useMemo(() =>
+    MOCK_VENDORS.map(v => ({
+      ...v,
+      previewItem: dbItems[v.name] || v.items[0],
+    })),
+  [dbItems]);
 
   const firstName = (profile?.full_name || 'Student').split(' ')[0];
   const balance = profile?.wallet_balance || 0;
@@ -145,10 +168,10 @@ export default function HomePage() {
       <div className="px-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Order from Campus</p>
-          <span className="text-xs text-gray-600">{MOCK_VENDORS.length} vendors</span>
+          <span className="text-xs text-gray-600">{vendors.length} vendors</span>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          {MOCK_VENDORS.map(vendor => (
+          {vendors.map(vendor => (
             <button
               key={vendor.id}
               onClick={() => openVendor(vendor)}
@@ -160,7 +183,7 @@ export default function HomePage() {
               <p className="font-semibold text-white text-sm leading-tight">{vendor.name}</p>
               <p className="text-xs text-gray-500 mt-0.5 truncate">{vendor.zone}</p>
               <p className="text-xs text-gray-600 mt-2 truncate">
-                {vendor.items[0].name} · <span className="text-gray-500">₦{vendor.items[0].price.toLocaleString()}</span>
+                {vendor.previewItem.name} · <span className="text-gray-500">₦{vendor.previewItem.price.toLocaleString()}</span>
               </p>
             </button>
           ))}

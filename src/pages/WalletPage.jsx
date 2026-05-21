@@ -151,6 +151,8 @@ export default function WalletPage() {
               reference: newest.reference || '',
             },
           },
+        }).then(({ error: emailErr }) => {
+          if (emailErr) console.error('send-email failed:', emailErr);
         });
       }
     }
@@ -220,6 +222,8 @@ export default function WalletPage() {
                 reference: txn.reference,
               },
             },
+          }).then(({ error: emailErr }) => {
+            if (emailErr) console.error('send-email failed:', emailErr);
           });
         },
         onCancel: () => {

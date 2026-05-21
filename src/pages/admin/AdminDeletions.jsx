@@ -43,6 +43,7 @@ export default function AdminDeletions() {
           setActing(null);
           return;
         }
+        // Record is deleted — remove from local list
         setRequests(prev => prev.filter(r => r.id !== id));
         setActing(null);
         return;
@@ -127,7 +128,7 @@ export default function AdminDeletions() {
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-semibold text-white truncate">{req.full_name || '—'}</p>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${STATUS_STYLE[req.status] || STATUS_STYLE.pending}`}>
-                      {req.status?.toUpperCase()}
+                      {req.status.toUpperCase()}
                     </span>
                   </div>
                   <p className="text-sm text-gray-400 truncate">{req.email}</p>

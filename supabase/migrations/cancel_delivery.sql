@@ -36,7 +36,6 @@ begin
   end if;
 
   -- Authorisation: buyer, assigned courier, or admin
-  -- Using coalesce to handle NULL courier_id safely
   if auth.uid() != v_delivery.buyer_id
      and (v_delivery.courier_id is null or auth.uid() != v_delivery.courier_id)
      and not public.is_admin()
@@ -55,23 +54,23 @@ begin
      and coalesce(v_delivery.total_amount, 0) > 0
   then
     begin
+      -- Update wallet balance
       update public.profiles
       set wallet_balance = wallet_balance + v_delivery.total_amount
       where id = v_delivery.buyer_id
       returning wallet_balance into v_balance;
 
+      -- Log the transaction using the actual column names in the table
       insert into public.wallet_transactions (
-        user_id, type, amount, balance_before, balance_after,
-        description, delivery_id, reference
+        user_id, type, amount, balance_after,
+        description, delivery_id
       ) values (
         v_delivery.buyer_id,
         'refund',
         v_delivery.total_amount,
-        v_balance - v_delivery.total_amount,
         v_balance,
         'Refund for cancelled order #' || left(p_delivery_id::text, 8),
-        p_delivery_id,
-        'refund_' || p_delivery_id::text
+        p_delivery_id
       );
 
       v_refunded := true;
@@ -91,7 +90,7 @@ begin
             ' has been returned to your wallet for your cancelled order.'
         );
       exception when others then
-        null; -- ignore if notifications table missing or has issues
+        null;
       end;
     end if;
   end if;

@@ -2,7 +2,6 @@ import { lazy, Suspense, Component } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import LoginPage from '@/components/auth/LoginPage';
-import TermsModal from '@/components/auth/TermsModal';
 import OnboardingForm from '@/components/auth/OnboardingForm';
 import MobileShell from '@/components/layout/MobileShell';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
@@ -32,7 +31,6 @@ export default function App() {
     </div>
   );
   if (!session) return <LoginPage />;
-  if (!profile?.terms_accepted) return <TermsModal />;
   if (!profile?.onboarding_complete) return <OnboardingForm />;
   if (profile?.is_blacklisted) {
     return (
@@ -61,6 +59,7 @@ export default function App() {
                 <Route path="menu" element={<AdminMenuCategories />} />
                 <Route path="withdrawals" element={<AdminWithdrawals />} />
                 <Route path="disputes" element={<AdminDisputes />} />
+                <Route path="price-edits" element={<AdminPriceEdits />} />
                 <Route path="notifications" element={<AdminNotifications />} />
                 <Route path="reports" element={<AdminReports />} />
                 <Route path="deletions" element={<AdminDeletions />} />
@@ -93,6 +92,7 @@ export default function App() {
 
             {/* Courier */}
             <Route path="/courier" element={<CourierDashboard />} />
+            <Route path="/courier/map" element={<CampusMapPage />} />
             <Route path="/courier/earnings" element={<CourierEarningsPage />} />
 
             {/* Referral */}
@@ -116,6 +116,7 @@ const PaymentPage             = lazy(() => import('@/pages/PaymentPage'));
 const TrackingPage            = lazy(() => import('@/pages/TrackingPage'));
 const CourierDashboard        = lazy(() => import('@/pages/CourierDashboard'));
 const CourierEarningsPage     = lazy(() => import('@/pages/CourierEarningsPage'));
+const CampusMapPage           = lazy(() => import('@/pages/CampusMapPage'));
 const ReferralPage            = lazy(() => import('@/pages/ReferralPage'));
 const AdminLayout             = lazy(() => import('@/pages/admin/AdminLayout'));
 const AdminOverview           = lazy(() => import('@/pages/admin/AdminOverview'));
@@ -127,11 +128,15 @@ const AdminMenuCategories     = lazy(() => import('@/pages/admin/AdminMenuCatego
 const AdminNotifications      = lazy(() => import('@/pages/admin/AdminNotifications'));
 const AdminReports            = lazy(() => import('@/pages/admin/AdminReports'));
 const AdminDisputes           = lazy(() => import('@/pages/admin/AdminDisputes'));
+const AdminPriceEdits         = lazy(() => import('@/pages/admin/AdminPriceEdits'));
 const AdminDeletions          = lazy(() => import('@/pages/admin/AdminDeletions'));
 
 class ErrorBoundary extends Component {
   state = { crashed: false };
   static getDerivedStateFromError() { return { crashed: true }; }
+  componentDidCatch(error, info) {
+    console.error('[CampusRun crash]', error, info);
+  }
   render() {
     if (this.state.crashed) return (
       <div className="min-h-screen bg-surface-950 flex items-center justify-center p-4">
@@ -149,7 +154,7 @@ class ErrorBoundary extends Component {
 function Spinner() {
   return (
     <div className="flex-1 flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-brand-800 border-t-brand-500 rounded-full animate-spin" />
+      <img src="/logo.png" alt="Loading" className="w-10 h-10 rounded-xl animate-pulse" />
     </div>
   );
 }
@@ -157,7 +162,7 @@ function Spinner() {
 function LoadingScreen() {
   return (
     <div className="min-h-screen bg-surface-950 flex items-center justify-center">
-      <div className="w-10 h-10 border-4 border-brand-800 border-t-brand-500 rounded-full animate-spin" />
+      <img src="/logo.png" alt="Loading" className="w-14 h-14 rounded-2xl animate-pulse" />
     </div>
   );
 }

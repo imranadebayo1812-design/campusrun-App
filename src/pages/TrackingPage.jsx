@@ -3,11 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
+import { formatDistanceToNow } from 'date-fns';
 import {
   ChevronLeft, Package, Clock, CheckCircle, MapPin, Star,
-  MessageSquare, AlertTriangle, Phone, Lock, ShoppingBag, Truck,
+  MessageSquare, Send, AlertTriangle, Phone, Lock, ShoppingBag, Truck,
 } from 'lucide-react';
-import ChatModal from '@/components/buyer/ChatModal';
 
 const STEPS = [
   { key: 'placed',     label: 'Order Placed',  desc: 'Your order has been confirmed',  Icon: Package },
@@ -150,14 +150,23 @@ function ReportIssueModal({ onClose, deliveryId, courierId, reporterId }) {
 }
 
 /* ── Rating Modal ───────────────────────────────────────────────── */
-function RatingModal({ onClose, onSubmit }) {
+function RatingModal({ delivery, session, onClose, onSubmit }) {
   const [stars, setStars] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
   const labels = ['', 'Poor', 'Fair', 'Good', 'Great!', 'Excellent!'];
 
-  function submit() {
+  async function submit() {
     if (!stars) return;
+    setSaving(true);
+    await supabase.from('delivery_feedback').insert({
+      delivery_id: delivery.id,
+      buyer_id:    session.user.id,
+      courier_id:  delivery.courier_id,
+      rating:      stars,
+      comment:     comment || null,
+    });
     setSubmitted(true);
     setTimeout(() => { onSubmit(stars, comment); onClose(); }, 900);
   }
@@ -193,10 +202,10 @@ function RatingModal({ onClose, onSubmit }) {
             />
             <button
               onClick={submit}
-              disabled={!stars}
+              disabled={!stars || saving}
               className="w-full bg-brand-500 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm"
             >
-              Submit Rating
+              {saving ? 'Saving…' : 'Submit Rating'}
             </button>
           </>
         )}
@@ -209,7 +218,7 @@ function RatingModal({ onClose, onSubmit }) {
 export default function TrackingPage() {
   const { deliveryId } = useParams();
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { session, refreshProfile } = useAuth();
   const [delivery, setDelivery] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -217,8 +226,12 @@ export default function TrackingPage() {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
-  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatSending, setChatSending] = useState(false);
   const [graceLeft, setGraceLeft] = useState(0);
+  const [accepting, setAccepting] = useState(false);
+  const [priceEditError, setPriceEditError] = useState('');
 
   // Load delivery from DB + subscribe to realtime updates
   useEffect(() => {
@@ -243,7 +256,37 @@ export default function TrackingPage() {
     return () => { if (channel) supabase.removeChannel(channel); };
   }, [deliveryId]);
 
-  // Grace period countdown timer
+  // Load chat messages + realtime subscription
+  useEffect(() => {
+    if (!deliveryId || !delivery?.courier_accepted) return;
+    let chatChannel;
+
+    supabase.from('chat_messages').select('*')
+      .eq('delivery_id', deliveryId)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => setChatMessages(data || []));
+
+    chatChannel = supabase.channel(`chat:${deliveryId}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'chat_messages',
+        filter: `delivery_id=eq.${deliveryId}`,
+      }, payload => {
+        setChatMessages(prev =>
+          prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new]
+        );
+      })
+      .subscribe();
+
+    return () => { if (chatChannel) supabase.removeChannel(chatChannel); };
+  }, [deliveryId, delivery?.courier_accepted]);
+
+  // Auto-show rating modal when delivery is confirmed (buyer only)
+  useEffect(() => {
+    if (delivery?.status === 'delivered' && !ratingSubmitted && session?.user?.id === delivery?.buyer_id) {
+      const t = setTimeout(() => setShowRatingModal(true), 1500);
+      return () => clearTimeout(t);
+    }
+  }, [delivery?.status, ratingSubmitted, session?.user?.id, delivery?.buyer_id]);
   useEffect(() => {
     if (!delivery?.courier_accepted) return;
     const ref = delivery.accepted_at || delivery.created_at;
@@ -287,15 +330,51 @@ export default function TrackingPage() {
     : [];
 
   async function acceptPriceEdit() {
-    const updatedItems = (delivery.items || []).map(({ original_price, ...rest }) => rest);
-    await supabase.from('deliveries')
-      .update({ items: updatedItems, price_edit_flag: false, price_edit_buyer_response: 'accepted' })
-      .eq('id', deliveryId);
-    setDelivery(prev => ({ ...prev, items: updatedItems, price_edit_flag: false }));
+    setAccepting(true);
+    setPriceEditError('');
+    const { error } = await supabase.rpc('accept_price_edit', { p_delivery_id: deliveryId });
+    if (error) {
+      setPriceEditError(error.message);
+    } else {
+      const updatedItems = (delivery.items || []).map(({ original_price, ...rest }) => rest);
+      setDelivery(prev => ({ ...prev, items: updatedItems, price_edit_flag: false }));
+    }
+    setAccepting(false);
+  }
+
+  async function cancelOrder() {
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('cancel_delivery', {
+        p_delivery_id: deliveryId,
+        p_cancelled_by: 'buyer',
+      });
+      if (rpcError) {
+        // RPC not deployed — fall back to direct status update (no refund)
+        const { error: updateError } = await supabase
+          .from('deliveries')
+          .update({ status: 'cancelled' })
+          .eq('id', deliveryId);
+        if (updateError) {
+          setCancelError(`Could not cancel: ${updateError.message}`);
+          setCancelling(false);
+          return;
+        }
+        setCancelError('Order cancelled. Wallet refund could not be processed automatically — contact support.');
+      } else if (rpcData?.refund_error) {
+        // RPC ran but refund step failed — show what went wrong
+        setCancelError(`Order cancelled. Refund error: ${rpcData.refund_error}`);
+      }
+      setDelivery(prev => ({ ...prev, status: 'cancelled' }));
+      refreshProfile();
+    } catch (err) {
+      setCancelError(`Unexpected error: ${err?.message || err}`);
+    }
+    setCancelling(false);
   }
 
   async function rejectPriceEdit() {
-    // 1. Restore items to original prices and clear the flag
     const restoredItems = (delivery.items || []).map(item => {
       if (item.original_price == null) return item;
       const { original_price, ...rest } = item;
@@ -305,32 +384,18 @@ export default function TrackingPage() {
       .update({ items: restoredItems, price_edit_flag: false, price_edit_buyer_response: 'rejected' })
       .eq('id', deliveryId);
 
-    // 2. Cancel with refund via RPC
-    await supabase.rpc('cancel_delivery', { p_delivery_id: deliveryId, p_cancelled_by: 'buyer' });
-    setDelivery(prev => ({ ...prev, items: restoredItems, price_edit_flag: false, status: 'cancelled' }));
-  }
-
-  async function cancelOrder() {
-    setCancelling(true);
-    setCancelError(null);
-    const { error: rpcError } = await supabase.rpc('cancel_delivery', {
+    // Cancel with refund — fall back to direct update if RPC unavailable
+    const { error: rpcErr } = await supabase.rpc('cancel_delivery', {
       p_delivery_id: deliveryId,
       p_cancelled_by: 'buyer',
     });
-    if (rpcError) {
-      // Fallback: direct status update so the cancellation still goes through
-      const { error: updateError } = await supabase
-        .from('deliveries')
-        .update({ status: 'cancelled', cancelled_by: 'buyer' })
+    if (rpcErr) {
+      await supabase.from('deliveries')
+        .update({ status: 'cancelled' })
         .eq('id', deliveryId);
-      if (updateError) {
-        setCancelError('Cancellation failed. Please try again or contact support.');
-        setCancelling(false);
-        return;
-      }
     }
-    setDelivery(prev => ({ ...prev, status: 'cancelled' }));
-    setCancelling(false);
+    setDelivery(prev => ({ ...prev, items: restoredItems, price_edit_flag: false, status: 'cancelled' }));
+    refreshProfile();
   }
 
   let etaText = null;
@@ -340,6 +405,20 @@ export default function TrackingPage() {
       etaText = `~${Math.max(2, Math.round(distance_m / 80))} min`;
     }
   } catch {}
+
+  async function sendChat() {
+    const text = chatInput.trim();
+    if (!text || chatSending) return;
+    setChatSending(true);
+    setChatInput('');
+    await supabase.from('chat_messages').insert({
+      delivery_id: deliveryId,
+      sender_id:   session.user.id,
+      sender_role: 'buyer',
+      message:     text,
+    });
+    setChatSending(false);
+  }
 
   return (
     <div className="bg-surface-950 min-h-full">
@@ -460,11 +539,13 @@ export default function TrackingPage() {
               </button>
               <button
                 onClick={acceptPriceEdit}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl text-sm"
+                disabled={accepting}
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm"
               >
-                Accept &amp; Continue
+                {accepting ? 'Accepting…' : 'Accept & Continue'}
               </button>
             </div>
+            {priceEditError && <p className="text-xs text-red-400 text-center">{priceEditError}</p>}
           </div>
         )}
 
@@ -596,20 +677,59 @@ export default function TrackingPage() {
           </div>
         )}
 
-        {/* Chat with courier */}
+        {/* In-app chat */}
         {delivery.courier_accepted && !isCancelled && (
-          <button
-            onClick={() => setShowChat(true)}
-            className="w-full flex items-center justify-between bg-surface-900 border border-white/[0.08] rounded-2xl px-4 py-3.5 active:scale-[0.98] transition-transform"
-          >
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-brand-400" aria-hidden="true" />
-              <p className="text-sm font-semibold text-white">Chat with Courier</p>
+          <div className="bg-surface-900 border border-white/[0.08] rounded-2xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-brand-400" aria-hidden="true" />
+                <p className="text-sm font-semibold text-white">Chat with Runner</p>
+              </div>
+              <span className="text-xs text-gray-500 bg-surface-800 px-2 py-0.5 rounded-full">Call (masked)</span>
             </div>
-            <span className="text-xs text-brand-400 font-medium">Open →</span>
-          </button>
+            <div className="p-4 space-y-3 max-h-52 overflow-y-auto">
+              {chatMessages.length === 0 && (
+                <p className="text-center text-sm text-gray-500 py-4">No messages yet. Start the conversation!</p>
+              )}
+              {chatMessages.map(msg => {
+                const isMine = msg.sender_id === session?.user?.id;
+                return (
+                  <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
+                      isMine
+                        ? 'bg-brand-500 text-white rounded-br-sm'
+                        : 'bg-surface-800 text-gray-300 rounded-bl-sm'
+                    }`}>
+                      <p>{msg.message}</p>
+                      <p className={`text-xs mt-0.5 ${isMine ? 'text-white/60' : 'text-gray-500'}`}>
+                        {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="px-3 py-2 border-t border-white/[0.06] flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendChat()}
+                placeholder="Type a message…"
+                disabled={chatSending}
+                className="flex-1 bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 disabled:opacity-60"
+              />
+              <button
+                onClick={sendChat}
+                disabled={chatSending}
+                aria-label="Send message"
+                className="w-9 h-9 bg-brand-500 rounded-xl flex items-center justify-center shrink-0 active:scale-95 transition-transform disabled:opacity-50"
+              >
+                <Send className="w-4 h-4 text-white" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
         )}
-        {showChat && <ChatModal deliveryId={deliveryId} onClose={() => setShowChat(false)} />}
 
         {/* Report Issue */}
         {delivery.courier_accepted && !isCancelled && !isDelivered && (
@@ -660,7 +780,12 @@ export default function TrackingPage() {
       </div>
 
       {showRatingModal && (
-        <RatingModal onClose={() => setShowRatingModal(false)} onSubmit={() => setRatingSubmitted(true)} />
+        <RatingModal
+          delivery={delivery}
+          session={session}
+          onClose={() => setShowRatingModal(false)}
+          onSubmit={() => setRatingSubmitted(true)}
+        />
       )}
       {showReportModal && (
         <ReportIssueModal

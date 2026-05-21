@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
-import { calculateDeliveryFee, getPickupCoords } from '@/lib/deliveryPricing';
+import { haversineDistance as _haversine } from '@/lib/venueCoords';
+import { calculateDeliveryFee } from '@/lib/deliveryPricing';
 import {
-  Bike, MapPin, Package, Lock, CheckCircle, Wallet, TrendingUp,
-  Star, Power, Clock, ShoppingBag, Truck, AlertCircle, AlertTriangle,
-  Pencil, ShieldAlert,
+  Bike, MapPin, Lock, CheckCircle, Wallet, TrendingUp,
+  Star, Power, Clock, AlertCircle, AlertTriangle,
+  Pencil, ShieldAlert, MessageSquare, Send,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -197,6 +198,130 @@ function ItemPriceEditModal({ target, onSubmit, onClose }) {
   );
 }
 
+/* ── Courier chat panel ─────────────────────────────────────────── */
+function CourierChatPanel({ deliveryId, session }) {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
+  const [unread, setUnread] = useState(0);
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    supabase.from('chat_messages').select('*')
+      .eq('delivery_id', deliveryId)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => {
+        const msgs = data || [];
+        setMessages(msgs);
+        setUnread(msgs.filter(m => m.sender_role !== 'courier').length);
+      });
+
+    const channel = supabase.channel(`courier-chat:${deliveryId}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'chat_messages',
+        filter: `delivery_id=eq.${deliveryId}`,
+      }, payload => {
+        setMessages(prev =>
+          prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new]
+        );
+        if (payload.new.sender_role !== 'courier') {
+          setUnread(u => u + 1);
+        }
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [deliveryId]);
+
+  useEffect(() => {
+    if (open) {
+      setUnread(0);
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    }
+  }, [open, messages.length]);
+
+  async function send() {
+    const text = input.trim();
+    if (!text || sending) return;
+    setSending(true);
+    setInput('');
+    await supabase.from('chat_messages').insert({
+      delivery_id: deliveryId,
+      sender_id:   session.user.id,
+      sender_role: 'courier',
+      message:     text,
+    });
+    setSending(false);
+  }
+
+  return (
+    <div className="border-t border-white/[0.06] mt-3 pt-3">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center justify-between w-full"
+      >
+        <div className="flex items-center gap-2">
+          <MessageSquare className="w-4 h-4 text-brand-400" aria-hidden="true" />
+          <p className="text-sm font-medium text-gray-300">Chat with buyer</p>
+          {unread > 0 && !open && (
+            <span className="min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+              {unread}
+            </span>
+          )}
+        </div>
+        <span className="text-xs text-gray-500">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="mt-3">
+          <div className="max-h-48 overflow-y-auto space-y-2 mb-2">
+            {messages.length === 0 && (
+              <p className="text-center text-xs text-gray-500 py-4">No messages yet. Start the conversation!</p>
+            )}
+            {messages.map(msg => {
+              const isMine = msg.sender_role === 'courier';
+              return (
+                <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
+                    isMine
+                      ? 'bg-brand-500 text-white rounded-br-sm'
+                      : 'bg-surface-800 text-gray-200 rounded-bl-sm'
+                  }`}>
+                    <p>{msg.message}</p>
+                    <p className={`text-xs mt-0.5 ${isMine ? 'text-white/60' : 'text-gray-500'}`}>
+                      {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+            <div ref={bottomRef} />
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && send()}
+              placeholder="Reply to buyer…"
+              disabled={sending}
+              className="flex-1 bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 disabled:opacity-60"
+            />
+            <button
+              onClick={send}
+              disabled={!input.trim() || sending}
+              aria-label="Send message"
+              className="w-9 h-9 bg-brand-500 rounded-xl flex items-center justify-center shrink-0 disabled:opacity-50"
+            >
+              <Send className="w-4 h-4 text-white" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Helpers ────────────────────────────────────────────────────── */
 function fmt(secs) {
   return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
@@ -241,65 +366,67 @@ export default function CourierDashboard() {
   const [tick, setTick] = useState(0);
   const [activeOrders, setActiveOrders] = useState([]);
   const [available, setAvailable] = useState([]);
-  const [courierLocation, setCourierLocation] = useState(null);
-  const [dashStats, setDashStats] = useState({ earned: 0, reimbursed: 0, total: 0, todayCount: 0 });
   const [verifyDelivery, setVerifyDelivery] = useState(null);
   const [updating, setUpdating] = useState(null);
   const [fraudWarningTarget, setFraudWarningTarget] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [acceptError, setAcceptError] = useState('');
+  const [earningsSummary, setEarningsSummary] = useState({ earned: 0, reimbursed: 0, totalDeliveries: 0 });
+  const [courierCoords, setCourierCoords] = useState(null);
+  const [locationStatus, setLocationStatus] = useState('pending'); // pending | ok | denied
+
+  // Matching constants
+  const PROXIMITY_RADIUS_M  = 800;  // metres — nearby courier
+  const BROADCAST_TIMEOUT_S = 60;   // seconds before order opens to all
+  const MIN_RATING_PRIORITY = 4.0;  // rating threshold for instant access
 
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
-  // Load real earnings stats for dashboard
+  // Get GPS when going online; save to profile for admin dispatch visibility
   useEffect(() => {
-    if (!session?.user?.id) return;
-    const userId = session.user.id;
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-    supabase.from('deliveries')
-      .select('delivery_fee, food_cost, created_at')
-      .eq('courier_id', userId)
-      .eq('status', 'delivered')
-      .gte('created_at', weekAgo)
-      .then(({ data }) => {
-        const rows = data || [];
-        setDashStats({
-          earned: rows.reduce((s, r) => s + (r.delivery_fee || 0), 0),
-          reimbursed: rows.reduce((s, r) => s + (r.food_cost || 0), 0),
-          total: rows.length,
-          todayCount: rows.filter(r => new Date(r.created_at) >= todayStart).length,
-        });
-      });
-  }, [session?.user?.id]);
+    if (!isOnline || !session?.user?.id) return;
+    if (!navigator.geolocation) { setLocationStatus('denied'); return; }
+    setLocationStatus('pending');
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setCourierCoords(coords);
+        setLocationStatus('ok');
+        supabase.from('profiles')
+          .update({ courier_lat: coords.lat, courier_lng: coords.lng })
+          .eq('id', session.user.id);
+      },
+      () => setLocationStatus('denied'),
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60_000 }
+    );
+  }, [isOnline, session?.user?.id]);
 
-  // Silent background location tracking — updates courier position every 60s
-  useEffect(() => {
-    if (!isOnline || !session?.user?.id || !navigator.geolocation) return;
-    const userId = session.user.id;
+  // Returns visibility info for an available order based on the four matching rules
+  function getOrderVisibility(order) {
+    // Couriers cannot pick up their own orders
+    if (order.buyer_id === session?.user?.id) return { visible: false };
 
-    function push() {
-      navigator.geolocation.getCurrentPosition(
-        async pos => {
-          const { latitude: lat, longitude: lng } = pos.coords;
-          setCourierLocation({ lat, lng });
-          await supabase.from('profiles').update({
-            last_lat: lat, last_lng: lng,
-            location_updated_at: new Date().toISOString(),
-          }).eq('id', userId);
-        },
-        null,
-        { enableHighAccuracy: false, timeout: 10000, maximumAge: 30000 },
-      );
+    const ageS = (Date.now() - new Date(order.created_at)) / 1000;
+
+    // Rule 1 — broadcast: order is old enough for everyone
+    if (ageS >= BROADCAST_TIMEOUT_S) return { visible: true, reason: 'broadcast' };
+
+    // Rule 2 — rating priority: high-rated couriers see all orders immediately
+    if ((profile?.avg_rating || 0) >= MIN_RATING_PRIORITY)
+      return { visible: true, reason: 'priority' };
+
+    // Rule 3 — proximity: courier is near the pickup
+    if (courierCoords && order.pickup_coords) {
+      const dist = _haversine(courierCoords, order.pickup_coords);
+      if (dist <= PROXIMITY_RADIUS_M) return { visible: true, reason: 'nearby', dist };
     }
 
-    push();
-    const id = setInterval(push, 60000);
-    return () => clearInterval(id);
-  }, [isOnline, session?.user?.id]);
+    // Not yet visible — show countdown
+    return { visible: false, opensIn: Math.ceil(BROADCAST_TIMEOUT_S - ageS) };
+  }
 
   // Load orders from DB + realtime subscriptions
   useEffect(() => {
@@ -317,6 +444,7 @@ export default function CourierDashboard() {
           .is('courier_id', null)
           .eq('status', 'placed')
           .eq('payment_verified', true)
+          .neq('buyer_id', userId)
           .order('created_at', { ascending: false }),
       ]);
       setActiveOrders(active || []);
@@ -366,20 +494,26 @@ export default function CourierDashboard() {
     };
   }, [session?.user?.id, profile?.is_courier]);
 
-  function distanceKm(pickupLocation) {
-    if (!courierLocation) return null;
-    const coord = getPickupCoords(pickupLocation);
-    if (!coord) return null;
-    const R = 6371;
-    const dLat = (coord.lat - courierLocation.lat) * Math.PI / 180;
-    const dLng = (coord.lng - courierLocation.lng) * Math.PI / 180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(courierLocation.lat*Math.PI/180)*Math.cos(coord.lat*Math.PI/180)*Math.sin(dLng/2)**2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  }
-
-  const sortedAvailable = courierLocation
-    ? [...available].sort((a, b) => (distanceKm(a.pickup_location) ?? 99) - (distanceKm(b.pickup_location) ?? 99))
-    : available;
+  // Load real earnings summary from courier_earnings
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    supabase
+      .from('courier_earnings')
+      .select('type, amount, created_at')
+      .eq('courier_id', session.user.id)
+      .then(({ data }) => {
+        if (!data) return;
+        const weekEarned = data
+          .filter(e => ['delivery_fee', 'tip'].includes(e.type) && e.created_at >= weekAgo)
+          .reduce((s, e) => s + e.amount, 0);
+        const reimbursed = data
+          .filter(e => e.type === 'reimbursement')
+          .reduce((s, e) => s + e.amount, 0);
+        const deliveryIds = new Set(data.map(e => e.delivery_id).filter(Boolean));
+        setEarningsSummary({ earned: weekEarned, reimbursed, totalDeliveries: deliveryIds.size });
+      });
+  }, [session?.user?.id]);
 
   if (!profile?.is_courier) {
     return (
@@ -397,10 +531,6 @@ export default function CourierDashboard() {
   }
 
   async function acceptOrder(order) {
-    if (order.buyer_id === session.user.id) {
-      setAcceptError('You cannot accept your own order.');
-      return;
-    }
     setAcceptError('');
     const now = new Date().toISOString();
     const { data, error } = await supabase
@@ -409,15 +539,17 @@ export default function CourierDashboard() {
       .eq('id', order.id)
       .is('courier_id', null)
       .select()
-      .single();
+      .maybeSingle();
     if (error) {
-      setAcceptError('Could not accept order. It may have been taken. ' + error.message);
+      setAcceptError('Could not accept order. ' + error.message);
       return;
     }
-    if (data) {
-      setAvailable(prev => prev.filter(o => o.id !== order.id));
-      setActiveOrders(prev => [...prev, data]);
+    if (!data) {
+      setAcceptError('Order already taken by another courier.');
+      return;
     }
+    setAvailable(prev => prev.filter(o => o.id !== order.id));
+    setActiveOrders(prev => [...prev, data]);
   }
 
   async function updateStatus(delivery, nextStatus) {
@@ -497,10 +629,10 @@ export default function CourierDashboard() {
   // No longer reading global priceEditState — each delivery has its own price_edit_flag
 
   const stats = [
-    { label: 'Total Deliveries', value: dashStats.total, sub: `${dashStats.todayCount} today`, icon: CheckCircle, iconColor: 'text-green-400', iconBg: 'bg-green-500/15' },
-    { label: 'Earned This Week', value: `₦${dashStats.earned.toLocaleString()}`, sub: 'delivery fees', icon: Wallet, iconColor: 'text-brand-400', iconBg: 'bg-brand-500/15' },
-    { label: 'Daily Average', value: `₦${Math.round(dashStats.earned / 7).toLocaleString()}`, sub: 'per day this week', icon: TrendingUp, iconColor: 'text-blue-400', iconBg: 'bg-blue-500/15' },
-    { label: 'Reimbursement', value: `₦${dashStats.reimbursed.toLocaleString()}`, sub: 'food costs this week', icon: Star, iconColor: 'text-yellow-400', iconBg: 'bg-yellow-500/15' },
+    { label: 'Total Deliveries', value: earningsSummary.totalDeliveries, sub: `${doneCount} today`, icon: CheckCircle, iconColor: 'text-green-400', iconBg: 'bg-green-500/15' },
+    { label: 'Earned This Week', value: `₦${earningsSummary.earned.toLocaleString()}`, sub: 'fees + tips', icon: Wallet, iconColor: 'text-brand-400', iconBg: 'bg-brand-500/15' },
+    { label: 'Daily Average', value: `₦${Math.round(earningsSummary.earned / 7).toLocaleString()}`, sub: 'per day this week', icon: TrendingUp, iconColor: 'text-blue-400', iconBg: 'bg-blue-500/15' },
+    { label: 'Reimbursement', value: `₦${earningsSummary.reimbursed.toLocaleString()}`, sub: 'pending payout', icon: Star, iconColor: 'text-yellow-400', iconBg: 'bg-yellow-500/15' },
   ];
 
   return (
@@ -598,10 +730,15 @@ export default function CourierDashboard() {
                       </div>
                       <button
                         onClick={async () => {
-                          await supabase.rpc('cancel_delivery', {
+                          const { error: rpcErr } = await supabase.rpc('cancel_delivery', {
                             p_delivery_id: delivery.id,
                             p_cancelled_by: 'courier',
                           });
+                          if (rpcErr) {
+                            await supabase.from('deliveries')
+                              .update({ status: 'cancelled' })
+                              .eq('id', delivery.id);
+                          }
                           setActiveOrders(prev => prev.filter(o => o.id !== delivery.id));
                         }}
                         className="text-xs font-semibold bg-amber-500/20 border border-amber-500/30 text-amber-400 px-3 py-1.5 rounded-lg"
@@ -729,7 +866,11 @@ export default function CourierDashboard() {
                       </p>
                     )}
 
+                    {/* Chat with buyer */}
+                    <CourierChatPanel deliveryId={delivery.id} session={session} />
+
                     {/* Action button */}
+                    {action && <div className="mt-3" />}
                     {action && (
                       <button
                         onClick={() => updateStatus(delivery, action.next)}
@@ -769,55 +910,86 @@ export default function CourierDashboard() {
           <p className="text-xs text-red-400">{acceptError}</p>
         </div>
       )}
-      {isOnline && sortedAvailable.length > 0 && (
+      {isOnline && available.length > 0 && (
         <div className="px-4 mb-6">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Available Orders</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Available Orders</p>
+            <div className="flex items-center gap-2">
+              {profile?.avg_rating >= MIN_RATING_PRIORITY && (
+                <span className="flex items-center gap-1 text-[10px] font-bold text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 px-2 py-0.5 rounded-full">
+                  <Star className="w-2.5 h-2.5" /> Priority Access
+                </span>
+              )}
+              <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${
+                locationStatus === 'ok' ? 'text-green-400 bg-green-400/10 border-green-400/20' :
+                locationStatus === 'denied' ? 'text-gray-500 bg-white/[0.04] border-white/[0.08]' :
+                'text-amber-400 bg-amber-400/10 border-amber-400/20'
+              }`}>
+                <MapPin className="w-2.5 h-2.5" />
+                {locationStatus === 'ok' ? 'Located' : locationStatus === 'denied' ? 'No GPS' : 'Locating…'}
+              </span>
+            </div>
+          </div>
           <div className="space-y-3">
-            {sortedAvailable.map(order => {
-              const km = distanceKm(order.pickup_location);
+            {available.map(order => {
+              // eslint-disable-next-line react-hooks/rules-of-hooks -- tick is stable
+              const vis = getOrderVisibility(order);
+              const locked = !vis.visible;
               return (
-              <div key={order.id} className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-gray-500 uppercase">{order.order_type}</span>
-                    {km !== null && (
-                      <span className="text-[10px] font-semibold bg-brand-500/15 text-brand-400 px-2 py-0.5 rounded-full">
-                        {km < 1 ? `${Math.round(km * 1000)}m away` : `${km.toFixed(1)}km away`}
-                      </span>
-                    )}
+                <div key={order.id} className={`bg-surface-900 border rounded-2xl p-4 transition-opacity ${locked ? 'opacity-60 border-white/[0.05]' : 'border-white/[0.08]'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-gray-500 uppercase">{order.order_type}</span>
+                      {!locked && vis.reason === 'nearby' && (
+                        <span className="text-[10px] text-brand-400 bg-brand-400/10 border border-brand-400/20 px-1.5 py-0.5 rounded-full">Nearby</span>
+                      )}
+                      {!locked && vis.reason === 'priority' && (
+                        <span className="text-[10px] text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 px-1.5 py-0.5 rounded-full">Priority</span>
+                      )}
+                      {!locked && vis.reason === 'broadcast' && (
+                        <span className="text-[10px] text-green-400 bg-green-400/10 border border-green-400/20 px-1.5 py-0.5 rounded-full">Open</span>
+                      )}
+                    </div>
+                    <span className="text-sm font-bold text-green-400">₦{order.delivery_fee?.toLocaleString()}</span>
                   </div>
-                  <span className="text-sm font-bold text-green-400">₦{order.delivery_fee?.toLocaleString()}</span>
-                </div>
-                <div className="space-y-2 mb-3">
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-4 h-4 text-brand-400 mt-0.5 shrink-0" aria-hidden="true" />
-                    <p className="text-sm text-white">{order.pickup_location}</p>
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-4 h-4 text-brand-400 mt-0.5 shrink-0" aria-hidden="true" />
+                      <p className="text-sm text-white">{order.pickup_location}</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-4 h-4 text-green-400 mt-0.5 shrink-0" aria-hidden="true" />
+                      <p className="text-sm text-white">{order.dropoff_location}</p>
+                    </div>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-4 h-4 text-green-400 mt-0.5 shrink-0" aria-hidden="true" />
-                    <p className="text-sm text-white">{order.dropoff_location}</p>
+                  {order.order_type === 'purchase' && order.food_cost > 0 && (
+                    <p className="text-xs text-gray-500 mb-3">
+                      Food cost to reimburse: <span className="text-green-400 font-semibold">₦{order.food_cost.toLocaleString()}</span>
+                    </p>
+                  )}
+                  {order.order_type === 'errand' && order.item_description && (
+                    <p className="text-xs text-gray-400 bg-surface-800 rounded-lg px-3 py-2 mb-3">{order.item_description}</p>
+                  )}
+                  <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
+                    <Clock className="w-3 h-3" aria-hidden="true" />
+                    {formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}
                   </div>
+                  {locked ? (
+                    <div className="w-full bg-surface-800 border border-white/[0.06] rounded-xl py-2.5 flex items-center justify-center gap-2 text-sm text-gray-500">
+                      <Lock className="w-3.5 h-3.5" />
+                      Opens in {vis.opensIn}s
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => acceptOrder(order)}
+                      className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-lg shadow-brand-500/20"
+                    >
+                      Accept Order
+                    </button>
+                  )}
                 </div>
-                {order.order_type === 'purchase' && order.food_cost > 0 && (
-                  <p className="text-xs text-gray-500 mb-3">
-                    Food cost to reimburse: <span className="text-green-400 font-semibold">₦{order.food_cost.toLocaleString()}</span>
-                  </p>
-                )}
-                {order.order_type === 'errand' && order.item_description && (
-                  <p className="text-xs text-gray-400 bg-surface-800 rounded-lg px-3 py-2 mb-3">{order.item_description}</p>
-                )}
-                <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
-                  <Clock className="w-3 h-3" aria-hidden="true" />
-                  {formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}
-                </div>
-                <button
-                  onClick={() => acceptOrder(order)}
-                  className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-lg shadow-brand-500/20"
-                >
-                  Accept Order
-                </button>
-              </div>
-            );})}
+              );
+            })}
           </div>
         </div>
       )}

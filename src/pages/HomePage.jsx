@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
@@ -7,6 +7,8 @@ import { isOrderingOpen, orderingClosedMessage } from '@/lib/restaurantHours';
 import { ChevronRight, Package, AlertCircle, Wallet } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
+// Metadata-only lookup — emoji/color/zone not stored in DB
+const VENDOR_META = Object.fromEntries(MOCK_VENDORS.map(v => [v.name, v]));
 const STATUS_LABEL = {
   placed: 'Waiting for courier',
   bought: 'Bought',
@@ -46,9 +48,53 @@ const ACTIVE_STATUSES = ['placed', 'bought', 'on_the_way', 'arrived'];
 export default function HomePage() {
   const navigate = useNavigate();
   const { profile, session } = useAuth();
-  const open = isOrderingOpen();
+  const [open, setOpen] = useState(() => isOrderingOpen());
   const [activeOrders, setActiveOrders] = useState([]);
-  const [dbItems, setDbItems] = useState({});
+  const [vendors, setVendors] = useState([]);
+  const [vendorsLoading, setVendorsLoading] = useState(true);
+
+  // Re-evaluate ordering hours every minute so the UI updates at exactly 9:30 PM
+  useEffect(() => {
+    const id = setInterval(() => setOpen(isOrderingOpen()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    async function loadVendors() {
+      const { data: cats } = await supabase
+        .from('menu_categories')
+        .select('vendor_name')
+        .order('vendor_name');
+
+      if (!cats?.length) {
+        setVendors(MOCK_VENDORS);
+        setVendorsLoading(false);
+        return;
+      }
+
+      const names = [...new Set(cats.map(c => c.vendor_name))];
+
+      const { data: firstItems } = await supabase
+        .from('menu_items')
+        .select('vendor_name, name, price')
+        .eq('is_available', true)
+        .order('vendor_name')
+        .order('name');
+
+      const firstByVendor = {};
+      for (const item of (firstItems || [])) {
+        if (!firstByVendor[item.vendor_name]) firstByVendor[item.vendor_name] = item;
+      }
+
+      setVendors(names.map(name => {
+        const meta = VENDOR_META[name] || { id: name, zone: 'Campus', category: 'food', color: 'bg-brand-500', emoji: '🏪' };
+        const first = firstByVendor[name];
+        return { ...meta, name, items: first ? [{ name: first.name, price: first.price }] : meta.items || [] };
+      }));
+      setVendorsLoading(false);
+    }
+    loadVendors();
+  }, []);
 
   useEffect(() => {
     if (!session?.user?.id) return;
@@ -62,32 +108,11 @@ export default function HomePage() {
       .then(({ data }) => setActiveOrders(data || []));
   }, [session?.user?.id]);
 
-  useEffect(() => {
-    supabase
-      .from('menu_items')
-      .select('vendor_name, name, price')
-      .eq('is_available', true)
-      .order('created_at')
-      .then(({ data }) => {
-        const map = {};
-        (data || []).forEach(item => {
-          if (!map[item.vendor_name]) map[item.vendor_name] = item;
-        });
-        setDbItems(map);
-      });
-  }, []);
-
-  const vendors = useMemo(() =>
-    MOCK_VENDORS.map(v => ({
-      ...v,
-      previewItem: dbItems[v.name] || v.items?.[0] || null,
-    })),
-  [dbItems]);
-
   const firstName = (profile?.full_name || 'Student').split(' ')[0];
   const balance = profile?.wallet_balance || 0;
 
   function openVendor(vendor) {
+    if (!open) return;
     navigate('/create-order', {
       state: { type: 'purchase', vendor: vendor.zone, vendorId: vendor.id },
     });
@@ -168,10 +193,22 @@ export default function HomePage() {
       <div className="px-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Order from Campus</p>
-          <span className="text-xs text-gray-600">{vendors.length} vendors</span>
+          {open ? (
+            <span className="flex items-center gap-1 text-xs font-semibold text-green-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+              Open · 8 AM – 9:30 PM
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-xs font-semibold text-red-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+              Closed
+            </span>
+          )}
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          {vendors.map(vendor => (
+        <div className="grid grid-cols-2 gap-3" style={!open ? { opacity: 0.45, pointerEvents: 'none', userSelect: 'none' } : undefined}>
+          {vendorsLoading
+            ? [1,2,3,4,5,6].map(i => <div key={i} className="h-28 bg-surface-900 rounded-2xl animate-pulse border border-white/[0.06]" />)
+            : vendors.map(vendor => (
             <button
               key={vendor.id}
               onClick={() => openVendor(vendor)}
@@ -182,14 +219,18 @@ export default function HomePage() {
               </div>
               <p className="font-semibold text-white text-sm leading-tight">{vendor.name}</p>
               <p className="text-xs text-gray-500 mt-0.5 truncate">{vendor.zone}</p>
-              {vendor.previewItem && (
+              {vendor.items?.[0] && (
                 <p className="text-xs text-gray-600 mt-2 truncate">
-                  {vendor.previewItem.name} · <span className="text-gray-500">₦{Number(vendor.previewItem.price).toLocaleString()}</span>
+                  {vendor.items[0].name} · <span className="text-gray-500">₦{vendor.items[0].price.toLocaleString()}</span>
                 </p>
               )}
             </button>
           ))}
+
         </div>
+        {!open && (
+          <p className="text-center text-xs text-gray-600 mt-3">Vendors reopen at midnight</p>
+        )}
       </div>
 
       <div className="h-6" />

@@ -77,7 +77,9 @@ export function AuthProvider({ children }) {
         filter: `user_id=eq.${userId}`,
       }, payload =>
         setWalletTransactions(prev =>
-          prev.some(t => t.id === payload.new.id) ? prev : [payload.new, ...prev]
+          prev.some(t => t.id === payload.new.id || (payload.new.reference && t.reference === payload.new.reference))
+            ? prev
+            : [payload.new, ...prev]
         )
       )
       .subscribe();
@@ -93,6 +95,18 @@ export function AuthProvider({ children }) {
       )
       .subscribe();
 
+    // Auto sign-out when admin approves a deletion request for this user
+    const deletionChannel = supabase.channel(`deletion:${userId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'deletion_requests',
+        filter: `user_id=eq.${userId}`,
+      }, payload => {
+        if (payload.new.status === 'approved') {
+          supabase.auth.signOut();
+        }
+      })
+      .subscribe();
+
     // Fetch initial data (fire-and-forget — channels above handle live updates)
     supabase.from('wallet_transactions').select('*').eq('user_id', userId)
       .order('created_at', { ascending: false })
@@ -105,6 +119,7 @@ export function AuthProvider({ children }) {
     return () => {
       supabase.removeChannel(txChannel);
       supabase.removeChannel(notifChannel);
+      supabase.removeChannel(deletionChannel);
     };
   }, [session?.user?.id]);
 
@@ -121,9 +136,22 @@ export function AuthProvider({ children }) {
     if (session?.user?.id) await loadProfile(session.user.id);
   }
 
+  async function refreshTransactions() {
+    if (!session?.user?.id) return;
+    const { data } = await supabase
+      .from('wallet_transactions')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending: false });
+    if (data) setWalletTransactions(data);
+  }
+
   // ── Auth actions ───────────────────────────────────────────
 
   async function signUp(email, password, fullName, referralCode = '') {
+    if (!isNileEmail(email)) {
+      return { error: { message: 'Only @nileuniversity.edu.ng email addresses can sign up.' } };
+    }
     const metadata = { full_name: fullName };
     if (referralCode) metadata.referral_code = referralCode;
     const { error } = await supabase.auth.signUp({
@@ -242,6 +270,7 @@ export function AuthProvider({ children }) {
       updateProfileLocally,
       walletTransactions,
       addWalletTransaction,
+      refreshTransactions,
       priceEditState,
       submitPriceEdits,
       buyerAcceptsPriceEdit,

@@ -47,7 +47,8 @@ serve(async (req) => {
           .eq('id', meta.user_id)
           .single();
 
-        const newBalance = ((prof?.wallet_balance as number) || 0) + amountNaira;
+        const balanceBefore = (prof?.wallet_balance as number) || 0;
+        const newBalance = balanceBefore + amountNaira;
 
         await supabase
           .from('profiles')
@@ -57,11 +58,12 @@ serve(async (req) => {
         await supabase
           .from('wallet_transactions')
           .insert({
-            user_id:      meta.user_id,
-            type:         'topup',
-            amount:       amountNaira,
-            balance_after: newBalance,
-            description:  'Wallet top-up',
+            user_id:        meta.user_id,
+            type:           'topup',
+            amount:         amountNaira,
+            balance_before: balanceBefore,
+            balance_after:  newBalance,
+            description:    'Wallet top-up',
             reference,
           });
       }

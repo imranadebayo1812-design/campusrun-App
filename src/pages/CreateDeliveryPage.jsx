@@ -4,6 +4,8 @@ import { useAuth } from '@/context/AuthContext';
 import { MOCK_VENDORS } from '@/lib/mockData';
 import { supabase } from '@/api/supabaseClient';
 import { calculateDeliveryFee, DEFAULT_SERVICE_FEE, isResidentialZone, getZoneKey } from '@/lib/deliveryPricing';
+import { isOrderingOpen } from '@/lib/restaurantHours';
+import { getCoordsForVenue } from '@/lib/venueCoords';
 import { ChevronLeft, ChevronRight, Plus, Minus, Trash2, MapPin, ShoppingBag, Package, Search, Navigation, Upload, Bookmark, FileText, Hash } from 'lucide-react';
 
 const LOCATION_GROUPS = [
@@ -248,7 +250,8 @@ export default function CreateDeliveryPage() {
   const initVendor = location.state?.vendor || '';
   const initVendorId = location.state?.vendorId || null;
 
-  const vendor = initVendorId ? MOCK_VENDORS.find(v => v.id === initVendorId) : null;
+  // Metadata lookup only — DB does not store emoji/zone/color
+  const vendorMeta = initVendorId ? MOCK_VENDORS.find(v => v.id === initVendorId) : null;
 
   const [orderType, setOrderType] = useState(initType);
   const [pickupLocation, setPickupLocation] = useState(initVendor || '');
@@ -259,12 +262,49 @@ export default function CreateDeliveryPage() {
   const [itemDescription, setItemDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [dbMenu, setDbMenu] = useState(null);
+  const [menuLoading, setMenuLoading] = useState(false);
 
-  // vendor matched by name when user picks a vendor from the location picker
-  const pickerVendor = !vendor && pickupLocation
+  // Vendor meta (emoji/zone) from MOCK_VENDORS; items come from DB
+  const pickerMeta = !vendorMeta && pickupLocation
     ? MOCK_VENDORS.find(v => v.name === pickupLocation) ?? null
     : null;
-  const activeVendor = vendor || pickerVendor;
+  const activeVendorMeta = vendorMeta || pickerMeta;
+  const activeVendorName = activeVendorMeta?.name || null;
+
+  // Merge DB menu data onto vendor metadata
+  const activeVendor = activeVendorMeta
+    ? { ...activeVendorMeta, ...(dbMenu || {}) }
+    : null;
+
+  // Fetch live menu from DB whenever vendor changes
+  useEffect(() => {
+    if (!activeVendorName) { setDbMenu(null); return; }
+    let cancelled = false;
+    setMenuLoading(true);
+    async function fetchMenu() {
+      const [{ data: cats }, { data: items }] = await Promise.all([
+        supabase.from('menu_categories').select('id, name, display_order')
+          .eq('vendor_name', activeVendorName).order('display_order'),
+        supabase.from('menu_items').select('id, name, price, is_available, category_id')
+          .eq('vendor_name', activeVendorName).order('name'),
+      ]);
+      if (cancelled) return;
+      if (items?.length) {
+        const menuItems = items.map(i => ({ name: i.name, price: i.price, available: i.is_available !== false }));
+        const menuGroups = (cats || []).map(cat => ({
+          label: cat.name,
+          names: items.filter(i => i.category_id === cat.id).map(i => i.name),
+        })).filter(g => g.names.length > 0);
+        setDbMenu({ items: menuItems, menuGroups: menuGroups.length > 0 ? menuGroups : undefined });
+      } else {
+        setDbMenu(null);
+      }
+      setMenuLoading(false);
+    }
+    fetchMenu();
+    return () => { cancelled = true; };
+  }, [activeVendorName]);
 
   function handlePickupChange(loc) {
     setPickupLocation(loc);
@@ -360,6 +400,10 @@ export default function CreateDeliveryPage() {
       setError('Please select pickup and dropoff locations.');
       return;
     }
+    if (orderType === 'purchase' && !isOrderingOpen()) {
+      setError('Campus vendors are closed after 9:30 PM. Orders open again at midnight.');
+      return;
+    }
     if (orderType === 'purchase' && items.some(i => !i.name || !i.price)) {
       setError('Please fill in all item names and prices.');
       return;
@@ -372,11 +416,14 @@ export default function CreateDeliveryPage() {
       ? `${dropoffLocation} — Room ${roomNumber.trim()}`
       : dropoffLocation;
 
+    const pickupName = vendorMeta ? vendorMeta.name : pickupLocation;
     const orderData = {
       buyer_id: session.user.id,
       order_type: orderType,
-      pickup_location: vendor ? vendor.name : pickupLocation,
+      pickup_location: pickupName,
       dropoff_location: dropoff,
+      pickup_coords:  getCoordsForVenue(pickupName),
+      dropoff_coords: getCoordsForVenue(dropoff),
       items: orderType === 'purchase'
         ? items.map(i => ({ name: i.name, qty: i.qty, price: String(i.price) }))
         : [],
@@ -422,17 +469,17 @@ export default function CreateDeliveryPage() {
         </button>
         <div>
           <h1 className="text-lg font-bold text-white leading-tight">
-            {vendor ? vendor.name : 'New Delivery'}
+            {activeVendorMeta ? activeVendorMeta.name : 'New Delivery'}
           </h1>
           <p className="text-xs text-gray-500">
-            {vendor ? vendor.zone : 'Where to & what do you need?'}
+            {activeVendorMeta ? activeVendorMeta.zone : 'Where to & what do you need?'}
           </p>
         </div>
       </div>
 
       <div className="px-4 space-y-5 pb-6">
         {/* Order type — hidden when coming from a vendor */}
-        {!vendor && (
+        {!vendorMeta && (
           <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4">
             <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-4">What do you need?</p>
             <div className="grid grid-cols-2 gap-3">
@@ -475,14 +522,14 @@ export default function CreateDeliveryPage() {
           <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-4">Location Details</p>
           <div className="space-y-4">
             {/* Pickup — locked chip if vendor pre-selected */}
-            {vendor ? (
+            {vendorMeta ? (
               <div>
                 <label className="flex items-center gap-2 text-sm font-semibold text-white mb-2">
                   <MapPin className="w-4 h-4 text-green-400" /> Pickup Location
                 </label>
                 <div className="w-full bg-surface-800/60 border border-brand-500/30 rounded-xl px-4 py-3 text-sm text-brand-300 flex items-center gap-2">
-                  <span>{vendor.emoji}</span>
-                  <span>{vendor.name} — {vendor.zone}</span>
+                  <span>{vendorMeta.emoji}</span>
+                  <span>{vendorMeta.name} — {vendorMeta.zone}</span>
                 </div>
               </div>
             ) : (
@@ -529,7 +576,12 @@ export default function CreateDeliveryPage() {
             <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">
               {activeVendor.name} Menu — Tap to add
             </p>
-            {activeVendor.menuGroups && dbMenuItems.length === 0 ? (
+            {menuLoading && (
+              <div className="space-y-2">
+                {[1,2,3].map(i => <div key={i} className="h-12 bg-surface-800 rounded-xl animate-pulse" />)}
+              </div>
+            )}
+            {!menuLoading && activeVendor.menuGroups ? (
               <div className="space-y-2">
                 {activeVendor.menuGroups.map(group => {
                   const groupItems = group.names.map(n => activeVendor.items.find(it => it.name === n)).filter(Boolean);
@@ -610,9 +662,9 @@ export default function CreateDeliveryPage() {
                   );
                 })()}
               </div>
-            ) : (
+            ) : !menuLoading ? (
               <div className="space-y-1.5">
-                {(dbMenuItems.length > 0 ? dbMenuItems : activeVendor.items).map(menuItem => {
+                {(activeVendor.items || []).map(menuItem => {
                   const isAvailable = menuItem.available !== false;
                   const inCart = isAvailable ? items.find(it => it.name === menuItem.name) : null;
                   return (
@@ -643,7 +695,7 @@ export default function CreateDeliveryPage() {
                   );
                 })}
               </div>
-            )}
+            ) : null}
           </div>
         )}
 

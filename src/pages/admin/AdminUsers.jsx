@@ -50,6 +50,25 @@ function UserDetailModal({ user, onClose, onUpdate }) {
     onClose();
   }
 
+  async function doTopup() {
+    const amt = Math.round(parseFloat(topupAmount));
+    if (!amt || amt < 1) { setTopupMsg({ error: 'Enter a valid amount', success: '' }); return; }
+    setTopupLoading(true);
+    const { error } = await supabase.rpc('admin_topup', {
+      p_user_id: profile.id, p_amount: amt,
+      p_reason: topupReason || 'Admin manual top-up',
+    });
+    if (error) {
+      setTopupMsg({ error: error.message, success: '' });
+    } else {
+      setTopupMsg({ error: '', success: `₦${amt.toLocaleString()} added` });
+      setTopupAmount(''); setTopupReason('');
+      const { data } = await supabase.from('profiles').select('wallet_balance').eq('id', profile.id).single();
+      if (data) setProfile(p => ({ ...p, wallet_balance: data.wallet_balance }));
+    }
+    setTopupLoading(false);
+  }
+
   async function toggleCourier() {
     setActionLoading(true);
     await supabase.from('profiles').update({ is_courier: !profile?.is_courier }).eq('id', user.id);
@@ -81,25 +100,6 @@ function UserDetailModal({ user, onClose, onUpdate }) {
     setDeleteLoading(false);
     onUpdate();
     onClose();
-  }
-
-  async function doTopup() {
-    const amt = Math.round(parseFloat(topupAmount));
-    if (!amt || amt < 1) { setTopupMsg({ error: 'Enter a valid amount', success: '' }); return; }
-    setTopupLoading(true);
-    const { error } = await supabase.rpc('admin_topup', {
-      p_user_id: user.id, p_amount: amt,
-      p_reason: topupReason || 'Admin manual top-up',
-    });
-    if (error) {
-      setTopupMsg({ error: error.message, success: '' });
-    } else {
-      setTopupMsg({ error: '', success: `₦${amt.toLocaleString()} added` });
-      setTopupAmount(''); setTopupReason('');
-      const { data } = await supabase.from('profiles').select('wallet_balance').eq('id', user.id).single();
-      if (data) setProfile(p => ({ ...p, wallet_balance: data.wallet_balance }));
-    }
-    setTopupLoading(false);
   }
 
   const STATUS_COLORS = {

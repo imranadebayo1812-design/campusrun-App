@@ -116,7 +116,7 @@ function WithdrawToBankModal({ maxAmount, onSuccess, onClose }) {
 }
 
 export default function WalletPage() {
-  const { session, profile, refreshProfile, updateProfileLocally, walletTransactions } = useAuth();
+  const { session, profile, refreshProfile, updateProfileLocally, walletTransactions, addWalletTransaction } = useAuth();
   const [topupAmount, setTopupAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -182,18 +182,32 @@ export default function WalletPage() {
         ref,
         currency: 'NGN',
         metadata: { type: 'wallet_topup', user_id: session.user.id },
-        onSuccess: async (txn) => {
-          // Callbacks still work on desktop — keep them as a fast path
+        onSuccess: (txn) => {
           clearTimeout(timeoutRef.current);
           txCountRef.current = null;
           const roundedAmount = Math.round(amount);
-          updateProfileLocally({ wallet_balance: (profile?.wallet_balance || 0) + roundedAmount });
+          const newBalance = (profile?.wallet_balance || 0) + roundedAmount;
+          // Update state synchronously so it renders before any async work
+          addWalletTransaction({
+            id: `optimistic_${txn.reference}`,
+            user_id: session.user.id,
+            type: 'topup',
+            amount: roundedAmount,
+            balance_before: profile?.wallet_balance || 0,
+            balance_after: newBalance,
+            reference: txn.reference,
+            description: 'Wallet top-up via Paystack',
+            created_at: new Date().toISOString(),
+          });
+          updateProfileLocally({ wallet_balance: newBalance });
           setTopupAmount('');
           setSuccess(`₦${roundedAmount.toLocaleString()} added to your wallet!`);
           setLoading(false);
+          // Record in DB in the background
           supabase.rpc('record_topup', { p_reference: txn.reference, p_amount: roundedAmount })
-            .then(({ error: rpcErr }) => {
-              if (!rpcErr) refreshProfile();
+            .then(({ error }) => {
+              if (error) setError(`Wallet updated locally but DB sync failed: ${error.message}`);
+              else refreshProfile();
             });
           supabase.functions.invoke('send-email', {
             body: {
@@ -238,9 +252,8 @@ export default function WalletPage() {
 
   return (
     <div className="bg-surface-950 min-h-full">
-      <div className="px-4 pt-5 pb-4 flex items-center justify-between">
+      <div className="px-4 pt-5 pb-4">
         <h1 className="text-xl font-bold text-white">Wallet</h1>
-        <span className="text-xs text-gray-600">v4</span>
       </div>
 
       {/* Balance card */}

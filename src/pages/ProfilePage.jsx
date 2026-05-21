@@ -7,27 +7,27 @@ import { useNavigate } from 'react-router-dom';
 function DeleteAccountModal({ onClose }) {
   const { session, profile } = useAuth();
   const [confirm, setConfirm] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   async function handleDelete() {
     if (confirm !== 'DELETE') return;
-    setLoading(true);
+    setSubmitting(true);
     setError('');
-    const { error: err } = await supabase.from('deletion_requests').insert({
-      user_id: session.user.id,
-      email: session.user.email,
-      full_name: profile?.full_name || '',
-      status: 'pending',
+    const { error: dbErr } = await supabase.from('deletion_requests').insert({
+      user_id:    session.user.id,
+      email:      session.user.email,
+      full_name:  profile?.full_name || '',
+      status:     'pending',
     });
-    if (err) {
+    if (dbErr) {
       setError('Could not submit request. Please try again.');
-      setLoading(false);
+      setSubmitting(false);
       return;
     }
-    setLoading(false);
     setSubmitted(true);
+    setSubmitting(false);
   }
 
   return (
@@ -47,7 +47,7 @@ function DeleteAccountModal({ onClose }) {
         {submitted ? (
           <div className="text-center py-6">
             <p className="text-green-400 font-semibold">Request submitted.</p>
-            <p className="text-gray-400 text-sm mt-1">Your account will be permanently deleted within 24 hours.</p>
+            <p className="text-gray-400 text-sm mt-1">Our team will review and process your request shortly.</p>
             <button onClick={onClose} className="mt-4 bg-brand-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">Done</button>
           </div>
         ) : (
@@ -73,10 +73,10 @@ function DeleteAccountModal({ onClose }) {
               <button onClick={onClose} className="flex-1 bg-surface-800 border border-white/[0.08] text-gray-400 font-medium py-3 rounded-xl text-sm">Cancel</button>
               <button
                 onClick={handleDelete}
-                disabled={confirm !== 'DELETE' || loading}
+                disabled={confirm !== 'DELETE' || submitting}
                 className="flex-1 bg-red-500 disabled:opacity-40 text-white font-semibold py-3 rounded-xl text-sm"
               >
-                {loading ? 'Submitting…' : 'Delete Account'}
+                {submitting ? 'Submitting…' : 'Delete Account'}
               </button>
             </div>
           </>
@@ -87,22 +87,26 @@ function DeleteAccountModal({ onClose }) {
 }
 
 export default function ProfilePage() {
-  const { profile, session, updateProfileLocally, signOut } = useAuth();
+  const { profile, session, signOut, updateProfileLocally } = useAuth();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ full_name: profile?.full_name || '', phone_number: profile?.phone_number || '', course: profile?.course || '', hostel: profile?.hostel || '' });
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef(null);
 
   async function saveProfile() {
     setSaving(true);
+    setSaveError('');
     const { error } = await supabase
       .from('profiles')
       .update(form)
       .eq('id', session.user.id);
-    if (!error) {
+    if (error) {
+      setSaveError('Could not save changes. Please try again.');
+    } else {
       updateProfileLocally(form);
       setEditing(false);
     }
@@ -224,6 +228,9 @@ export default function ProfilePage() {
             </p>
           </div>
         </div>
+        {saveError && (
+          <p className="px-4 pb-3 text-xs text-red-400">{saveError}</p>
+        )}
       </div>
 
       {/* Settings */}
@@ -360,13 +367,15 @@ export default function ProfilePage() {
           <Shield className="w-4 h-4" aria-hidden="true" />
           Privacy Policy
         </button>
-        <button
-          onClick={() => setShowDeleteModal(true)}
-          className="w-full flex items-center justify-center gap-2 bg-surface-900 border border-white/[0.08] text-gray-600 font-medium py-3 rounded-2xl text-sm"
-        >
-          <Trash2 className="w-4 h-4" aria-hidden="true" />
-          Delete Account
-        </button>
+        {!profile?.is_admin && (
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="w-full flex items-center justify-center gap-2 bg-surface-900 border border-white/[0.08] text-gray-600 font-medium py-3 rounded-2xl text-sm"
+          >
+            <Trash2 className="w-4 h-4" aria-hidden="true" />
+            Delete Account
+          </button>
+        )}
       </div>
 
       <div className="h-4" />

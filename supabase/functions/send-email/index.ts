@@ -6,7 +6,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const FROM = 'CampusRun <noreply@campusrun.online>';
+const FROM = 'CampusRun <hello@campusrun.online>';
 
 function baseTemplate(body: string) {
   return `<!DOCTYPE html>

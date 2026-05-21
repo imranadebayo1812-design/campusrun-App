@@ -16,7 +16,16 @@ export default function App() {
 
   // Public routes — no auth required, always render directly
   if (location.pathname === '/privacy') return <PrivacyPolicyPage />;
-  if (location.pathname === '/welcome') return <WelcomePage />;
+
+  // /welcome: only keep if still loading OR user just finished onboarding (has nav state)
+  // If fully authenticated + onboarded with no onboarding state, redirect home
+  if (location.pathname === '/welcome') {
+    const fromOnboarding = !!location.state?.name;
+    if (!loading && session && profile?.onboarding_complete && !fromOnboarding) {
+      return <Navigate to="/" replace />;
+    }
+    return <WelcomePage />;
+  }
 
   if (loading) return <LoadingScreen />;
   if (authError) return (
@@ -31,7 +40,9 @@ export default function App() {
     </div>
   );
   if (!session) return <LoginPage />;
-  if (!profile?.onboarding_complete) return <OnboardingForm />;
+  // Profile still loading after login — prevent OnboardingForm flash
+  if (!profile) return <LoadingScreen />;
+  if (!profile.onboarding_complete) return <OnboardingForm />;
   if (profile?.is_blacklisted) {
     return (
       <div className="min-h-screen bg-surface-950 flex items-center justify-center p-4">

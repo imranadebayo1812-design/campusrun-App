@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { getMessagingInstance, getToken, onMessage } from '@/lib/firebase';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
 
@@ -10,45 +10,88 @@ export function usePushNotifications() {
 
   useEffect(() => {
     if (!session?.user?.id) return;
-    if (!VAPID_KEY) return;
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
-    if (Notification.permission === 'denied') return;
 
-    let unsub;
+    if (Capacitor.isNativePlatform()) {
+      setupNative(session.user.id, addNotification);
+    } else {
+      setupWeb(session.user.id, addNotification);
+    }
+  }, [session?.user?.id]);
+}
 
-    async function setup() {
-      try {
-        const messaging = await getMessagingInstance();
-        if (!messaging) return;
+// ── Native Android (Capacitor PushNotifications) ───────────────────
 
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') return;
+async function setupNative(userId, addNotification) {
+  try {
+    const { PushNotifications } = await import('@capacitor/push-notifications');
 
-        const registration = await navigator.serviceWorker.ready;
-        const token = await getToken(messaging, {
-          vapidKey: VAPID_KEY,
-          serviceWorkerRegistration: registration,
-        });
-        if (!token) return;
+    const { receive } = await PushNotifications.checkPermissions();
+    let finalStatus = receive;
 
-        await supabase.from('push_tokens').upsert(
-          { user_id: session.user.id, token, platform: 'web' },
-          { onConflict: 'user_id,token' },
-        );
-
-        unsub = onMessage(messaging, payload => {
-          addNotification({
-            title: payload.notification?.title ?? 'CampusRun',
-            body:  payload.notification?.body  ?? '',
-            type:  payload.data?.type          ?? 'info',
-          });
-        });
-      } catch {
-        // Push is an enhancement — silently ignore all errors
-      }
+    if (receive === 'prompt') {
+      const result = await PushNotifications.requestPermissions();
+      finalStatus = result.receive;
     }
 
-    setup();
-    return () => { if (unsub) unsub(); };
-  }, [session?.user?.id]);
+    if (finalStatus !== 'granted') return;
+
+    await PushNotifications.register();
+
+    PushNotifications.addListener('registration', async ({ value: token }) => {
+      await supabase.from('push_tokens').upsert(
+        { user_id: userId, token, platform: 'android' },
+        { onConflict: 'user_id,token' },
+      );
+    });
+
+    PushNotifications.addListener('pushNotificationReceived', notification => {
+      addNotification({
+        title: notification.title ?? 'CampusRun',
+        body:  notification.body  ?? '',
+        type:  notification.data?.type ?? 'info',
+      });
+    });
+  } catch {
+    // Push is an enhancement — silently ignore errors
+  }
+}
+
+// ── Web (Firebase Web SDK) ─────────────────────────────────────────
+
+async function setupWeb(userId, addNotification) {
+  if (!VAPID_KEY) return;
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+  if (Notification.permission === 'denied') return;
+
+  try {
+    const { getMessagingInstance, getToken, onMessage } = await import('@/lib/firebase');
+
+    const messaging = await getMessagingInstance();
+    if (!messaging) return;
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+
+    const registration = await navigator.serviceWorker.ready;
+    const token = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: registration,
+    });
+    if (!token) return;
+
+    await supabase.from('push_tokens').upsert(
+      { user_id: userId, token, platform: 'web' },
+      { onConflict: 'user_id,token' },
+    );
+
+    onMessage(messaging, payload => {
+      addNotification({
+        title: payload.notification?.title ?? 'CampusRun',
+        body:  payload.notification?.body  ?? '',
+        type:  payload.data?.type          ?? 'info',
+      });
+    });
+  } catch {
+    // Push is an enhancement — silently ignore errors
+  }
 }

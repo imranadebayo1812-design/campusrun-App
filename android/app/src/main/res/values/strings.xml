@@ -4,4 +4,6 @@
     <string name="title_activity_main">CampusRun</string>
     <string name="package_name">com.campusrun.app</string>
     <string name="custom_url_scheme">com.campusrun.app</string>
+    <string name="default_notification_channel_id">campusrun_default</string>
+    <string name="default_notification_channel_name">CampusRun</string>
 </resources>

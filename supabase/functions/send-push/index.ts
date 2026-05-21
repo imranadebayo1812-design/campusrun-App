@@ -6,7 +6,6 @@ const FCM_URL    = `https://fcm.googleapis.com/v1/projects/${PROJECT_ID}/message
 
 serve(async (req) => {
   try {
-    // Supabase DB webhook payload
     const payload = await req.json();
     const record  = payload?.record;
     if (!record?.user_id) return ok();
@@ -18,38 +17,51 @@ serve(async (req) => {
 
     const { data: tokens } = await supabase
       .from('push_tokens')
-      .select('token')
+      .select('token, platform')
       .eq('user_id', record.user_id);
 
     if (!tokens?.length) return ok();
 
     const accessToken = await getFCMAccessToken();
 
-    await Promise.allSettled(tokens.map(({ token }) =>
-      fetch(FCM_URL, {
+    await Promise.allSettled(tokens.map(({ token, platform }) => {
+      const message: Record<string, unknown> = {
+        token,
+        notification: {
+          title: record.title ?? 'CampusRun',
+          body:  record.body  ?? '',
+        },
+        data: {
+          type:     record.type     ?? 'info',
+          notif_id: record.id       ?? '',
+        },
+      };
+
+      // Native Android token — use android-specific channel config
+      if (platform === 'android') {
+        message.android = {
+          notification: {
+            icon:         'ic_launcher',
+            channel_id:   'campusrun_default',
+            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+          },
+        };
+      } else {
+        // Web push token — route through browser push service
+        message.webpush = {
+          notification: { icon: '/logo.png', badge: '/logo.png' },
+        };
+      }
+
+      return fetch(FCM_URL, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
+          'Content-Type':  'application/json',
         },
-        body: JSON.stringify({
-          message: {
-            token,
-            notification: {
-              title: record.title ?? 'CampusRun',
-              body:  record.body  ?? '',
-            },
-            data: {
-              type:     record.type     ?? 'info',
-              notif_id: record.id       ?? '',
-            },
-            webpush: {
-              notification: { icon: '/logo.png', badge: '/logo.png' },
-            },
-          },
-        }),
-      })
-    ));
+        body: JSON.stringify({ message }),
+      });
+    }));
 
     return ok();
   } catch (err) {
@@ -61,8 +73,6 @@ serve(async (req) => {
 function ok() {
   return new Response('ok', { status: 200 });
 }
-
-// ── FCM HTTP v1 auth via service account JWT ──────────────────────────────────
 
 async function getFCMAccessToken(): Promise<string> {
   const sa   = JSON.parse(Deno.env.get('FIREBASE_SERVICE_ACCOUNT')!);

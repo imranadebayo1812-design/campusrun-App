@@ -481,9 +481,11 @@ export default function CourierDashboard() {
         event: 'UPDATE', schema: 'public', table: 'deliveries',
       }, payload => {
         const o = payload.new;
-        // Remove from available if taken by someone else or status changed
         if (o.courier_id || o.status !== 'placed') {
           setAvailable(prev => prev.filter(a => a.id !== o.id));
+        } else if (!o.courier_id && o.status === 'placed' && o.payment_verified && o.buyer_id !== userId) {
+          // Payment just confirmed — add to available if not already present
+          setAvailable(prev => prev.some(a => a.id === o.id) ? prev : [o, ...prev]);
         }
       })
       .subscribe();

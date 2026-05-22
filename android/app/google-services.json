@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "533791548849",
+    "project_id": "campusrun-9f977",
+    "storage_bucket": "campusrun-9f977.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:533791548849:android:c9f259320e337da2a34990",
+        "android_client_info": {
+          "package_name": "com.campusrun.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_CPnHkBpZ29PLg14f6OxoPRfnN2X6k3s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

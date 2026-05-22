@@ -48,15 +48,20 @@ const LOCATION_GROUPS = [
   },
 ];
 
+// Restricted pickup venues for Item Purchase orders
+const PURCHASE_LOCATION_GROUPS = LOCATION_GROUPS.filter(g =>
+  ['Food Court', 'Student Center', 'Male Shopping Complex', 'Female Shopping Complex', 'Turkish Restaurant'].includes(g.label)
+);
+
 function generateDeliveryCode() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
-function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor, savedAddresses = [] }) {
+function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor, savedAddresses = [], groups = LOCATION_GROUPS }) {
   const [query, setQuery] = useState('');
   // auto-expand the group that contains the current value on first render
   const [expanded, setExpanded] = useState(() => {
-    for (const g of LOCATION_GROUPS) {
+    for (const g of groups) {
       if (g.subItems?.includes(value)) return new Set([g.label]);
     }
     return new Set();
@@ -64,7 +69,7 @@ function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor, s
 
   const pinnedSaved = savedAddresses.filter(a => !query || a.toLowerCase().includes(query.toLowerCase()));
 
-  const visibleGroups = LOCATION_GROUPS
+  const visibleGroups = groups
     .map(group => {
       if (!query) return group;
       const q = query.toLowerCase();
@@ -132,14 +137,18 @@ function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor, s
           {visibleGroups.length === 0 ? (
             <p className="text-xs text-gray-500 text-center py-4">No match</p>
           ) : (
-            visibleGroups.map(group => (
+            visibleGroups.map((group, gi) => {
+              const isLast = gi === visibleGroups.length - 1;
+              return (
               <div key={group.label}>
                 {group.subItems ? (
                   /* Expandable group header — tap to reveal sub-venues */
                   <button
                     type="button"
                     onClick={() => toggleGroup(group.label)}
-                    className={`w-full text-left px-4 py-3 border-b border-white/[0.05] text-sm font-semibold flex items-center gap-2 transition-colors hover:bg-white/[0.04] ${
+                    className={`w-full text-left px-4 py-3 text-sm font-semibold flex items-center gap-2 transition-colors hover:bg-white/[0.04] ${
+                      !isLast || isExpanded(group.label) ? 'border-b border-white/[0.05]' : ''
+                    } ${
                       group.subItems.includes(value) ? 'text-brand-400' : 'text-white'
                     }`}
                   >
@@ -153,7 +162,9 @@ function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor, s
                   <button
                     type="button"
                     onClick={() => onChange(group.label)}
-                    className={`w-full text-left px-4 py-3 border-b border-white/[0.05] text-sm transition-colors last:border-0 flex items-center gap-2 ${
+                    className={`w-full text-left px-4 py-3 text-sm transition-colors flex items-center gap-2 ${
+                      !isLast ? 'border-b border-white/[0.05]' : ''
+                    } ${
                       value === group.label
                         ? 'text-brand-400 bg-brand-500/10 font-medium'
                         : 'text-gray-300 hover:bg-white/[0.04]'
@@ -187,7 +198,7 @@ function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor, s
                   </button>
                 ))}
               </div>
-            ))
+            );})
           )}
         </div>
       </div>
@@ -256,7 +267,7 @@ export default function CreateDeliveryPage() {
   const [orderType, setOrderType] = useState(initType);
   const [pickupLocation, setPickupLocation] = useState(initVendor || '');
   const [dropoffLocation, setDropoffLocation] = useState('');
-  const [items, setItems] = useState([{ name: '', qty: 1, price: '' }]);
+  const [items, setItems] = useState([]);
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [packageValue, setPackageValue] = useState('');
   const [itemDescription, setItemDescription] = useState('');
@@ -404,6 +415,10 @@ export default function CreateDeliveryPage() {
       setError('Campus vendors are closed after 9:30 PM. Orders open again at midnight.');
       return;
     }
+    if (orderType === 'purchase' && items.length === 0) {
+      setError('Please select at least one item from the menu.');
+      return;
+    }
     if (orderType === 'purchase' && items.some(i => !i.name || !i.price)) {
       setError('Please fill in all item names and prices.');
       return;
@@ -540,6 +555,7 @@ export default function CreateDeliveryPage() {
                 icon={MapPin}
                 iconColor="text-green-400"
                 savedAddresses={savedAddresses}
+                groups={orderType === 'purchase' ? PURCHASE_LOCATION_GROUPS : LOCATION_GROUPS}
               />
             )}
             <InlineLocationSelect
@@ -699,16 +715,11 @@ export default function CreateDeliveryPage() {
           </div>
         )}
 
-        {/* Items list */}
-        {orderType === 'purchase' && (
+        {/* Items list — only shown when a vendor menu is active */}
+        {orderType === 'purchase' && activeVendor && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
-                {activeVendor ? 'Your Order' : 'Item Details'}
-              </p>
-              <button type="button" onClick={addItem} className="text-brand-400 text-xs font-semibold flex items-center gap-1">
-                <Plus className="w-3 h-3" /> {activeVendor ? 'Add custom item' : 'Add another item'}
-              </button>
+              <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Your Order</p>
             </div>
             <div className="space-y-2">
               {items.map((item, i) => (

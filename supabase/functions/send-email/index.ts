@@ -38,7 +38,7 @@ function baseTemplate(body: string) {
 
 function welcomeEmail(name: string, referralCode: string) {
   return {
-    subject: `Welcome to CampusRun, ${name}! 🎉`,
+    subject: `Welcome to CampusRun, ${name}!`,
     html: baseTemplate(`
       <h1 style="color:#fff;font-size:20px;font-weight:700;margin:0 0 8px;">Welcome, ${name}! 👋</h1>
       <p style="color:#9ca3af;font-size:14px;line-height:1.6;margin:0 0 20px;">
@@ -68,7 +68,7 @@ function topupReceiptEmail(name: string, amount: number, newBalance: number, ref
   return {
     subject: `Wallet credited: ₦${amount.toLocaleString()}`,
     html: baseTemplate(`
-      <h1 style="color:#fff;font-size:20px;font-weight:700;margin:0 0 4px;">Payment Confirmed ✅</h1>
+      <h1 style="color:#fff;font-size:20px;font-weight:700;margin:0 0 4px;">Payment Confirmed</h1>
       <p style="color:#9ca3af;font-size:14px;margin:0 0 20px;">Hi ${name}, your wallet has been topped up.</p>
       <table width="100%" style="background:#111827;border-radius:12px;padding:16px;margin-bottom:20px;border-collapse:collapse;">
         <tr>
@@ -97,9 +97,9 @@ function topupReceiptEmail(name: string, amount: number, newBalance: number, ref
 
 function orderReceiptEmail(name: string, pickup: string, dropoff: string, total: number, deliveryId: string) {
   return {
-    subject: `Order placed — ₦${total.toLocaleString()}`,
+    subject: `Order confirmed - N${total.toLocaleString()}`,
     html: baseTemplate(`
-      <h1 style="color:#fff;font-size:20px;font-weight:700;margin:0 0 4px;">Order Placed! 🎉</h1>
+      <h1 style="color:#fff;font-size:20px;font-weight:700;margin:0 0 4px;">Order Confirmed</h1>
       <p style="color:#9ca3af;font-size:14px;margin:0 0 20px;">Hi ${name}, your order is confirmed. A runner will pick it up shortly.</p>
       <table width="100%" style="background:#111827;border-radius:12px;padding:16px;margin-bottom:20px;border-collapse:collapse;">
         <tr>

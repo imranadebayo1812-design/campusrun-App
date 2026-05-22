@@ -258,13 +258,18 @@ export default function TrackingPage() {
 
   // Load chat messages + realtime subscription
   useEffect(() => {
-    if (!deliveryId || !delivery?.courier_accepted) return;
+    if (!deliveryId || !delivery?.courier_id) return;
     let chatChannel;
 
-    supabase.from('chat_messages').select('*')
-      .eq('delivery_id', deliveryId)
-      .order('created_at', { ascending: true })
-      .then(({ data }) => setChatMessages(data || []));
+    function loadChat() {
+      supabase.from('chat_messages').select('*')
+        .eq('delivery_id', deliveryId)
+        .order('created_at', { ascending: true })
+        .then(({ data }) => setChatMessages(data || []));
+    }
+
+    loadChat();
+    const pollId = setInterval(loadChat, 5000);
 
     chatChannel = supabase.channel(`chat:${deliveryId}`)
       .on('postgres_changes', {
@@ -277,8 +282,11 @@ export default function TrackingPage() {
       })
       .subscribe();
 
-    return () => { if (chatChannel) supabase.removeChannel(chatChannel); };
-  }, [deliveryId, delivery?.courier_accepted]);
+    return () => {
+      clearInterval(pollId);
+      if (chatChannel) supabase.removeChannel(chatChannel);
+    };
+  }, [deliveryId, delivery?.courier_id]);
 
   // Auto-show rating modal when delivery is confirmed (buyer only)
   useEffect(() => {
@@ -678,7 +686,7 @@ export default function TrackingPage() {
         )}
 
         {/* In-app chat */}
-        {delivery.courier_accepted && !isCancelled && (
+        {delivery.courier_id && !isCancelled && (
           <div className="bg-surface-900 border border-white/[0.08] rounded-2xl overflow-hidden">
             <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
               <div className="flex items-center gap-2">

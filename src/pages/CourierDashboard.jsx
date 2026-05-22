@@ -208,14 +208,19 @@ function CourierChatPanel({ deliveryId, session }) {
   const bottomRef = useRef(null);
 
   useEffect(() => {
-    supabase.from('chat_messages').select('*')
-      .eq('delivery_id', deliveryId)
-      .order('created_at', { ascending: true })
-      .then(({ data }) => {
-        const msgs = data || [];
-        setMessages(msgs);
-        setUnread(msgs.filter(m => m.sender_role !== 'courier').length);
-      });
+    function loadChat() {
+      supabase.from('chat_messages').select('*')
+        .eq('delivery_id', deliveryId)
+        .order('created_at', { ascending: true })
+        .then(({ data }) => {
+          const msgs = data || [];
+          setMessages(msgs);
+          setUnread(msgs.filter(m => m.sender_role !== 'courier').length);
+        });
+    }
+
+    loadChat();
+    const pollId = setInterval(loadChat, 5000);
 
     const channel = supabase.channel(`courier-chat:${deliveryId}`)
       .on('postgres_changes', {
@@ -231,7 +236,10 @@ function CourierChatPanel({ deliveryId, session }) {
       })
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      clearInterval(pollId);
+      supabase.removeChannel(channel);
+    };
   }, [deliveryId]);
 
   useEffect(() => {

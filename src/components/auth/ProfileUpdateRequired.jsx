@@ -43,20 +43,31 @@ export default function ProfileUpdateRequired() {
   async function save() {
     setLoading(true);
     setError('');
-    const updates = { gender, campus_status: campusStatus || existingStatus };
-    if (campusStatus === 'residential' || existingStatus === 'residential') {
-      updates.hostel = hostel || profile?.hostel;
-    }
+
+    const updates = { gender };
+    // Only write campus_status if we have a valid value to write
+    const statusToSave = campusStatus || existingStatus;
+    if (statusToSave) updates.campus_status = statusToSave;
+    if (hostel) updates.hostel = hostel;
+    else if (profile?.hostel) updates.hostel = profile.hostel;
+
     const { error: err } = await supabase
       .from('profiles')
       .update(updates)
       .eq('id', session.user.id);
+
     if (err) {
       setError(err.message || 'Could not save. Please try again.');
       setLoading(false);
       return;
     }
-    await refreshProfile();
+
+    try {
+      await refreshProfile();
+    } catch (e) {
+      setError('Saved! Please restart the app if nothing happens.');
+    }
+    setLoading(false);
   }
 
   return (
@@ -158,10 +169,15 @@ export default function ProfileUpdateRequired() {
           <button
             disabled={!canSave || loading}
             onClick={save}
-            className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 disabled:opacity-50 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-brand-500/20"
+            className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl shadow-lg shadow-brand-500/20"
           >
             {loading ? 'Saving…' : 'Save & Continue'}
           </button>
+          {!canSave && gender && (
+            <p className="text-xs text-gray-500 text-center -mt-1">
+              {!campusStatus && !existingStatus ? 'Select your campus status' : 'Select your hostel block'}
+            </p>
+          )}
         </div>
       </div>
     </div>

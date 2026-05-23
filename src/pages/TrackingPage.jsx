@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
+import { getEstateRestriction } from '@/lib/hostelEstates';
 import { formatDistanceToNow } from 'date-fns';
 import {
   ChevronLeft, Package, Clock, CheckCircle, MapPin, Star,
@@ -218,7 +219,7 @@ function RatingModal({ delivery, session, onClose, onSubmit }) {
 export default function TrackingPage() {
   const { deliveryId } = useParams();
   const navigate = useNavigate();
-  const { session, refreshProfile } = useAuth();
+  const { session, refreshProfile, addNotification } = useAuth();
   const [delivery, setDelivery] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -232,6 +233,8 @@ export default function TrackingPage() {
   const [graceLeft, setGraceLeft] = useState(0);
   const [accepting, setAccepting] = useState(false);
   const [priceEditError, setPriceEditError] = useState('');
+  const [allowOffcampusLoading, setAllowOffcampusLoading] = useState(false);
+  const [tick, setTick] = useState(0);
 
   // Load delivery from DB + subscribe to realtime updates
   useEffect(() => {
@@ -276,9 +279,17 @@ export default function TrackingPage() {
         event: 'INSERT', schema: 'public', table: 'chat_messages',
         filter: `delivery_id=eq.${deliveryId}`,
       }, payload => {
-        setChatMessages(prev =>
-          prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new]
-        );
+        setChatMessages(prev => {
+          // Replace matching optimistic entry, or append if genuinely new
+          const withoutOptimistic = prev.filter(m =>
+            !(String(m.id).startsWith('temp-') &&
+              m.message === payload.new.message &&
+              m.sender_id === payload.new.sender_id)
+          );
+          return withoutOptimistic.some(m => m.id === payload.new.id)
+            ? withoutOptimistic
+            : [...withoutOptimistic, payload.new];
+        });
       })
       .subscribe();
 
@@ -306,6 +317,38 @@ export default function TrackingPage() {
     return () => clearInterval(id);
   }, [delivery?.courier_accepted, delivery?.accepted_at, delivery?.created_at]);
 
+  // Tick every 10s so hostel-fallback age threshold is re-evaluated reactively
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 10000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Repeat in-app notification every 5s while buyer has a pending action to confirm
+  useEffect(() => {
+    if (!delivery) return;
+    const orderAgeS = (Date.now() - new Date(delivery.created_at)) / 1000;
+    const estate = getEstateRestriction(delivery.pickup_location, delivery.dropoff_location);
+    const needsHostelFallback = estate &&
+      ['placed', 'payment_verified'].includes(delivery.status) &&
+      !delivery.courier_id && orderAgeS > 120 && !delivery.allow_offcampus &&
+      session?.user?.id === delivery.buyer_id;
+
+    const hasPending = delivery.price_edit_flag || needsHostelFallback;
+    if (!hasPending) return;
+
+    function fire() {
+      if (delivery?.price_edit_flag) {
+        addNotification({ title: 'Action Required', body: 'Your runner updated item prices. Tap to review.', type: 'warning' });
+      } else {
+        addNotification({ title: 'Action Required', body: 'No hostel runner found. Tap to allow an off-campus runner.', type: 'warning' });
+      }
+    }
+    fire();
+    const id = setInterval(fire, 5000);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [delivery?.price_edit_flag, delivery?.allow_offcampus, delivery?.courier_id, delivery?.status, tick]);
+
   if (notFound) {
     return <div className="p-4 text-center text-gray-500 pt-20">Order not found.</div>;
   }
@@ -322,6 +365,14 @@ export default function TrackingPage() {
   const isArrived = delivery.status === 'arrived';
   const codeVisible = isArrived || isDelivered;
   const gracePeriodActive = graceLeft > 0 && delivery.courier_accepted && delivery.status === 'placed';
+
+  // Hostel estate fallback — buyer confirmation needed
+  const estateRestriction = getEstateRestriction(delivery.pickup_location, delivery.dropoff_location);
+  const orderAgeS = (Date.now() - new Date(delivery.created_at)) / 1000;
+  const needsHostelFallback = !!(estateRestriction &&
+    ['placed', 'payment_verified'].includes(delivery.status) &&
+    !delivery.courier_id && orderAgeS > 120 && !delivery.allow_offcampus &&
+    session?.user?.id === delivery.buyer_id);
 
   // Price-edit state derived from DB (no context dependency)
   const hasPendingPriceEdit = !!delivery.price_edit_flag && !isCancelled && !isDelivered;
@@ -419,6 +470,15 @@ export default function TrackingPage() {
     if (!text || chatSending) return;
     setChatSending(true);
     setChatInput('');
+    // Optimistic update — message appears instantly before server confirms
+    setChatMessages(prev => [...prev, {
+      id:          `temp-${Date.now()}`,
+      delivery_id: deliveryId,
+      sender_id:   session.user.id,
+      sender_role: 'buyer',
+      message:     text,
+      created_at:  new Date().toISOString(),
+    }]);
     await supabase.from('chat_messages').insert({
       delivery_id: deliveryId,
       sender_id:   session.user.id,
@@ -496,6 +556,38 @@ export default function TrackingPage() {
               Cancellation window closed
             </div>
           )
+        )}
+
+        {/* Hostel fallback — no on-campus runner after 2 min, buyer must confirm off-campus */}
+        {needsHostelFallback && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" aria-hidden="true" />
+              <p className="text-sm font-bold text-amber-400">No hostel runner available yet</p>
+            </div>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              {estateRestriction === 'victoria_falls'
+                ? 'No female on-campus runner has accepted yet. You can allow an off-campus female runner — but she cannot enter Victoria Falls estate. You will need to come outside the gate to collect your order.'
+                : 'No male on-campus runner has accepted yet. You can allow an off-campus male runner — but he cannot enter Moat Heaven estate. You will need to come outside the gate to collect your order.'}
+            </p>
+            <div className="flex gap-2">
+              <button className="flex-1 bg-surface-800 border border-white/[0.08] text-gray-400 font-medium py-2.5 rounded-xl text-sm">
+                Keep Waiting
+              </button>
+              <button
+                disabled={allowOffcampusLoading}
+                onClick={async () => {
+                  setAllowOffcampusLoading(true);
+                  await supabase.from('deliveries').update({ allow_offcampus: true }).eq('id', deliveryId);
+                  setDelivery(prev => ({ ...prev, allow_offcampus: true }));
+                  setAllowOffcampusLoading(false);
+                }}
+                className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm"
+              >
+                {allowOffcampusLoading ? 'Saving…' : 'Allow Off-Campus Runner'}
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Price approval card — shown when courier edits item prices */}

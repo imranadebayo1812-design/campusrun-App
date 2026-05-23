@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { haversineDistance as _haversine, CAMPUS_CENTER, CAMPUS_GEOFENCE_RADIUS_M } from '@/lib/venueCoords';
+import { VF_ESTATE, MH_ESTATE } from '@/lib/hostelEstates';
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
 import {
   Bike, MapPin, Lock, CheckCircle, Wallet, TrendingUp,
-  Star, Power, Clock, AlertCircle, AlertTriangle,
+  Star, Power, Clock, AlertCircle, AlertTriangle, BellOff,
   Pencil, ShieldAlert, MessageSquare, Send,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -227,12 +228,16 @@ function CourierChatPanel({ deliveryId, session }) {
         event: 'INSERT', schema: 'public', table: 'chat_messages',
         filter: `delivery_id=eq.${deliveryId}`,
       }, payload => {
-        setMessages(prev =>
-          prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new]
-        );
-        if (payload.new.sender_role !== 'courier') {
-          setUnread(u => u + 1);
-        }
+        setMessages(prev => {
+          const withoutOptimistic = prev.filter(m =>
+            !(String(m.id).startsWith('temp-') &&
+              m.message === payload.new.message &&
+              m.sender_id === payload.new.sender_id)
+          );
+          return withoutOptimistic.some(m => m.id === payload.new.id)
+            ? withoutOptimistic : [...withoutOptimistic, payload.new];
+        });
+        if (payload.new.sender_role !== 'courier') setUnread(u => u + 1);
       })
       .subscribe();
 
@@ -254,6 +259,11 @@ function CourierChatPanel({ deliveryId, session }) {
     if (!text || sending) return;
     setSending(true);
     setInput('');
+    setMessages(prev => [...prev, {
+      id: `temp-${Date.now()}`, delivery_id: deliveryId,
+      sender_id: session.user.id, sender_role: 'courier',
+      message: text, created_at: new Date().toISOString(),
+    }]);
     await supabase.from('chat_messages').insert({
       delivery_id: deliveryId,
       sender_id:   session.user.id,
@@ -368,9 +378,10 @@ const STATUS_LABEL = {
 
 /* ── Main component ─────────────────────────────────────────────── */
 export default function CourierDashboard() {
-  const { profile, session } = useAuth();
+  const { profile, session, updateProfileLocally } = useAuth();
   const navigate = useNavigate();
   const [isOnline, setIsOnline] = useState(false);
+  const [onlineInitialized, setOnlineInitialized] = useState(false);
   const [tick, setTick] = useState(0);
   const [activeOrders, setActiveOrders] = useState([]);
   const [available, setAvailable] = useState([]);
@@ -393,6 +404,21 @@ export default function CourierDashboard() {
     const id = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Restore is_online from DB on first profile load — persists across app restarts
+  useEffect(() => {
+    if (profile && !onlineInitialized) {
+      setIsOnline(profile.is_online ?? false);
+      setOnlineInitialized(true);
+    }
+  }, [profile, onlineInitialized]);
+
+  async function toggleOnline() {
+    const newVal = !isOnline;
+    setIsOnline(newVal);
+    await supabase.from('profiles').update({ is_online: newVal }).eq('id', session.user.id);
+    updateProfileLocally({ is_online: newVal });
+  }
 
   // Get GPS when going online; save to profile for admin dispatch visibility
   useEffect(() => {
@@ -436,30 +462,40 @@ export default function CourierDashboard() {
     })();
   }, [isOnline, session?.user?.id]);
 
-  // Returns visibility info for an available order based on the four matching rules
+  // Returns visibility info for an available order based on matching rules + hostel access
   function getOrderVisibility(order) {
-    // Couriers cannot pick up their own orders
     if (order.buyer_id === session?.user?.id) return { visible: false };
-
-    // Campus geofence — courier must be physically on campus
     if (!isOnCampus) return { visible: false, offCampus: true };
 
+    const courierGender     = profile?.gender;           // 'male' | 'female'
+    const isResidential     = profile?.campus_status === 'residential';
+    const pickup            = order.pickup_location;
+    const dropoff           = order.dropoff_location;
+    const involvesVF        = VF_ESTATE.has(pickup) || VF_ESTATE.has(dropoff);
+    const involvesMH        = MH_ESTATE.has(pickup) || MH_ESTATE.has(dropoff);
+
+    if (involvesVF) {
+      if (courierGender !== 'female') return { visible: false };
+      if (!order.allow_offcampus && !isResidential) return { visible: false };
+      if (order.allow_offcampus && !isResidential)
+        return { visible: true, hostelNote: 'victoria_falls' };
+    }
+
+    if (involvesMH) {
+      if (courierGender !== 'male') return { visible: false };
+      if (!order.allow_offcampus && !isResidential) return { visible: false };
+      if (order.allow_offcampus && !isResidential)
+        return { visible: true, hostelNote: 'moat_heaven' };
+    }
+
     const ageS = (Date.now() - new Date(order.created_at)) / 1000;
-
-    // Rule 1 — broadcast: order is old enough for everyone
     if (ageS >= BROADCAST_TIMEOUT_S) return { visible: true, reason: 'broadcast' };
-
-    // Rule 2 — rating priority: high-rated couriers see all orders immediately
     if ((profile?.avg_rating || 0) >= MIN_RATING_PRIORITY)
       return { visible: true, reason: 'priority' };
-
-    // Rule 3 — proximity: courier is near the pickup
     if (courierCoords && order.pickup_coords) {
       const dist = _haversine(courierCoords, order.pickup_coords);
       if (dist <= PROXIMITY_RADIUS_M) return { visible: true, reason: 'nearby', dist };
     }
-
-    // Not yet visible — show countdown
     return { visible: false, opensIn: Math.ceil(BROADCAST_TIMEOUT_S - ageS) };
   }
 
@@ -681,7 +717,7 @@ export default function CourierDashboard() {
           <p className="text-sm text-gray-500 mt-0.5">You're on duty. Campus is counting on you.</p>
         </div>
         <button
-          onClick={() => setIsOnline(v => !v)}
+          onClick={toggleOnline}
           className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold shrink-0 transition-all ${
             isOnline ? 'bg-green-500/15 text-green-400 border border-green-500/30' : 'bg-surface-900 text-gray-400 border border-white/[0.08]'
           }`}
@@ -731,7 +767,7 @@ export default function CourierDashboard() {
             <p className="text-white font-semibold text-base">You're off duty</p>
             <p className="text-gray-500 text-sm mt-1.5">Toggle online above to start receiving delivery requests.</p>
             <button
-              onClick={() => setIsOnline(true)}
+              onClick={toggleOnline}
               className="mt-5 bg-gradient-to-br from-brand-500 to-indigo-600 text-white font-semibold px-6 py-2.5 rounded-xl text-sm shadow-lg shadow-brand-500/20"
             >
               Start Accepting Deliveries
@@ -1023,6 +1059,16 @@ export default function CourierDashboard() {
                     <Clock className="w-3 h-3" aria-hidden="true" />
                     {formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}
                   </div>
+                  {!locked && vis.hostelNote && (
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 mb-3 flex items-start gap-2">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" aria-hidden="true" />
+                      <p className="text-xs text-amber-400 leading-relaxed">
+                        {vis.hostelNote === 'victoria_falls'
+                          ? 'You cannot enter Victoria Falls estate. The buyer will meet you outside the gate.'
+                          : 'You cannot enter Moat Heaven estate. The buyer will meet you outside the gate.'}
+                      </p>
+                    </div>
+                  )}
                   {locked ? (
                     <div className="w-full bg-surface-800 border border-white/[0.06] rounded-xl py-2.5 flex items-center justify-center gap-2 text-sm text-gray-500">
                       <Lock className="w-3.5 h-3.5" />
@@ -1042,6 +1088,29 @@ export default function CourierDashboard() {
           </div>
         </div>
       )}
+
+      {/* Do Not Disturb toggle */}
+      <div className="px-4 mb-6">
+        <button
+          onClick={() => {
+            const newVal = !profile?.dnd_courier_reminders;
+            supabase.from('profiles').update({ dnd_courier_reminders: newVal }).eq('id', session.user.id);
+            updateProfileLocally({ dnd_courier_reminders: newVal });
+          }}
+          className="w-full flex items-center justify-between bg-surface-900 border border-white/[0.08] rounded-2xl px-4 py-3.5"
+        >
+          <div className="flex items-center gap-3">
+            <BellOff className="w-4 h-4 text-gray-400" aria-hidden="true" />
+            <div className="text-left">
+              <p className="text-sm font-medium text-white">Do Not Disturb</p>
+              <p className="text-xs text-gray-500">Pause 30-min order reminders when offline</p>
+            </div>
+          </div>
+          <div className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${profile?.dnd_courier_reminders ? 'bg-brand-500' : 'bg-surface-700'}`}>
+            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${profile?.dnd_courier_reminders ? 'translate-x-5' : 'translate-x-1'}`} />
+          </div>
+        </button>
+      </div>
 
       <div className="h-6" />
 

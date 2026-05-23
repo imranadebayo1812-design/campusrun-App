@@ -5,24 +5,34 @@ import { useAuth } from '@/context/AuthContext';
 import { User, Phone, BookOpen, Home } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 
+// Victoria Falls = female hostel estate; Moat Heaven = male hostel estate
 const HOSTEL_BLOCKS = {
-  'Moat Heaven':    ['Zambezi', 'Moat Orange', 'Black Volta', 'Red Volta', 'Blue Nile', 'Lake Chad', 'Moat Heaven Cafeteria'],
-  'Victoria Falls': ['Mississippi', 'White Nile', 'Lake Tana', 'Shebelle', 'Nile Delta', 'Lake Victoria', 'Victoria Falls Cafeteria'],
+  female: {
+    'Victoria Falls': ['Mississippi', 'White Nile', 'Lake Tana', 'Shebelle', 'Nile Delta', 'Lake Victoria', 'Victoria Falls Cafeteria'],
+  },
+  male: {
+    'Moat Heaven': ['Zambezi', 'Moat Orange', 'Black Volta', 'Red Volta', 'Blue Nile', 'Lake Chad', 'Moat Heaven Cafeteria'],
+  },
 };
-
 
 export default function OnboardingForm() {
   const { session, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [data, setData] = useState({
-    full_name: '', phone_number: '', course: '', campus_status: '', hostel: '',
+    full_name: '', phone_number: '', course: '', gender: '',
+    campus_status: '', hostel: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   function update(field, value) {
-    setData(prev => ({ ...prev, [field]: value }));
+    setData(prev => {
+      const next = { ...prev, [field]: value };
+      // Clear hostel if gender changes — avoids cross-gender hostel selection
+      if (field === 'gender') next.hostel = '';
+      return next;
+    });
   }
 
   async function finish() {
@@ -39,10 +49,8 @@ export default function OnboardingForm() {
       setLoading(false);
       return;
     }
-    // Navigate first — App's early return for /welcome shows the page immediately.
     navigate('/welcome', { replace: true, state: { name: data.full_name } });
     refreshProfile();
-    // Fire welcome email in background — don't await
     supabase.functions.invoke('send-email', {
       body: {
         type: 'welcome',
@@ -53,6 +61,15 @@ export default function OnboardingForm() {
   }
 
   const inputClass = "w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50";
+
+  const step1Ready = data.full_name && data.phone_number && data.course && data.gender;
+  const step2Ready = data.campus_status &&
+    (data.campus_status !== 'residential' || data.hostel);
+
+  const hostelGroups = data.gender ? HOSTEL_BLOCKS[data.gender] ?? {} : {
+    'Moat Heaven': HOSTEL_BLOCKS.male['Moat Heaven'],
+    'Victoria Falls': HOSTEL_BLOCKS.female['Victoria Falls'],
+  };
 
   return (
     <div className="min-h-screen bg-surface-950 flex items-center justify-center p-4">
@@ -80,12 +97,9 @@ export default function OnboardingForm() {
                   <User className="w-4 h-4" aria-hidden="true" /> Full Name
                 </label>
                 <input
-                  id="ob-fullname"
-                  type="text"
-                  value={data.full_name}
+                  id="ob-fullname" type="text" value={data.full_name}
                   onChange={e => update('full_name', e.target.value)}
-                  placeholder="Your full name"
-                  className={inputClass}
+                  placeholder="Your full name" className={inputClass}
                 />
               </div>
 
@@ -94,12 +108,9 @@ export default function OnboardingForm() {
                   <Phone className="w-4 h-4" aria-hidden="true" /> Phone Number
                 </label>
                 <input
-                  id="ob-phone"
-                  type="tel"
-                  value={data.phone_number}
+                  id="ob-phone" type="tel" value={data.phone_number}
                   onChange={e => update('phone_number', e.target.value)}
-                  placeholder="08012345678"
-                  className={inputClass}
+                  placeholder="08012345678" className={inputClass}
                 />
               </div>
 
@@ -108,17 +119,36 @@ export default function OnboardingForm() {
                   <BookOpen className="w-4 h-4" aria-hidden="true" /> Course
                 </label>
                 <input
-                  id="ob-course"
-                  type="text"
-                  value={data.course}
+                  id="ob-course" type="text" value={data.course}
                   onChange={e => update('course', e.target.value)}
-                  placeholder="e.g. Computer Science"
-                  className={inputClass}
+                  placeholder="e.g. Computer Science" className={inputClass}
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Gender</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { value: 'female', label: 'Female' },
+                    { value: 'male',   label: 'Male' },
+                  ].map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => update('gender', value)}
+                      className={`py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                        data.gender === value
+                          ? 'border-brand-500 bg-brand-500/10 text-white'
+                          : 'border-white/[0.08] text-gray-400 bg-surface-800'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <button
-                disabled={!data.full_name || !data.phone_number || !data.course}
+                disabled={!step1Ready}
                 onClick={() => setStep(2)}
                 className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 disabled:opacity-50 text-white font-bold py-3.5 rounded-xl mt-2 shadow-lg shadow-brand-500/20"
               >
@@ -126,14 +156,15 @@ export default function OnboardingForm() {
               </button>
             </>
           )}
+
           {step === 2 && (
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Campus Status</label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { value: 'resident', label: 'On-Campus' },
-                    { value: 'day_student', label: 'Off-Campus' },
+                    { value: 'residential', label: 'On-Campus' },
+                    { value: 'commuter',    label: 'Off-Campus' },
                   ].map(({ value, label }) => (
                     <button
                       key={value}
@@ -149,36 +180,31 @@ export default function OnboardingForm() {
                   ))}
                 </div>
               </div>
-              {data.campus_status === 'resident' && (
+
+              {data.campus_status === 'residential' && (
                 <div>
                   <label htmlFor="ob-hostel" className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-1">
-                    <Home className="w-4 h-4" aria-hidden="true" /> Hostel
+                    <Home className="w-4 h-4" aria-hidden="true" /> Hostel Block
                   </label>
                   <select
-                    id="ob-hostel"
-                    value={data.hostel}
+                    id="ob-hostel" value={data.hostel}
                     onChange={e => update('hostel', e.target.value)}
                     className={`${inputClass} bg-surface-800`}
                   >
-                    <option value="">Select hostel…</option>
-                    <optgroup label="Moat Heaven">
-                      {HOSTEL_BLOCKS['Moat Heaven'].map(b => (
-                        <option key={b} value={`Moat Heaven — ${b}`}>{b}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Victoria Falls">
-                      {HOSTEL_BLOCKS['Victoria Falls'].map(b => (
-                        <option key={b} value={`Victoria Falls — ${b}`}>{b}</option>
-                      ))}
-                    </optgroup>
+                    <option value="">Select your hostel block…</option>
+                    {Object.entries(hostelGroups).map(([estate, blocks]) => (
+                      <optgroup key={estate} label={estate}>
+                        {blocks.map(b => (
+                          <option key={b} value={`${estate} — ${b}`}>{b}</option>
+                        ))}
+                      </optgroup>
+                    ))}
                     <option value="Student Quarters">Student Quarters</option>
                   </select>
                 </div>
               )}
 
-              {error && (
-                <p className="text-sm text-red-400">{error}</p>
-              )}
+              {error && <p className="text-sm text-red-400">{error}</p>}
 
               <div className="flex gap-3">
                 <button
@@ -188,7 +214,7 @@ export default function OnboardingForm() {
                   Back
                 </button>
                 <button
-                  disabled={!data.campus_status || loading}
+                  disabled={!step2Ready || loading}
                   onClick={finish}
                   className="flex-1 bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 disabled:opacity-50 text-white font-bold py-3 rounded-xl shadow-lg shadow-brand-500/20"
                 >

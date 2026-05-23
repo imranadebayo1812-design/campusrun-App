@@ -28,9 +28,11 @@ create table if not exists public.deletion_requests (
   created_at  timestamptz default now()
 );
 alter table public.deletion_requests enable row level security;
-create policy if not exists "Users submit own deletion requests"
+drop policy if exists "Users submit own deletion requests" on public.deletion_requests;
+create policy "Users submit own deletion requests"
   on public.deletion_requests for insert with check (user_id = auth.uid());
-create policy if not exists "Admins manage deletion requests"
+drop policy if exists "Admins manage deletion requests" on public.deletion_requests;
+create policy "Admins manage deletion requests"
   on public.deletion_requests for all using (public.is_admin());
 
 

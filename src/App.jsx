@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import LoginPage from '@/components/auth/LoginPage';
 import OnboardingForm from '@/components/auth/OnboardingForm';
+import ProfileUpdateRequired from '@/components/auth/ProfileUpdateRequired';
 import MobileShell from '@/components/layout/MobileShell';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import WelcomePage from '@/pages/WelcomePage';
@@ -43,6 +44,7 @@ export default function App() {
   // Profile still loading after login — prevent OnboardingForm flash
   if (!profile) return <LoadingScreen />;
   if (!profile.onboarding_complete) return <OnboardingForm />;
+  if (!profile.gender) return <ProfileUpdateRequired />;
   if (profile?.is_blacklisted) {
     return (
       <div className="min-h-screen bg-surface-950 flex items-center justify-center p-4">

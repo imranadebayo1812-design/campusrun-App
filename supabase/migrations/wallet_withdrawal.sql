@@ -9,7 +9,7 @@ alter table public.courier_withdrawals
   drop constraint if exists courier_withdrawals_type_check;
 alter table public.courier_withdrawals
   add constraint courier_withdrawals_type_check
-  check (type in ('earnings', 'reimbursement', 'wallet_withdrawal'));
+  check (type in ('earnings', 'reimbursement', 'wallet_withdrawal')) not valid;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 2. RPC: request_bank_withdrawal

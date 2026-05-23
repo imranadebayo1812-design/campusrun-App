@@ -223,8 +223,10 @@ export default function ProfilePage() {
           <Home className="w-4 h-4 text-gray-500 shrink-0" />
           <div>
             <p className="text-xs text-gray-500">Campus Status</p>
-            <p className="text-sm font-medium text-white capitalize">
-              {profile?.campus_status || '—'}
+            <p className="text-sm font-medium text-white">
+              {profile?.campus_status === 'residential' ? 'On-Campus (Residential)'
+                : profile?.campus_status === 'commuter' ? 'Off-Campus (Commuter)'
+                : '—'}
             </p>
           </div>
         </div>

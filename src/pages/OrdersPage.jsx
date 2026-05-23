@@ -89,6 +89,7 @@ export default function OrdersPage() {
         .from('deliveries')
         .select('*')
         .eq('buyer_id', userId)
+        .eq('payment_verified', true)
         .order('created_at', { ascending: false });
       setOrders(data || []);
       setLoading(false);

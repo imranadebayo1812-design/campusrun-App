@@ -164,7 +164,7 @@ function UserDetailModal({ user, onClose, onUpdate }) {
                 { icon: Phone, label: 'Phone', value: profile?.phone_number || profile?.phone || '–' },
                 { icon: Calendar, label: 'Joined', value: profile?.created_at ? format(new Date(profile.created_at), 'PPP') : '–' },
                 { icon: BookOpen, label: 'Course', value: profile?.course || '–' },
-                { icon: Home, label: 'Campus Status', value: profile?.campus_status === 'resident' ? `Residential${profile?.hostel ? ` — ${profile.hostel}` : ''}` : profile?.campus_status === 'day_student' ? 'Commuter' : '–' },
+                { icon: Home, label: 'Campus Status', value: profile?.campus_status === 'residential' ? `On-Campus${profile?.hostel ? ` — ${profile.hostel}` : ''}` : profile?.campus_status === 'commuter' ? 'Off-Campus (Commuter)' : '–' },
                 { icon: Wallet, label: 'Wallet Balance', value: `₦${(profile?.wallet_balance || 0).toLocaleString()}`, isWallet: true },
                 { icon: Package, label: 'Referral Code', value: profile?.referral_code || '–' },
               ].map(({ icon: Icon, label, value, isWallet }) => (

@@ -102,10 +102,14 @@ export default function HomePage() {
       .from('deliveries')
       .select('*')
       .eq('buyer_id', session.user.id)
+      .eq('payment_verified', true)
       .in('status', ACTIVE_STATUSES)
       .order('created_at', { ascending: false })
       .limit(3)
       .then(({ data }) => setActiveOrders(data || []));
+
+    // Expire any stale unpicked orders (paid but no courier after 2h)
+    supabase.rpc('expire_stale_orders').then(() => {});
   }, [session?.user?.id]);
 
   const firstName = (profile?.full_name || 'Student').split(' ')[0];

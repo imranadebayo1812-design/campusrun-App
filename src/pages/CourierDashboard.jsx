@@ -251,8 +251,15 @@ function CourierChatPanel({ deliveryId, session }) {
     if (open) {
       setUnread(0);
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      // Mark all buyer messages as seen in DB
+      supabase.from('chat_messages')
+        .update({ seen: true })
+        .eq('delivery_id', deliveryId)
+        .eq('sender_role', 'buyer')
+        .eq('seen', false)
+        .then(() => {});
     }
-  }, [open, messages.length]);
+  }, [open, messages.length, deliveryId]);
 
   async function send() {
     const text = input.trim();
@@ -415,6 +422,16 @@ export default function CourierDashboard() {
 
   async function toggleOnline() {
     const newVal = !isOnline;
+    // Prevent going offline while an active delivery is in progress
+    if (!newVal) {
+      const hasActiveDelivery = activeOrders.some(o =>
+        ['placed', 'bought', 'on_the_way', 'arrived'].includes(o.status)
+      );
+      if (hasActiveDelivery) {
+        setAcceptError('Complete your active delivery before going offline.');
+        return;
+      }
+    }
     setIsOnline(newVal);
     await supabase.from('profiles').update({ is_online: newVal }).eq('id', session.user.id);
     updateProfileLocally({ is_online: newVal });
@@ -803,20 +820,28 @@ export default function CourierDashboard() {
                       </div>
                       <button
                         onClick={async () => {
-                          const { error: rpcErr } = await supabase.rpc('cancel_delivery', {
-                            p_delivery_id: delivery.id,
-                            p_cancelled_by: 'courier',
-                          });
-                          if (rpcErr) {
-                            await supabase.from('deliveries')
-                              .update({ status: 'cancelled' })
-                              .eq('id', delivery.id);
+                          // During grace period, re-queue the order instead of cancelling it.
+                          // The buyer keeps their paid order — another courier can accept it.
+                          const { error } = await supabase.from('deliveries')
+                            .update({
+                              courier_id: null,
+                              courier_accepted: false,
+                              accepted_at: null,
+                            })
+                            .eq('id', delivery.id)
+                            .eq('status', 'placed'); // safety: only requeue if not yet bought
+                          if (error) {
+                            // Order progressed past placed — do full cancel as fallback
+                            await supabase.rpc('cancel_delivery', {
+                              p_delivery_id: delivery.id,
+                              p_cancelled_by: 'courier',
+                            });
                           }
                           setActiveOrders(prev => prev.filter(o => o.id !== delivery.id));
                         }}
                         className="text-xs font-semibold bg-amber-500/20 border border-amber-500/30 text-amber-400 px-3 py-1.5 rounded-lg"
                       >
-                        Cancel
+                        Release Order
                       </button>
                     </div>
                   )}

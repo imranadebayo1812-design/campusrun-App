@@ -232,6 +232,7 @@ export default function TrackingPage() {
   const [chatSending, setChatSending] = useState(false);
   const [graceLeft, setGraceLeft] = useState(0);
   const [accepting, setAccepting] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
   const [priceEditError, setPriceEditError] = useState('');
   const [allowOffcampusLoading, setAllowOffcampusLoading] = useState(false);
   const [tick, setTick] = useState(0);
@@ -268,7 +269,16 @@ export default function TrackingPage() {
       supabase.from('chat_messages').select('*')
         .eq('delivery_id', deliveryId)
         .order('created_at', { ascending: true })
-        .then(({ data }) => setChatMessages(data || []));
+        .then(({ data }) => {
+          setChatMessages(data || []);
+          // Mark all courier messages as seen — buyer is viewing this page
+          supabase.from('chat_messages')
+            .update({ seen: true })
+            .eq('delivery_id', deliveryId)
+            .eq('sender_role', 'courier')
+            .eq('seen', false)
+            .then(() => {});
+        });
     }
 
     loadChat();
@@ -434,6 +444,9 @@ export default function TrackingPage() {
   }
 
   async function rejectPriceEdit() {
+    setRejecting(true);
+    setPriceEditError('');
+    // Restore original prices before cancelling so cancel_delivery sees correct total
     const restoredItems = (delivery.items || []).map(item => {
       if (item.original_price == null) return item;
       const { original_price, ...rest } = item;
@@ -443,18 +456,18 @@ export default function TrackingPage() {
       .update({ items: restoredItems, price_edit_flag: false, price_edit_buyer_response: 'rejected' })
       .eq('id', deliveryId);
 
-    // Cancel with refund — fall back to direct update if RPC unavailable
-    const { error: rpcErr } = await supabase.rpc('cancel_delivery', {
+    const { data: rpcData, error: rpcErr } = await supabase.rpc('cancel_delivery', {
       p_delivery_id: deliveryId,
       p_cancelled_by: 'buyer',
     });
     if (rpcErr) {
-      await supabase.from('deliveries')
-        .update({ status: 'cancelled' })
-        .eq('id', deliveryId);
+      setPriceEditError('Order cancelled but refund failed — contact support.');
+    } else if (rpcData?.refund_error) {
+      setPriceEditError(`Order cancelled. Refund error: ${rpcData.refund_error}`);
     }
     setDelivery(prev => ({ ...prev, items: restoredItems, price_edit_flag: false, status: 'cancelled' }));
     refreshProfile();
+    setRejecting(false);
   }
 
   let etaText = null;
@@ -633,9 +646,10 @@ export default function TrackingPage() {
             <div className="flex gap-2">
               <button
                 onClick={rejectPriceEdit}
-                className="flex-1 bg-red-500/15 border border-red-500/30 text-red-400 font-semibold py-3 rounded-xl text-sm"
+                disabled={rejecting}
+                className="flex-1 bg-red-500/15 border border-red-500/30 text-red-400 font-semibold py-3 rounded-xl text-sm disabled:opacity-50"
               >
-                Cancel Order
+                {rejecting ? 'Cancelling…' : 'Reject & Cancel'}
               </button>
               <button
                 onClick={acceptPriceEdit}

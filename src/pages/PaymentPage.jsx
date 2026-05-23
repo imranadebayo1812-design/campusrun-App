@@ -96,9 +96,10 @@ export default function PaymentPage() {
           amount: total * 100,
           ref: `cr_${deliveryId}_${Date.now()}`,
           metadata: { type: 'delivery_payment', delivery_id: deliveryId },
-          onSuccess: async () => {
+          onSuccess: async (response) => {
+            const ref = response?.reference || response?.trxref || '';
             await supabase.from('deliveries')
-              .update({ payment_verified: true, payment_method: 'paystack' })
+              .update({ payment_verified: true, payment_method: 'paystack', paystack_reference: ref })
               .eq('id', deliveryId);
             setLoading(false);
             setPaid(true);

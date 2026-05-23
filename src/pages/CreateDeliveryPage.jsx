@@ -427,6 +427,21 @@ export default function CreateDeliveryPage() {
     setLoading(true);
     setError('');
 
+    // Prevent duplicate active orders
+    const { data: existing } = await supabase
+      .from('deliveries')
+      .select('id')
+      .eq('buyer_id', session.user.id)
+      .eq('payment_verified', true)
+      .not('status', 'in', '("delivered","cancelled")')
+      .limit(1)
+      .maybeSingle();
+    if (existing) {
+      setError('You already have an active order. Complete or cancel it before placing a new one.');
+      setLoading(false);
+      return;
+    }
+
     const dropoff = roomNumber.trim()
       ? `${dropoffLocation} — Room ${roomNumber.trim()}`
       : dropoffLocation;

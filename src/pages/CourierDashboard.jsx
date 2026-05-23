@@ -6,7 +6,7 @@ import { VF_ESTATE, MH_ESTATE } from '@/lib/hostelEstates';
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
 import {
   Bike, MapPin, Lock, CheckCircle, Wallet, TrendingUp,
-  Star, Power, Clock, AlertCircle, AlertTriangle, BellOff,
+  Star, Power, Clock, AlertCircle, AlertTriangle,
   Pencil, ShieldAlert, MessageSquare, Send,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -1088,29 +1088,6 @@ export default function CourierDashboard() {
           </div>
         </div>
       )}
-
-      {/* Do Not Disturb toggle */}
-      <div className="px-4 mb-6">
-        <button
-          onClick={() => {
-            const newVal = !profile?.dnd_courier_reminders;
-            supabase.from('profiles').update({ dnd_courier_reminders: newVal }).eq('id', session.user.id);
-            updateProfileLocally({ dnd_courier_reminders: newVal });
-          }}
-          className="w-full flex items-center justify-between bg-surface-900 border border-white/[0.08] rounded-2xl px-4 py-3.5"
-        >
-          <div className="flex items-center gap-3">
-            <BellOff className="w-4 h-4 text-gray-400" aria-hidden="true" />
-            <div className="text-left">
-              <p className="text-sm font-medium text-white">Do Not Disturb</p>
-              <p className="text-xs text-gray-500">Pause 30-min order reminders when offline</p>
-            </div>
-          </div>
-          <div className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${profile?.dnd_courier_reminders ? 'bg-brand-500' : 'bg-surface-700'}`}>
-            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${profile?.dnd_courier_reminders ? 'translate-x-5' : 'translate-x-1'}`} />
-          </div>
-        </button>
-      </div>
 
       <div className="h-6" />
 

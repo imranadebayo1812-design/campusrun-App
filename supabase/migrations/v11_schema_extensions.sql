@@ -2,9 +2,8 @@
 
 -- 1. New profile columns
 alter table public.profiles
-  add column if not exists gender                text check (gender in ('male', 'female')),
-  add column if not exists is_online             boolean not null default false,
-  add column if not exists dnd_courier_reminders boolean not null default false;
+  add column if not exists gender     text check (gender in ('male', 'female')),
+  add column if not exists is_online  boolean not null default false;
 
 -- 2. Allow off-campus fallback flag on orders
 alter table public.deliveries

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
-import { haversineDistance as _haversine } from '@/lib/venueCoords';
+import { haversineDistance as _haversine, CAMPUS_CENTER, CAMPUS_GEOFENCE_RADIUS_M } from '@/lib/venueCoords';
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
 import {
   Bike, MapPin, Lock, CheckCircle, Wallet, TrendingUp,
@@ -381,11 +381,12 @@ export default function CourierDashboard() {
   const [acceptError, setAcceptError] = useState('');
   const [earningsSummary, setEarningsSummary] = useState({ earned: 0, reimbursed: 0, totalDeliveries: 0 });
   const [courierCoords, setCourierCoords] = useState(null);
-  const [locationStatus, setLocationStatus] = useState('pending'); // pending | ok | denied
+  const [locationStatus, setLocationStatus] = useState('pending'); // pending | ok | denied | offcampus
+  const [isOnCampus, setIsOnCampus] = useState(false);
 
   // Matching constants
   const PROXIMITY_RADIUS_M  = 800;  // metres — nearby courier
-  const BROADCAST_TIMEOUT_S = 60;   // seconds before order opens to all
+  const BROADCAST_TIMEOUT_S = 120;  // seconds before order opens to all on-campus couriers
   const MIN_RATING_PRIORITY = 4.0;  // rating threshold for instant access
 
   useEffect(() => {
@@ -402,13 +403,16 @@ export default function CourierDashboard() {
       pos => {
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setCourierCoords(coords);
-        setLocationStatus('ok');
+        const distFromCampus = _haversine(coords, CAMPUS_CENTER);
+        const onCampus = distFromCampus <= CAMPUS_GEOFENCE_RADIUS_M;
+        setIsOnCampus(onCampus);
+        setLocationStatus(onCampus ? 'ok' : 'offcampus');
         supabase.from('profiles')
           .update({ courier_lat: coords.lat, courier_lng: coords.lng })
           .eq('id', session.user.id);
       },
-      () => setLocationStatus('denied'),
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60_000 }
+      () => { setLocationStatus('denied'); setIsOnCampus(false); },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30_000 }
     );
   }, [isOnline, session?.user?.id]);
 
@@ -416,6 +420,9 @@ export default function CourierDashboard() {
   function getOrderVisibility(order) {
     // Couriers cannot pick up their own orders
     if (order.buyer_id === session?.user?.id) return { visible: false };
+
+    // Campus geofence — courier must be physically on campus
+    if (!isOnCampus) return { visible: false, offCampus: true };
 
     const ageS = (Date.now() - new Date(order.created_at)) / 1000;
 
@@ -932,14 +939,26 @@ export default function CourierDashboard() {
               )}
               <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${
                 locationStatus === 'ok' ? 'text-green-400 bg-green-400/10 border-green-400/20' :
+                locationStatus === 'offcampus' ? 'text-red-400 bg-red-400/10 border-red-400/20' :
                 locationStatus === 'denied' ? 'text-gray-500 bg-white/[0.04] border-white/[0.08]' :
                 'text-amber-400 bg-amber-400/10 border-amber-400/20'
               }`}>
                 <MapPin className="w-2.5 h-2.5" />
-                {locationStatus === 'ok' ? 'Located' : locationStatus === 'denied' ? 'No GPS' : 'Locating…'}
+                {locationStatus === 'ok' ? 'On Campus' :
+                 locationStatus === 'offcampus' ? 'Off Campus' :
+                 locationStatus === 'denied' ? 'No GPS' : 'Locating…'}
               </span>
             </div>
           </div>
+          {locationStatus === 'offcampus' && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 flex items-start gap-2 mb-2">
+              <MapPin className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-red-400">You are off campus</p>
+                <p className="text-xs text-red-400/70 mt-0.5">You must be physically on Nile University campus to accept orders.</p>
+              </div>
+            </div>
+          )}
           <div className="space-y-3">
             {available.map(order => {
               // eslint-disable-next-line react-hooks/rules-of-hooks -- tick is stable

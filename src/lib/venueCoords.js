@@ -1,6 +1,7 @@
 // Approximate GPS coordinates for Nile University campus venues.
 // Update these if the campus layout changes.
-const CAMPUS_CENTER = { lat: 9.0752, lng: 7.3997 };
+export const CAMPUS_CENTER = { lat: 9.0752, lng: 7.3997 };
+export const CAMPUS_GEOFENCE_RADIUS_M = 3000; // 3 km — must be within this to act as courier
 
 export const VENUE_COORDS = {
   'Food Court':                { lat: 9.0762, lng: 7.4002 },

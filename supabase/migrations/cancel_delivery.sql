@@ -1,14 +1,16 @@
 -- Resilient cancel_delivery RPC.
 -- Cancellation always succeeds. Wallet refund is attempted separately
 -- so a constraint error there never blocks the cancellation itself.
+-- Refund goes to in-app wallet regardless of original payment method:
+-- wallet payments are reversed directly; Paystack payments are credited
+-- as wallet balance so the buyer can spend or withdraw the amount.
 
 create or replace function public.cancel_delivery(
   p_delivery_id  uuid,
   p_cancelled_by text default 'buyer'
 )
 returns jsonb
-language plpgsql
-security definer
+language plpgsql security definer
 as $$
 declare
   v_delivery  record;
@@ -49,8 +51,9 @@ begin
   where id = p_delivery_id;
 
   -- ── Step 2: Wallet refund (best-effort, never blocks step 1) ───
-  if v_delivery.payment_method = 'wallet'
-     and v_delivery.payment_verified = true
+  -- Refund whenever payment was confirmed, regardless of payment method.
+  -- Paystack-paid orders are credited to the in-app wallet.
+  if v_delivery.payment_verified = true
      and coalesce(v_delivery.total_amount, 0) > 0
   then
     begin
@@ -60,7 +63,7 @@ begin
       where id = v_delivery.buyer_id
       returning wallet_balance into v_balance;
 
-      -- Log the transaction using the actual column names in the table
+      -- Log the transaction
       insert into public.wallet_transactions (
         user_id, type, amount, balance_after,
         description, delivery_id

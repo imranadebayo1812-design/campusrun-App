@@ -43,9 +43,9 @@ begin
     end if;
   end if;
 
-  -- Notify COURIERS when a new order is placed (no courier assigned yet)
-  if NEW.status = 'placed' and OLD.status is distinct from 'placed' then
-    -- Insert one notification per courier (fetched via join)
+  -- Notify COURIERS only after payment is confirmed — not on initial 'placed'
+  -- to avoid spamming couriers about orders that never complete payment
+  if NEW.status = 'payment_verified' and OLD.status is distinct from 'payment_verified' then
     insert into public.notifications (user_id, title, body, type)
     select p.id, 'New order available! 📦',
            'A new delivery just came in. Open the app to accept it.',

@@ -48,6 +48,10 @@ async function setupNative(userId, addNotification) {
       );
     });
 
+    PushNotifications.addListener('registrationError', err => {
+      console.error('[CampusRun Push] FCM registration error:', JSON.stringify(err));
+    });
+
     PushNotifications.addListener('pushNotificationReceived', notification => {
       addNotification({
         title: notification.title ?? 'CampusRun',
@@ -55,8 +59,8 @@ async function setupNative(userId, addNotification) {
         type:  notification.data?.type ?? 'info',
       });
     });
-  } catch {
-    // Push is an enhancement — silently ignore errors
+  } catch (err) {
+    console.error('[CampusRun Push] Setup error:', err?.message ?? err);
   }
 }
 

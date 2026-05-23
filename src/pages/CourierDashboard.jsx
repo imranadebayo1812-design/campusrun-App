@@ -397,23 +397,43 @@ export default function CourierDashboard() {
   // Get GPS when going online; save to profile for admin dispatch visibility
   useEffect(() => {
     if (!isOnline || !session?.user?.id) return;
-    if (!navigator.geolocation) { setLocationStatus('denied'); return; }
     setLocationStatus('pending');
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setCourierCoords(coords);
-        const distFromCampus = _haversine(coords, CAMPUS_CENTER);
-        const onCampus = distFromCampus <= CAMPUS_GEOFENCE_RADIUS_M;
-        setIsOnCampus(onCampus);
-        setLocationStatus(onCampus ? 'ok' : 'offcampus');
-        supabase.from('profiles')
-          .update({ courier_lat: coords.lat, courier_lng: coords.lng })
-          .eq('id', session.user.id);
-      },
-      () => { setLocationStatus('denied'); setIsOnCampus(false); },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30_000 }
-    );
+
+    function applyPosition(lat, lng) {
+      const coords = { lat, lng };
+      setCourierCoords(coords);
+      const d = _haversine(coords, CAMPUS_CENTER);
+      const onCampus = d <= CAMPUS_GEOFENCE_RADIUS_M;
+      setIsOnCampus(onCampus);
+      setLocationStatus(onCampus ? 'ok' : 'offcampus');
+      supabase.from('profiles').update({ courier_lat: lat, courier_lng: lng }).eq('id', session.user.id);
+    }
+
+    (async () => {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (Capacitor.isNativePlatform()) {
+          // Use native Geolocation plugin on Android — triggers proper OS permission dialog
+          const { Geolocation } = await import('@capacitor/geolocation');
+          const perm = await Geolocation.requestPermissions();
+          if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') {
+            setLocationStatus('denied'); setIsOnCampus(false); return;
+          }
+          const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 });
+          applyPosition(pos.coords.latitude, pos.coords.longitude);
+        } else {
+          if (!navigator.geolocation) { setLocationStatus('denied'); return; }
+          navigator.geolocation.getCurrentPosition(
+            pos => applyPosition(pos.coords.latitude, pos.coords.longitude),
+            () => { setLocationStatus('denied'); setIsOnCampus(false); },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 30_000 },
+          );
+        }
+      } catch {
+        setLocationStatus('denied');
+        setIsOnCampus(false);
+      }
+    })();
   }, [isOnline, session?.user?.id]);
 
   // Returns visibility info for an available order based on the four matching rules

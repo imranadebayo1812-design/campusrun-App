@@ -4,7 +4,7 @@ import { supabase } from '@/api/supabaseClient';
 import { formatDistanceToNow, startOfDay } from 'date-fns';
 import {
   Users, Package, CheckCircle, TrendingUp,
-  Clock, Banknote, ArrowRight, RefreshCw,
+  Clock, Banknote, ArrowRight, RefreshCw, DollarSign, PieChart,
 } from 'lucide-react';
 
 const STATUS_BADGE = {
@@ -53,6 +53,8 @@ export default function AdminOverview() {
 
     const todayStart = startOfDay(new Date()).toISOString();
 
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+
     const [
       { count: totalUsers },
       { count: activeDeliveries },
@@ -62,6 +64,10 @@ export default function AdminOverview() {
       { count: newUsersWeek },
       { data: recentDel },
       { data: recentU },
+      { data: serviceFeeAllTime },
+      { data: serviceFeeMth },
+      { data: commissionRows },
+      { data: tipsRows },
     ] = await Promise.all([
       supabase.from('profiles').select('*', { count: 'exact', head: true }),
       supabase.from('deliveries').select('*', { count: 'exact', head: true }).not('status', 'in', '("delivered","cancelled")'),
@@ -75,11 +81,26 @@ export default function AdminOverview() {
       supabase.from('profiles')
         .select('id, full_name, email, created_at, is_courier')
         .order('created_at', { ascending: false }).limit(6),
+      // Platform revenue: service fees on paid non-cancelled orders
+      supabase.from('deliveries').select('service_fee').eq('payment_verified', true).neq('status', 'cancelled'),
+      supabase.from('deliveries').select('service_fee').eq('payment_verified', true).neq('status', 'cancelled').gte('created_at', monthStart),
+      // Commission: 15% kept from courier earnings transfers
+      supabase.from('courier_withdrawals').select('commission').eq('status', 'completed').eq('type', 'earnings'),
+      // Tips collected (all time)
+      supabase.from('deliveries').select('tip').eq('status', 'delivered').gt('tip', 0),
     ]);
 
-    const revenueToday = (revenueRows || []).reduce((s, d) => s + (d.total_amount || 0), 0);
+    const revenueToday   = (revenueRows || []).reduce((s, d) => s + (d.total_amount || 0), 0);
+    const svcAll         = (serviceFeeAllTime || []).reduce((s, d) => s + (d.service_fee || 0), 0);
+    const svcMonth       = (serviceFeeMth || []).reduce((s, d) => s + (d.service_fee || 0), 0);
+    const commissionAll  = (commissionRows || []).reduce((s, d) => s + (d.commission || 0), 0);
+    const tipsAll        = (tipsRows || []).reduce((s, d) => s + (d.tip || 0), 0);
+    const netRevenue     = svcAll + commissionAll;
 
-    setStats({ totalUsers, activeDeliveries, completedToday, revenueToday, pendingWithdrawals, newUsersWeek });
+    setStats({
+      totalUsers, activeDeliveries, completedToday, revenueToday, pendingWithdrawals, newUsersWeek,
+      svcAll, svcMonth, commissionAll, tipsAll, netRevenue,
+    });
     setRecentDeliveries(recentDel || []);
     setRecentUsers(recentU || []);
     setLoading(false);
@@ -128,6 +149,32 @@ export default function AdminOverview() {
         {STAT_CARDS.map(card => (
           <StatCard key={card.label} {...card} loading={loading} />
         ))}
+      </div>
+
+      {/* Platform Revenue */}
+      <div className="bg-surface-900 border border-white/[0.06] rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-white/[0.06] flex items-center gap-2">
+          <PieChart className="w-4 h-4 text-yellow-400" aria-hidden="true" />
+          <p className="text-sm font-semibold text-white">Platform Revenue</p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-white/[0.06]">
+          {[
+            { label: 'Net Revenue (all time)', value: `₦${(stats.netRevenue ?? 0).toLocaleString()}`, sub: 'Service fees + commissions', color: 'text-yellow-400' },
+            { label: 'Service Fees (this month)', value: `₦${(stats.svcMonth ?? 0).toLocaleString()}`, sub: `₦${(stats.svcAll ?? 0).toLocaleString()} all time`, color: 'text-brand-400' },
+            { label: 'Commission Earned', value: `₦${(stats.commissionAll ?? 0).toLocaleString()}`, sub: '15% of courier earnings withdrawn', color: 'text-green-400' },
+            { label: 'Tips Passed to Runners', value: `₦${(stats.tipsAll ?? 0).toLocaleString()}`, sub: '100% goes to couriers', color: 'text-purple-400' },
+          ].map(({ label, value, sub, color }) => (
+            <div key={label} className="px-5 py-4">
+              {loading ? (
+                <div className="h-7 w-24 bg-white/[0.06] rounded-lg animate-pulse mb-1" />
+              ) : (
+                <p className={`text-xl font-bold ${color}`}>{value}</p>
+              )}
+              <p className="text-xs text-gray-400 mt-0.5">{label}</p>
+              <p className="text-[11px] text-gray-600 mt-0.5">{sub}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="grid xl:grid-cols-3 gap-6">

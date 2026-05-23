@@ -13,6 +13,7 @@ export default function PaymentPage() {
 
   const delivery = location.state?.delivery;
   const [method, setMethod] = useState('paystack');
+  const [tip, setTip] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [paid, setPaid] = useState(false);
@@ -40,7 +41,8 @@ export default function PaymentPage() {
     }, 90000);
     return () => { clearInterval(pollRef.current); clearTimeout(timeout); };
   }, [loading, deliveryId]);
-  const total = delivery?.total_amount || 0;
+  const baseTotal = delivery?.total_amount || 0;
+  const total = baseTotal + tip;
   const walletBalance = profile?.wallet_balance || 0;
   const canUseWallet = walletBalance >= total;
 
@@ -65,6 +67,13 @@ export default function PaymentPage() {
   async function handlePay() {
     setLoading(true);
     setError('');
+
+    // Persist tip + updated total before charging so DB always matches charge
+    if (tip > 0) {
+      await supabase.from('deliveries')
+        .update({ tip, total_amount: total })
+        .eq('id', deliveryId);
+    }
 
     if (method === 'wallet') {
       if (!canUseWallet) {
@@ -202,9 +211,36 @@ export default function PaymentPage() {
             <span className="text-gray-400">Service fee</span>
             <span className="text-white">₦{delivery.service_fee.toLocaleString()}</span>
           </div>
+          {tip > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">Tip for runner</span>
+              <span className="text-green-400">+₦{tip.toLocaleString()}</span>
+            </div>
+          )}
           <div className="border-t border-white/[0.08] pt-3 flex justify-between font-bold">
             <span className="text-white">Total</span>
             <span className="text-brand-400 text-lg">₦{total.toLocaleString()}</span>
+          </div>
+        </div>
+
+        {/* Optional tip */}
+        <div>
+          <p className="text-sm font-semibold text-white mb-1">Add a tip for your runner <span className="text-gray-500 font-normal">(optional)</span></p>
+          <p className="text-xs text-gray-500 mb-3">100% goes directly to the runner</p>
+          <div className="grid grid-cols-4 gap-2">
+            {[0, 100, 200, 500].map(amount => (
+              <button
+                key={amount}
+                onClick={() => setTip(amount)}
+                className={`py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
+                  tip === amount
+                    ? 'border-green-500 bg-green-500/10 text-green-400'
+                    : 'border-white/[0.08] bg-surface-900 text-gray-400'
+                }`}
+              >
+                {amount === 0 ? 'None' : `₦${amount}`}
+              </button>
+            ))}
           </div>
         </div>
 

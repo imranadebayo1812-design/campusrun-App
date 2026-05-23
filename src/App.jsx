@@ -41,22 +41,10 @@ export default function App() {
     </div>
   );
   if (!session) return <LoginPage />;
-  // Profile still loading after login — prevent OnboardingForm flash
+  // Profile still loading after login — prevent flash
   if (!profile) return <LoadingScreen />;
-  if (!profile.onboarding_complete) return <OnboardingForm />;
-  if (!profile.gender) return <ProfileUpdateRequired />;
-  if (profile?.is_blacklisted) {
-    return (
-      <div className="min-h-screen bg-surface-950 flex items-center justify-center p-4">
-        <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-6 text-center max-w-sm">
-          <p className="text-red-400 font-bold text-lg mb-2">Account Suspended</p>
-          <p className="text-gray-500 text-sm">{profile.blacklist_reason || 'Your account has been suspended. Contact support.'}</p>
-        </div>
-      </div>
-    );
-  }
 
-  // Admin dashboard — desktop-only, no mobile shell
+  // Admin portal bypasses all onboarding / profile-completeness gates
   if (location.pathname.startsWith('/admin')) {
     if (!profile?.is_admin) return <Navigate to="/" replace />;
     return (
@@ -82,6 +70,20 @@ export default function App() {
           </Suspense>
         </ErrorBoundary>
       </ToastProvider>
+    );
+  }
+
+  // Regular users — enforce profile completeness before showing the app
+  if (!profile.onboarding_complete) return <OnboardingForm />;
+  if (!profile.gender) return <ProfileUpdateRequired />;
+  if (profile?.is_blacklisted) {
+    return (
+      <div className="min-h-screen bg-surface-950 flex items-center justify-center p-4">
+        <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-6 text-center max-w-sm">
+          <p className="text-red-400 font-bold text-lg mb-2">Account Suspended</p>
+          <p className="text-gray-500 text-sm">{profile.blacklist_reason || 'Your account has been suspended. Contact support.'}</p>
+        </div>
+      </div>
     );
   }
 

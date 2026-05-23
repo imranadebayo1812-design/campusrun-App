@@ -41,9 +41,8 @@ serve(async (req) => {
       if (platform === 'android') {
         message.android = {
           notification: {
-            icon:         'ic_launcher',
-            channel_id:   'campusrun_default',
-            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+            icon:       'ic_launcher',
+            channel_id: 'campusrun_default',
           },
         };
       } else {

@@ -36,20 +36,22 @@ export default function ProfileUpdateRequired() {
 
   const hostelGroups = gender ? HOSTEL_BLOCKS[gender] ?? {} : {};
 
-  const canSave = gender &&
-    (!needsStatus || campusStatus) &&
-    (campusStatus !== 'residential' || hostel);
-
   async function save() {
-    setLoading(true);
     setError('');
 
-    const updates = { gender };
-    // Only write campus_status if we have a valid value to write
+    // Validate inline — button is never disabled so we always reach here
+    if (!gender) { setError('Please select your gender.'); return; }
     const statusToSave = campusStatus || existingStatus;
-    if (statusToSave) updates.campus_status = statusToSave;
-    if (hostel) updates.hostel = hostel;
-    else if (profile?.hostel) updates.hostel = profile.hostel;
+    if (!statusToSave) { setError('Please select your campus status.'); return; }
+    if (statusToSave === 'residential' && !hostel && !profile?.hostel) {
+      setError('Please select your hostel block.'); return;
+    }
+
+    setLoading(true);
+
+    const updates = { gender, campus_status: statusToSave };
+    const hostelToSave = hostel || profile?.hostel;
+    if (hostelToSave) updates.hostel = hostelToSave;
 
     const { error: err } = await supabase
       .from('profiles')
@@ -167,17 +169,12 @@ export default function ProfileUpdateRequired() {
           {error && <p className="text-sm text-red-400">{error}</p>}
 
           <button
-            disabled={!canSave || loading}
             onClick={save}
-            className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl shadow-lg shadow-brand-500/20"
+            disabled={loading}
+            className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 disabled:opacity-50 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-brand-500/20"
           >
             {loading ? 'Saving…' : 'Save & Continue'}
           </button>
-          {!canSave && gender && (
-            <p className="text-xs text-gray-500 text-center -mt-1">
-              {!campusStatus && !existingStatus ? 'Select your campus status' : 'Select your hostel block'}
-            </p>
-          )}
         </div>
       </div>
     </div>

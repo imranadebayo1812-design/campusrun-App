@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { XCircle } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 
 export default function AuthConfirmPage() {
@@ -27,7 +27,6 @@ export default function AuthConfirmPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setStatus('success');
-        setTimeout(() => navigate('/', { replace: true }), 2500);
       } else {
         setStatus('error');
         setMessage('Could not verify your email. Please try logging in manually.');
@@ -35,71 +34,94 @@ export default function AuthConfirmPage() {
     }
 
     confirm();
-  }, [navigate]);
+  }, []);
+
+  if (status === 'verifying') {
+    return (
+      <div className="min-h-screen bg-surface-950 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-full border-4 border-brand-500/30 border-t-brand-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="min-h-screen bg-surface-950 flex flex-col items-center justify-center px-6 text-center gap-5">
+        <div className="w-16 h-16 bg-red-500/15 rounded-full flex items-center justify-center">
+          <XCircle className="w-8 h-8 text-red-400" />
+        </div>
+        <div>
+          <p className="text-xl font-bold text-white">Link expired</p>
+          <p className="text-sm text-gray-400 mt-2">{message}</p>
+        </div>
+        <button
+          onClick={() => navigate('/', { replace: true })}
+          className="bg-brand-500 hover:bg-brand-600 text-white font-bold px-8 py-3 rounded-2xl text-sm"
+        >
+          Go to Login
+        </button>
+        <a href="mailto:support@campusrun.online" className="text-xs text-brand-400 hover:underline">
+          support@campusrun.online
+        </a>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-surface-950 flex flex-col items-center justify-center px-6 text-center">
-      {/* Glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-80 bg-brand-600/20 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Top accent */}
+      <div className="h-1.5 w-full bg-gradient-to-r from-brand-500 to-indigo-500" />
 
-      <div className="relative z-10 flex flex-col items-center gap-6 w-full max-w-xs">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center">
         {/* Logo */}
-        <div className="flex flex-col items-center gap-1">
-          <Logo size={72} className="rounded-2xl shadow-xl shadow-brand-500/20" />
-          <p className="text-xs text-gray-500 mt-2 tracking-wide uppercase">Campus Deliveries · Nile University</p>
+        <Logo size={64} className="rounded-2xl shadow-lg mb-6" />
+
+        {/* Confetti-style label */}
+        <p className="text-xs font-bold tracking-[0.2em] uppercase text-brand-500 mb-4">
+          Thanks for joining
+        </p>
+
+        {/* Headline */}
+        <h1 className="text-4xl font-black text-gray-900 leading-tight mb-4">
+          Your account is<br />confirmed. 🎉
+        </h1>
+
+        <p className="text-gray-500 text-base max-w-xs leading-relaxed mb-10">
+          Welcome to CampusRun — the fastest way to get deliveries done at Nile University, Abuja.
+        </p>
+
+        {/* How it works */}
+        <div className="w-full max-w-xs bg-gray-50 rounded-2xl p-5 mb-8 text-left space-y-3">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">How it works</p>
+          {[
+            { icon: '🏠', text: 'Browse vendors on the Home tab' },
+            { icon: '📦', text: 'Place your order in seconds' },
+            { icon: '📍', text: 'Track your runner in real-time' },
+            { icon: '💸', text: 'Pay with card or wallet balance' },
+          ].map(({ icon, text }) => (
+            <div key={text} className="flex items-center gap-3">
+              <span className="text-lg">{icon}</span>
+              <p className="text-sm text-gray-600">{text}</p>
+            </div>
+          ))}
         </div>
 
-        {status === 'verifying' && (
-          <>
-            <div className="w-16 h-16 rounded-full border-4 border-brand-500/30 border-t-brand-500 animate-spin" />
-            <div>
-              <p className="text-xl font-bold text-white">Confirming your email…</p>
-              <p className="text-sm text-gray-400 mt-1">Just a moment</p>
-            </div>
-          </>
-        )}
+        {/* CTA */}
+        <button
+          onClick={() => navigate('/', { replace: true })}
+          className="w-full max-w-xs bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white font-black text-base py-4 rounded-2xl shadow-lg shadow-brand-500/30 transition-all"
+        >
+          Start Ordering →
+        </button>
 
-        {status === 'success' && (
-          <>
-            <div className="w-20 h-20 bg-green-500/15 rounded-full flex items-center justify-center">
-              <CheckCircle className="w-10 h-10 text-green-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-black text-white">You're in! 🎉</p>
-              <p className="text-sm text-gray-400 mt-2 leading-relaxed">
-                Your email is confirmed. Taking you to CampusRun now…
-              </p>
-            </div>
-            <div className="w-full bg-surface-900 border border-white/[0.08] rounded-2xl px-5 py-4">
-              <p className="text-xs text-gray-500 mb-2">What's next</p>
-              <p className="text-sm text-gray-300">Set up your profile and place your first order. Deliveries are fast — most runners arrive within 20 minutes.</p>
-            </div>
-          </>
-        )}
+        <p className="text-xs text-gray-400 mt-6">
+          Questions? <a href="mailto:support@campusrun.online" className="text-brand-500 hover:underline">support@campusrun.online</a>
+        </p>
+      </div>
 
-        {status === 'error' && (
-          <>
-            <div className="w-20 h-20 bg-red-500/15 rounded-full flex items-center justify-center">
-              <XCircle className="w-10 h-10 text-red-400" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-white">Link expired</p>
-              <p className="text-sm text-gray-400 mt-2 leading-relaxed">{message}</p>
-            </div>
-            <button
-              onClick={() => navigate('/', { replace: true })}
-              className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-brand-500/20"
-            >
-              Go to Login
-            </button>
-            <p className="text-xs text-gray-600">
-              Need help?{' '}
-              <a href="mailto:support@campusrun.online" className="text-brand-400 hover:underline">
-                support@campusrun.online
-              </a>
-            </p>
-          </>
-        )}
+      {/* Footer */}
+      <div className="py-5 text-center border-t border-gray-100">
+        <p className="text-xs text-gray-400">© {new Date().getFullYear()} CampusRun · Nile University, Abuja</p>
       </div>
     </div>
   );

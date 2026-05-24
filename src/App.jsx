@@ -14,6 +14,9 @@ export default function App() {
   const { session, profile, loading, authError } = useAuth();
   const location = useLocation();
 
+  // confirm subdomain — always show the confirmation page
+  if (window.location.hostname === 'confirm.campusrun.online') return <AuthConfirmPage />;
+
   // Public routes — no auth required, always render directly
   if (location.pathname === '/privacy') return <PrivacyPolicyPage />;
   if (location.pathname === '/auth/confirm') return <AuthConfirmPage />;

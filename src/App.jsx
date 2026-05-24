@@ -14,12 +14,6 @@ export default function App() {
   const { session, profile, loading, authError } = useAuth();
   const location = useLocation();
 
-  // Admin subdomain — always go straight to /admin
-  if (window.location.hostname === 'app.campusrun.online' &&
-      !location.pathname.startsWith('/admin')) {
-    return <Navigate to="/admin" replace />;
-  }
-
   // Public routes — no auth required, always render directly
   if (location.pathname === '/privacy') return <PrivacyPolicyPage />;
   if (location.pathname === '/auth/confirm') return <AuthConfirmPage />;

@@ -9,12 +9,10 @@ import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import WelcomePage from '@/pages/WelcomePage';
 import AuthConfirmPage from '@/pages/AuthConfirmPage';
 import { ToastProvider } from '@/context/ToastContext';
-import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 export default function App() {
   const { session, profile, loading, authError } = useAuth();
   const location = useLocation();
-  usePushNotifications();
 
   // Public routes — no auth required, always render directly
   if (location.pathname === '/privacy') return <PrivacyPolicyPage />;

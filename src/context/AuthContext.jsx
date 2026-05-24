@@ -16,7 +16,6 @@ export function AuthProvider({ children }) {
   const [authError, setAuthError] = useState(false);
 
   const [walletTransactions, setWalletTransactions] = useState([]);
-  const [notifications, setNotifications] = useState([]);
 
   // Price-edit flow shared between CourierDashboard ↔ TrackingPage
   const [priceEditState, setPriceEditState] = useState({
@@ -55,7 +54,6 @@ export function AuthProvider({ children }) {
       } else {
         setProfile(null);
         setWalletTransactions([]);
-        setNotifications([]);
       }
     });
 
@@ -65,12 +63,11 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // ── Load transactions & notifications when session is ready ─
+  // ── Load transactions when session is ready ─────────────────
   useEffect(() => {
     if (!session?.user?.id) return;
     const userId = session.user.id;
 
-    // Subscribe synchronously so cleanup always holds valid references
     const txChannel = supabase.channel(`wallet-tx:${userId}`)
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'wallet_transactions',
@@ -84,42 +81,12 @@ export function AuthProvider({ children }) {
       )
       .subscribe();
 
-    const notifChannel = supabase.channel(`notifs:${userId}`)
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'notifications',
-        filter: `user_id=eq.${userId}`,
-      }, payload =>
-        setNotifications(prev =>
-          prev.some(n => n.id === payload.new.id) ? prev : [payload.new, ...prev]
-        )
-      )
-      .subscribe();
-
-    // Auto sign-out when admin approves a deletion request for this user
-    const deletionChannel = supabase.channel(`deletion:${userId}`)
-      .on('postgres_changes', {
-        event: 'UPDATE', schema: 'public', table: 'deletion_requests',
-        filter: `user_id=eq.${userId}`,
-      }, payload => {
-        if (payload.new.status === 'approved') {
-          supabase.auth.signOut();
-        }
-      })
-      .subscribe();
-
-    // Fetch initial data (fire-and-forget — channels above handle live updates)
     supabase.from('wallet_transactions').select('*').eq('user_id', userId)
       .order('created_at', { ascending: false })
       .then(({ data }) => { if (data) setWalletTransactions(data); });
 
-    supabase.from('notifications').select('*').eq('user_id', userId)
-      .order('created_at', { ascending: false }).limit(50)
-      .then(({ data }) => { if (data) setNotifications(data); });
-
     return () => {
       supabase.removeChannel(txChannel);
-      supabase.removeChannel(notifChannel);
-      supabase.removeChannel(deletionChannel);
     };
   }, [session?.user?.id]);
 
@@ -180,35 +147,10 @@ export function AuthProvider({ children }) {
     setProfile(prev => prev ? { ...prev, ...updates } : updates);
   }
 
-  // ── Wallet helpers (mock until Phase 2) ───────────────────
+  // ── Wallet helpers ─────────────────────────────────────────
 
   function addWalletTransaction(tx) {
     setWalletTransactions(prev => [tx, ...prev]);
-  }
-
-  // ── Notification helpers ───────────────────────────────────
-
-  function addNotification(notif) {
-    setNotifications(prev => [
-      { ...notif, id: `notif-${Date.now()}`, read: false, created_at: new Date().toISOString() },
-      ...prev,
-    ]);
-  }
-
-  async function markAllRead() {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    if (session?.user?.id) {
-      await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('user_id', session.user.id)
-        .eq('read', false);
-    }
-  }
-
-  async function markRead(id) {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    await supabase.from('notifications').update({ read: true }).eq('id', id);
   }
 
   // ── Price-edit flow ────────────────────────────────────────
@@ -279,10 +221,6 @@ export function AuthProvider({ children }) {
       buyerAcceptsPriceEdit,
       buyerRejectsPriceEdit,
       clearRejectedOrder,
-      notifications,
-      addNotification,
-      markAllRead,
-      markRead,
     }}>
       {children}
     </AuthContext.Provider>

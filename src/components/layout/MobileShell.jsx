@@ -1,21 +1,17 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMode } from '@/context/ModeContext';
 import { useAuth } from '@/context/AuthContext';
 import BottomNav from './BottomNav';
 import Logo from '@/components/ui/Logo';
-import { Bell } from 'lucide-react';
-import NotificationSheet from '@/components/ui/NotificationSheet';
 
 export default function MobileShell({ children }) {
   const { mode, toggleMode } = useMode();
-  const { profile, notifications } = useAuth();
+  const { profile } = useAuth();
   const navigate = useNavigate();
   const contentRef = useRef(null);
-  const [showNotifications, setShowNotifications] = useState(false);
 
   const isCourier = mode === 'courier';
-  const unreadCount = notifications?.filter(n => !n.read).length ?? 0;
 
   function handleToggle() {
     toggleMode();
@@ -37,20 +33,6 @@ export default function MobileShell({ children }) {
 
         {profile && (
           <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-            {/* Notification bell */}
-            <button
-              onClick={() => setShowNotifications(true)}
-              aria-label={`${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`}
-              className="relative w-8 h-8 flex items-center justify-center rounded-xl bg-surface-800 border border-white/[0.06] shrink-0"
-            >
-              <Bell className="w-4 h-4 text-gray-400" aria-hidden="true" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center px-0.5">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
-
             {/* Buyer/Courier toggle */}
             <button
               onClick={handleToggle}
@@ -77,8 +59,6 @@ export default function MobileShell({ children }) {
 
       {/* Bottom navigation */}
       <BottomNav />
-
-      {showNotifications && <NotificationSheet onClose={() => setShowNotifications(false)} />}
 
     </div>
   );

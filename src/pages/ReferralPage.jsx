@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Copy, Check, Share2, Users, Banknote, Wallet } from 'lucide-react';
+import { ChevronLeft, Copy, Check, Users, Banknote, Clock, Wallet } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 
@@ -8,27 +8,28 @@ export default function ReferralPage() {
   const navigate = useNavigate();
   const { profile, session } = useAuth();
   const [copied, setCopied] = useState(false);
-  const [referralsCount, setReferralsCount] = useState(0);
+  const [earnedCount, setEarnedCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
   const [totalEarned, setTotalEarned] = useState(0);
   const [loadingStats, setLoadingStats] = useState(true);
 
   const code = profile?.referral_code || '—';
-  const shareUrl = `${window.location.origin}?ref=${code}`;
 
   useEffect(() => {
     if (!session?.user?.id) return;
     const userId = session.user.id;
 
     async function fetchStats() {
-      const { data } = await supabase
-        .from('referrals')
-        .select('id')
-        .eq('referrer_id', userId)
-        .eq('earned', true);
+      const [{ data: earned }, { data: allReferred }] = await Promise.all([
+        supabase.from('referrals').select('id').eq('referrer_id', userId).eq('earned', true),
+        supabase.from('profiles').select('id').eq('referred_by', userId),
+      ]);
 
-      const count = data?.length || 0;
-      setReferralsCount(count);
-      setTotalEarned(count * 100);
+      const ec = earned?.length || 0;
+      const total = allReferred?.length || 0;
+      setEarnedCount(ec);
+      setPendingCount(Math.max(0, total - ec));
+      setTotalEarned(ec * 100);
       setLoadingStats(false);
     }
 
@@ -36,18 +37,10 @@ export default function ReferralPage() {
   }, [session?.user?.id]);
 
   function copyCode() {
-    navigator.clipboard.writeText(code).catch(() => {});
+    const msg = `Use my referral code *${code}* when signing up on CampusRun (enter it in the Referral Code field during sign-up). Download the app on Google Play: CampusRun`;
+    navigator.clipboard.writeText(msg).catch(() => {});
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  function shareLink() {
-    const text = `Join CampusRun with my referral code ${code} and get fast campus deliveries at Nile University!\n${shareUrl}`;
-    if (navigator.share) {
-      navigator.share({ title: 'CampusRun Referral', text, url: shareUrl }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(text).catch(() => {});
-    }
+    setTimeout(() => setCopied(false), 2500);
   }
 
   const canWithdraw = totalEarned >= 1000;
@@ -75,7 +68,7 @@ export default function ReferralPage() {
           <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full bg-white/10" />
           <div className="absolute -left-4 -bottom-8 w-28 h-28 rounded-full bg-white/5" />
           <p className="text-xs font-bold text-white/60 uppercase tracking-wider mb-3 relative z-10">Your Referral Code</p>
-          <div className="flex items-center gap-3 mb-4 relative z-10">
+          <div className="flex items-center gap-3 mb-3 relative z-10">
             <p className="text-4xl font-black text-white tracking-widest">{code}</p>
             <button
               onClick={copyCode}
@@ -86,22 +79,18 @@ export default function ReferralPage() {
               {copied ? 'Copied!' : 'Copy'}
             </button>
           </div>
-          <button
-            onClick={shareLink}
-            className="flex items-center gap-2 text-white/80 text-sm font-medium relative z-10"
-          >
-            <Share2 className="w-4 h-4" aria-hidden="true" />
-            Share invite link
-          </button>
+          <p className="text-xs text-white/50 relative z-10">
+            Tell your friend to enter this code in the <span className="text-white/80 font-semibold">Referral Code</span> field when signing up
+          </p>
         </div>
       </div>
 
       {/* Stats */}
       <div className="mx-4 mb-5 grid grid-cols-3 gap-3">
         {[
-          { icon: Users, label: 'Referrals', value: loadingStats ? '…' : String(referralsCount), color: 'text-brand-400' },
-          { icon: Banknote, label: 'Total Earned', value: loadingStats ? '…' : `₦${totalEarned.toLocaleString()}`, color: 'text-green-400' },
-          { icon: Wallet, label: 'In Wallet', value: loadingStats ? '…' : `₦${totalEarned.toLocaleString()}`, color: 'text-yellow-400' },
+          { icon: Users,    label: 'Earned',   value: loadingStats ? '…' : String(earnedCount),                    color: 'text-brand-400' },
+          { icon: Clock,    label: 'Pending',  value: loadingStats ? '…' : String(pendingCount),                   color: 'text-yellow-400' },
+          { icon: Banknote, label: 'Earned ₦', value: loadingStats ? '…' : `₦${totalEarned.toLocaleString()}`,    color: 'text-green-400' },
         ].map(({ icon: Icon, label, value, color }) => (
           <div key={label} className="bg-surface-900 border border-white/[0.08] rounded-2xl p-3.5 flex flex-col items-center text-center">
             <Icon className={`w-5 h-5 ${color} mb-2`} aria-hidden="true" />
@@ -111,15 +100,35 @@ export default function ReferralPage() {
         ))}
       </div>
 
+      {/* Withdrawal CTA or progress */}
+      {canWithdraw ? (
+        <div className="mx-4 mb-5 bg-green-500/10 border border-green-500/20 rounded-2xl px-4 py-4">
+          <p className="text-sm font-bold text-green-400 mb-1">₦{totalEarned.toLocaleString()} in your wallet 🎉</p>
+          <p className="text-xs text-green-400/70 mb-3">Your referral earnings are already in your wallet balance.</p>
+          <button
+            onClick={() => navigate('/wallet')}
+            className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
+          >
+            <Wallet className="w-4 h-4" aria-hidden="true" />
+            Go to Wallet
+          </button>
+        </div>
+      ) : (
+        <div className="mx-4 mb-5 bg-amber-500/10 border border-amber-500/20 rounded-2xl px-4 py-3.5">
+          <p className="text-xs font-semibold text-amber-400">₦{needed.toLocaleString()} more to unlock withdrawal</p>
+          <p className="text-xs text-amber-400/70 mt-0.5">Refer {Math.ceil(needed / 100)} more friend{needed > 100 ? 's' : ''} to reach ₦1,000. Earnings go straight to your wallet.</p>
+        </div>
+      )}
+
       {/* How it works */}
       <div className="mx-4 mb-5 bg-surface-900 border border-white/[0.08] rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-white/[0.05]">
           <p className="text-sm font-semibold text-white">How it works</p>
         </div>
         {[
-          { step: '1', text: 'Share your referral code with a friend' },
-          { step: '2', text: 'They sign up using your code and complete onboarding' },
-          { step: '3', text: 'You earn ₦100 instantly credited to your wallet' },
+          { step: '1', text: 'Copy your code and share it with a friend' },
+          { step: '2', text: 'They download CampusRun and enter your code in the Referral Code field during sign-up' },
+          { step: '3', text: 'Once they place their first order, ₦100 is instantly added to your wallet' },
         ].map(({ step, text }) => (
           <div key={step} className="flex items-start gap-3 px-4 py-3 border-b border-white/[0.05] last:border-0">
             <div className="w-6 h-6 rounded-full bg-brand-500/20 flex items-center justify-center shrink-0 mt-0.5">
@@ -130,29 +139,22 @@ export default function ReferralPage() {
         ))}
       </div>
 
-      {/* Withdrawal note */}
-      {!canWithdraw && (
-        <div className="mx-4 mb-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl px-4 py-3.5">
-          <p className="text-xs font-semibold text-amber-400">₦{needed.toLocaleString()} more to unlock withdrawal</p>
-          <p className="text-xs text-amber-400/70 mt-0.5">Earn ₦1,000 in referral bonuses to withdraw. Your earnings go straight to your wallet.</p>
+      {/* Pending note */}
+      {!loadingStats && pendingCount > 0 && (
+        <div className="mx-4 mb-4 bg-surface-900 border border-white/[0.08] rounded-2xl px-4 py-3.5">
+          <p className="text-xs font-semibold text-yellow-400">{pendingCount} friend{pendingCount > 1 ? 's' : ''} signed up — waiting on first order</p>
+          <p className="text-xs text-gray-500 mt-0.5">You'll earn ₦100 once they place their first order.</p>
         </div>
       )}
 
       {/* Empty state */}
-      {!loadingStats && referralsCount === 0 && (
+      {!loadingStats && earnedCount === 0 && pendingCount === 0 && (
         <div className="mx-4 mb-4 text-center py-6">
           <div className="w-14 h-14 bg-surface-900 border border-white/[0.08] rounded-2xl flex items-center justify-center mx-auto mb-3">
             <Users className="w-7 h-7 text-gray-600" aria-hidden="true" />
           </div>
           <p className="text-sm font-medium text-gray-400">No referrals yet</p>
-          <p className="text-xs text-gray-600 mt-1">Share your code to start earning!</p>
-          <button
-            onClick={shareLink}
-            className="mt-4 flex items-center gap-2 mx-auto bg-brand-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl"
-          >
-            <Share2 className="w-4 h-4" aria-hidden="true" />
-            Share My Code
-          </button>
+          <p className="text-xs text-gray-600 mt-1">Copy your code and share it with friends!</p>
         </div>
       )}
 

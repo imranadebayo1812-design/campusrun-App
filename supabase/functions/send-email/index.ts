@@ -151,7 +151,7 @@ function accountRestoredEmail(name: string) {
   };
 }
 
-
+serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
 
   try {

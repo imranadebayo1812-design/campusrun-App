@@ -125,9 +125,7 @@ function UserDetailModal({ user, onClose, onUpdate }) {
     if (deleteConfirm !== 'DELETE') { setDeleteError('Type DELETE to confirm'); return; }
     setDeleteLoading(true);
     setDeleteError('');
-    const { error } = await supabase.functions.invoke('admin-delete-user', {
-      body: { target_user_id: user.id },
-    });
+    const { error } = await supabase.rpc('admin_delete_user', { p_user_id: user.id });
     if (error) {
       setDeleteError(error.message || 'Deletion failed. Try again.');
       setDeleteLoading(false);

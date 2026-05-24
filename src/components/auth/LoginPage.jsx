@@ -259,8 +259,9 @@ export default function LoginPage() {
               </div>
             )}
             {success && (
-              <div role="status" className="bg-green-500/10 border border-green-500/30 text-green-400 text-sm rounded-xl px-4 py-3">
-                {success}
+              <div role="status" className="bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 space-y-1">
+                <p className="text-green-400 text-sm font-medium">{success}</p>
+                <p className="text-green-600 text-xs">Can't find it? Check your Junk or Spam folder and mark us as safe.</p>
               </div>
             )}
 

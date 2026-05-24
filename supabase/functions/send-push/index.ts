@@ -18,7 +18,8 @@ serve(async (req) => {
     const { data: tokens } = await supabase
       .from('push_tokens')
       .select('token, platform')
-      .eq('user_id', record.user_id);
+      .eq('user_id', record.user_id)
+      .neq('platform', 'web'); // web push removed — mobile FCM only
 
     if (!tokens?.length) return ok();
 
@@ -37,18 +38,13 @@ serve(async (req) => {
         },
       };
 
-      // Native Android token — use android-specific channel config
+      // Native Android — channel config
       if (platform === 'android') {
         message.android = {
           notification: {
             icon:       'ic_launcher',
             channel_id: 'campusrun_default',
           },
-        };
-      } else {
-        // Web push token — route through browser push service
-        message.webpush = {
-          notification: { icon: '/logo.png', badge: '/logo.png' },
         };
       }
 

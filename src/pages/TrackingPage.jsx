@@ -340,11 +340,22 @@ export default function TrackingPage() {
     const estate = getEstateRestriction(delivery.pickup_location, delivery.dropoff_location);
     const needsHostelFallback = estate &&
       ['placed', 'payment_verified'].includes(delivery.status) &&
-      !delivery.courier_id && orderAgeS > 120 && !delivery.allow_offcampus &&
+      !delivery.courier_id && orderAgeS > 30 && !delivery.allow_offcampus &&
       session?.user?.id === delivery.buyer_id;
 
     const hasPending = delivery.price_edit_flag || needsHostelFallback;
     if (!hasPending) return;
+
+    // Send one real push notification (DB insert triggers send-push webhook)
+    supabase.from('notifications').insert({
+      user_id: session.user.id,
+      type: delivery?.price_edit_flag ? 'price_edit' : 'no_runner',
+      title: 'Action Required',
+      body: delivery?.price_edit_flag
+        ? 'Your runner updated item prices. Tap to review.'
+        : 'No hostel runner found yet. Tap to allow an off-campus runner.',
+      read: false,
+    }).then(() => {});
 
     function fire() {
       if (delivery?.price_edit_flag) {
@@ -381,7 +392,7 @@ export default function TrackingPage() {
   const orderAgeS = (Date.now() - new Date(delivery.created_at)) / 1000;
   const needsHostelFallback = !!(estateRestriction &&
     ['placed', 'payment_verified'].includes(delivery.status) &&
-    !delivery.courier_id && orderAgeS > 120 && !delivery.allow_offcampus &&
+    !delivery.courier_id && orderAgeS > 30 && !delivery.allow_offcampus &&
     session?.user?.id === delivery.buyer_id);
 
   // Price-edit state derived from DB (no context dependency)

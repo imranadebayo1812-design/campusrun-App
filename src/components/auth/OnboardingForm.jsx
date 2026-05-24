@@ -38,26 +38,31 @@ export default function OnboardingForm() {
   async function finish() {
     setLoading(true);
     setError('');
-    const { error: err } = await supabase.from('profiles').upsert({
-      id: session.user.id,
-      email: session.user.email,
-      ...data,
-      onboarding_complete: true,
-    });
-    if (err) {
-      setError(err.message || 'Could not save. Please try again.');
+    try {
+      const { error: err } = await supabase.from('profiles').upsert({
+        id: session.user.id,
+        email: session.user.email,
+        ...data,
+        onboarding_complete: true,
+      });
+      if (err) {
+        setError(err.message || 'Could not save. Please try again.');
+        return;
+      }
+      navigate('/welcome', { replace: true, state: { name: data.full_name } });
+      refreshProfile();
+      supabase.functions.invoke('send-email', {
+        body: {
+          type: 'welcome',
+          to: session.user.email,
+          data: { name: data.full_name.split(' ')[0], referral_code: '' },
+        },
+      });
+    } catch {
+      setError('Could not save. Please try again.');
+    } finally {
       setLoading(false);
-      return;
     }
-    navigate('/welcome', { replace: true, state: { name: data.full_name } });
-    refreshProfile();
-    supabase.functions.invoke('send-email', {
-      body: {
-        type: 'welcome',
-        to: session.user.email,
-        data: { name: data.full_name.split(' ')[0], referral_code: '' },
-      },
-    });
   }
 
   const inputClass = "w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50";

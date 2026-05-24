@@ -96,7 +96,12 @@ export function AuthProvider({ children }) {
       .select('*')
       .eq('id', userId)
       .single();
-    if (!error && data) setProfile(data);
+    if (!error && data) {
+      setProfile(data);
+    } else if (error?.code === 'PGRST116') {
+      // Profile deleted — sign out so user lands on login instead of hanging
+      await supabase.auth.signOut();
+    }
   }
 
   async function refreshProfile() {

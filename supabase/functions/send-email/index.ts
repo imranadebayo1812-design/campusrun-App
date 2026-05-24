@@ -77,7 +77,7 @@ function welcomeEmail(name: string, referralCode: string) {
         <tr><td style="color:#fff;font-size:22px;font-weight:800;letter-spacing:4px;">${h(referralCode)}</td></tr>
         <tr><td style="color:#6b7280;font-size:12px;padding-top:4px;">Earn ₦100 for every friend who joins</td></tr>
       </table>` : ''}
-      <a href="https://campusrun-eqcenaour-campus-run.vercel.app" style="display:block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;text-align:center;padding:14px;border-radius:12px;font-weight:700;font-size:14px;">
+      <a href="https://campusrun.online" style="display:block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;text-align:center;padding:14px;border-radius:12px;font-weight:700;font-size:14px;">
         Start Ordering →
       </a>
     `),
@@ -139,7 +139,7 @@ function orderReceiptEmail(name: string, pickup: string, dropoff: string, total:
           <td style="color:#9ca3af;font-size:11px;font-family:monospace;text-align:right;">${h(deliveryId.slice(0, 8))}</td>
         </tr>
       </table>
-      <a href="https://campusrun-eqcenaour-campus-run.vercel.app/track/${h(deliveryId)}" style="display:block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;text-align:center;padding:14px;border-radius:12px;font-weight:700;font-size:14px;">
+      <a href="https://campusrun.online/track/${h(deliveryId)}" style="display:block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;text-align:center;padding:14px;border-radius:12px;font-weight:700;font-size:14px;">
         Track My Order →
       </a>
     `),
@@ -164,7 +164,7 @@ function accountRestoredEmail(name: string) {
         If you believe this was a mistake or have any questions, please contact us at
         <a href="mailto:support@campusrun.online" style="color:#7c3aed;">support@campusrun.online</a>
       </p>
-      <a href="https://campusrun-hw4febeh7-campus-run.vercel.app" style="display:block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;text-align:center;padding:14px;border-radius:12px;font-weight:700;font-size:14px;">
+      <a href="https://campusrun.online" style="display:block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;text-align:center;padding:14px;border-radius:12px;font-weight:700;font-size:14px;">
         Log In to CampusRun →
       </a>
     `),

@@ -157,7 +157,10 @@ export function AuthProvider({ children }) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: metadata },
+      options: {
+        data: metadata,
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
+      },
     });
     return { error };
   }

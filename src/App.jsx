@@ -7,6 +7,7 @@ import ProfileUpdateRequired from '@/components/auth/ProfileUpdateRequired';
 import MobileShell from '@/components/layout/MobileShell';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import WelcomePage from '@/pages/WelcomePage';
+import AuthConfirmPage from '@/pages/AuthConfirmPage';
 import { ToastProvider } from '@/context/ToastContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
@@ -17,6 +18,7 @@ export default function App() {
 
   // Public routes — no auth required, always render directly
   if (location.pathname === '/privacy') return <PrivacyPolicyPage />;
+  if (location.pathname === '/auth/confirm') return <AuthConfirmPage />;
 
   // /welcome: only keep if still loading OR user just finished onboarding (has nav state)
   // If fully authenticated + onboarded with no onboarding state, redirect home

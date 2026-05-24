@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 
 const STATUS_COLORS = {
+  pending_payment: 'bg-gray-500/15 text-gray-400 border-gray-500/20',
   placed:     'bg-blue-500/15 text-blue-400 border-blue-500/20',
   bought:     'bg-yellow-500/15 text-yellow-400 border-yellow-500/20',
   on_the_way: 'bg-purple-500/15 text-purple-400 border-purple-500/20',
@@ -16,10 +17,11 @@ const STATUS_COLORS = {
   cancelled:  'bg-red-500/15 text-red-400 border-red-500/20',
 };
 const STATUS_LABELS = {
+  pending_payment: 'Awaiting Payment',
   placed: 'Placed', bought: 'Bought', on_the_way: 'On the Way',
   arrived: 'Arrived', delivered: 'Delivered', cancelled: 'Cancelled',
 };
-const ALL_STATUSES = ['placed', 'bought', 'on_the_way', 'arrived', 'delivered', 'cancelled'];
+const ALL_STATUSES = ['pending_payment', 'placed', 'bought', 'on_the_way', 'arrived', 'delivered', 'cancelled'];
 
 function AssignCourierModal({ delivery, onClose, onAssigned }) {
   const [couriers, setCouriers] = useState([]);

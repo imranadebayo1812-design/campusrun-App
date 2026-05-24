@@ -65,7 +65,7 @@ serve(async (req) => {
     // Use service role to mark verified — bypasses RLS column guard
     const { error: updErr } = await admin
       .from('deliveries')
-      .update({ payment_verified: true, payment_method: 'paystack', paystack_reference: reference })
+      .update({ payment_verified: true, status: 'placed', payment_method: 'paystack', paystack_reference: reference })
       .eq('id', delivery_id);
 
     if (updErr) return json({ error: updErr.message }, 500);

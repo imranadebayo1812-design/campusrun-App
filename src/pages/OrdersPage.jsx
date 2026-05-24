@@ -8,6 +8,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 
 const STATUS_DOT = {
+  pending_payment: 'bg-gray-400',
   placed:     'bg-yellow-400',
   bought:     'bg-blue-400',
   on_the_way: 'bg-brand-400',
@@ -17,6 +18,7 @@ const STATUS_DOT = {
 };
 
 const STATUS_LABEL = {
+  pending_payment: 'Awaiting Payment',
   placed:     'Waiting',
   bought:     'Bought',
   on_the_way: 'On The Way',
@@ -89,7 +91,6 @@ export default function OrdersPage() {
         .from('deliveries')
         .select('*')
         .eq('buyer_id', userId)
-        .eq('payment_verified', true)
         .order('created_at', { ascending: false });
       setOrders(data || []);
       setLoading(false);

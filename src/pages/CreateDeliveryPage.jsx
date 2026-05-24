@@ -449,6 +449,7 @@ export default function CreateDeliveryPage() {
       service_fee: serviceFee,
       total_amount: totalAmount,
       delivery_code: generateDeliveryCode(),
+      status: 'pending_payment',
       payment_verified: false,
       courier_accepted: false,
     };

@@ -339,7 +339,7 @@ export default function TrackingPage() {
     const orderAgeS = (Date.now() - new Date(delivery.created_at)) / 1000;
     const estate = getEstateRestriction(delivery.pickup_location, delivery.dropoff_location);
     const needsHostelFallback = estate &&
-      ['placed', 'payment_verified'].includes(delivery.status) &&
+      delivery.status === 'placed' &&
       !delivery.courier_id && orderAgeS > 30 && !delivery.allow_offcampus &&
       session?.user?.id === delivery.buyer_id;
 
@@ -380,6 +380,7 @@ export default function TrackingPage() {
       </div>
     );
   }
+  const isPendingPayment = delivery.status === 'pending_payment';
   const currentIdx = STATUS_ORDER.indexOf(delivery.status);
   const isCancelled = delivery.status === 'cancelled';
   const isDelivered = delivery.status === 'delivered';
@@ -387,11 +388,39 @@ export default function TrackingPage() {
   const codeVisible = isArrived || isDelivered;
   const gracePeriodActive = graceLeft > 0 && delivery.courier_accepted && delivery.status === 'placed';
 
+  if (isPendingPayment) {
+    return (
+      <div className="bg-surface-950 min-h-full">
+        <div className="flex items-center gap-3 px-4 pt-5 pb-4">
+          <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-800 border border-white/[0.06]">
+            <ChevronLeft className="w-5 h-5 text-gray-400" />
+          </button>
+          <h1 className="font-bold text-white text-lg">Order Status</h1>
+        </div>
+        <div className="flex flex-col items-center justify-center px-6 pt-16 gap-5 text-center">
+          <div className="w-16 h-16 bg-yellow-500/15 rounded-full flex items-center justify-center">
+            <Clock className="w-8 h-8 text-yellow-400" />
+          </div>
+          <div>
+            <p className="text-lg font-bold text-white">Awaiting Payment</p>
+            <p className="text-sm text-gray-400 mt-1">Complete payment to confirm this order.</p>
+          </div>
+          <button
+            onClick={() => navigate(`/payment/${delivery.id}`, { state: { delivery } })}
+            className="w-full max-w-xs bg-gradient-to-br from-brand-500 to-indigo-600 text-white font-bold py-4 rounded-2xl"
+          >
+            Complete Payment
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Hostel estate fallback — buyer confirmation needed
   const estateRestriction = getEstateRestriction(delivery.pickup_location, delivery.dropoff_location);
   const orderAgeS = (Date.now() - new Date(delivery.created_at)) / 1000;
   const needsHostelFallback = !!(estateRestriction &&
-    ['placed', 'payment_verified'].includes(delivery.status) &&
+    delivery.status === 'placed' &&
     !delivery.courier_id && orderAgeS > 30 && !delivery.allow_offcampus &&
     session?.user?.id === delivery.buyer_id);
 

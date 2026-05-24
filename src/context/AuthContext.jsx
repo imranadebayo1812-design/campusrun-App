@@ -16,6 +16,15 @@ export function AuthProvider({ children }) {
   const [authError, setAuthError] = useState(false);
 
   const [walletTransactions, setWalletTransactions] = useState([]);
+  const [inAppNotifications, setInAppNotifications] = useState([]);
+
+  function addNotification(notif) {
+    setInAppNotifications(prev => [{ ...notif, id: Date.now() }, ...prev.slice(0, 49)]);
+  }
+
+  function clearNotification(id) {
+    setInAppNotifications(prev => prev.filter(n => n.id !== id));
+  }
 
   // Price-edit flow shared between CourierDashboard ↔ TrackingPage
   const [priceEditState, setPriceEditState] = useState({
@@ -221,6 +230,9 @@ export function AuthProvider({ children }) {
       walletTransactions,
       addWalletTransaction,
       refreshTransactions,
+      inAppNotifications,
+      addNotification,
+      clearNotification,
       priceEditState,
       submitPriceEdits,
       buyerAcceptsPriceEdit,

@@ -4,12 +4,15 @@ import { useMode } from '@/context/ModeContext';
 import { useAuth } from '@/context/AuthContext';
 import BottomNav from './BottomNav';
 import Logo from '@/components/ui/Logo';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 export default function MobileShell({ children }) {
   const { mode, toggleMode } = useMode();
   const { profile } = useAuth();
   const navigate = useNavigate();
   const contentRef = useRef(null);
+
+  usePushNotifications();
 
   const isCourier = mode === 'courier';
 

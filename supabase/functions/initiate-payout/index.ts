@@ -25,6 +25,15 @@ serve(async (req) => {
   const { data: { user } } = await supabase.auth.getUser(token);
   if (!user) return json({ error: 'Unauthorized' }, 401);
 
+  // Rate limit: 5 payout requests per hour per courier
+  const { data: allowed } = await supabase.rpc('check_rate_limit', {
+    p_user_id:        user.id,
+    p_action:         'initiate_payout',
+    p_max_calls:      5,
+    p_window_seconds: 3600,
+  });
+  if (!allowed) return json({ error: 'Too many payout requests. Please wait before trying again.' }, 429);
+
   const { amount, type, bank_code, account_number, account_name, bank_name } = await req.json();
 
   if (!amount || amount < 500) return json({ error: 'Minimum payout is ₦500' }, 400);

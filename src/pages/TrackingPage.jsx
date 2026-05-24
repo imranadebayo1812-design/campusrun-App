@@ -509,6 +509,16 @@ export default function TrackingPage() {
       sender_role: 'buyer',
       message:     text,
     });
+    // Notify courier via push (DB insert triggers send-push webhook)
+    if (delivery?.courier_id) {
+      supabase.from('notifications').insert({
+        user_id: delivery.courier_id,
+        type:    'chat',
+        title:   'New message from buyer',
+        body:    text.length > 80 ? text.slice(0, 80) + '…' : text,
+        read:    false,
+      }).then(() => {});
+    }
     setChatSending(false);
   }
 

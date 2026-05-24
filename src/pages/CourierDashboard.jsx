@@ -200,7 +200,7 @@ function ItemPriceEditModal({ target, onSubmit, onClose }) {
 }
 
 /* ── Courier chat panel ─────────────────────────────────────────── */
-function CourierChatPanel({ deliveryId, session }) {
+function CourierChatPanel({ deliveryId, buyerId, session }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -277,6 +277,16 @@ function CourierChatPanel({ deliveryId, session }) {
       sender_role: 'courier',
       message:     text,
     });
+    // Notify buyer via push (DB insert triggers send-push webhook)
+    if (buyerId) {
+      supabase.from('notifications').insert({
+        user_id: buyerId,
+        type:    'chat',
+        title:   'New message from your runner',
+        body:    text.length > 80 ? text.slice(0, 80) + '…' : text,
+        read:    false,
+      }).then(() => {});
+    }
     setSending(false);
   }
 
@@ -965,7 +975,7 @@ export default function CourierDashboard() {
                     )}
 
                     {/* Chat with buyer */}
-                    <CourierChatPanel deliveryId={delivery.id} session={session} />
+                    <CourierChatPanel deliveryId={delivery.id} buyerId={delivery.buyer_id} session={session} />
 
                     {/* Action button */}
                     {action && <div className="mt-3" />}

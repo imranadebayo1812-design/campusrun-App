@@ -25,12 +25,8 @@ export default function AuthConfirmPage() {
       }
 
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setStatus('success');
-      } else {
-        setStatus('error');
-        setMessage('Could not verify your email. Please try logging in manually.');
-      }
+      setStatus(session ? 'success' : 'error');
+      if (!session) setMessage('Could not verify your email. Please try logging in manually.');
     }
 
     confirm();
@@ -107,12 +103,9 @@ export default function AuthConfirmPage() {
         </div>
 
         {/* CTA */}
-        <button
-          onClick={() => navigate('/', { replace: true })}
-          className="w-full max-w-xs bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white font-black text-base py-4 rounded-2xl shadow-lg shadow-brand-500/30 transition-all"
-        >
-          Start Ordering →
-        </button>
+        <p className="text-sm text-gray-500 bg-gray-50 rounded-2xl px-5 py-4 max-w-xs">
+          Open the <span className="font-bold text-gray-700">CampusRun app</span> on your phone to start ordering.
+        </p>
 
         <p className="text-xs text-gray-400 mt-6">
           Questions? <a href="mailto:support@campusrun.online" className="text-brand-500 hover:underline">support@campusrun.online</a>

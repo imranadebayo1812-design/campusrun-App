@@ -77,9 +77,6 @@ function welcomeEmail(name: string, referralCode: string) {
         <tr><td style="color:#fff;font-size:22px;font-weight:800;letter-spacing:4px;">${h(referralCode)}</td></tr>
         <tr><td style="color:#6b7280;font-size:12px;padding-top:4px;">Earn ₦100 for every friend who joins</td></tr>
       </table>` : ''}
-      <a href="https://app.campusrun.online" style="display:block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;text-align:center;padding:14px;border-radius:12px;font-weight:700;font-size:14px;">
-        Start Ordering →
-      </a>
     `),
   };
 }

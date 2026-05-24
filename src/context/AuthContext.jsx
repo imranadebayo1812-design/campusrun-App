@@ -126,7 +126,7 @@ export function AuthProvider({ children }) {
       password,
       options: {
         data: metadata,
-        emailRedirectTo: 'https://campusrun.online/auth/confirm',
+        emailRedirectTo: 'https://app.campusrun.online/auth/confirm',
       },
     });
     return { error };

@@ -125,11 +125,11 @@ function UserDetailModal({ user, onClose, onUpdate }) {
     if (deleteConfirm !== 'DELETE') { setDeleteError('Type DELETE to confirm'); return; }
     setDeleteLoading(true);
     setDeleteError('');
-    const { error } = await supabase.auth.admin.deleteUser(user.id).catch(() => ({ error: { message: 'Admin API not available from client — delete via Supabase dashboard.' } }));
+    const { error } = await supabase.functions.invoke('admin-delete-user', {
+      body: { target_user_id: user.id },
+    });
     if (error) {
-      // Fallback: mark account as blacklisted with deletion note so it can't be used
-      await supabase.from('profiles').update({ is_blacklisted: true, blacklist_reason: 'Pending deletion — requested by admin' }).eq('id', user.id);
-      setDeleteError('Account flagged for deletion. To fully remove, use Supabase Dashboard → Authentication → Users.');
+      setDeleteError(error.message || 'Deletion failed. Try again.');
       setDeleteLoading(false);
       return;
     }

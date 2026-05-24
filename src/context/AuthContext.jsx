@@ -152,6 +152,11 @@ export function AuthProvider({ children }) {
     if (!isNileEmail(email)) {
       return { error: { message: 'Only @nileuniversity.edu.ng email addresses can sign up.' } };
     }
+    // Server-side banned email check (security definer — cannot be bypassed)
+    const { data: isBanned } = await supabase.rpc('is_email_banned', { p_email: email });
+    if (isBanned) {
+      return { error: { message: 'This account has been permanently suspended. Contact support@campusrun.online if you believe this is a mistake.' } };
+    }
     const metadata = { full_name: fullName };
     if (referralCode) metadata.referral_code = referralCode;
     const { error } = await supabase.auth.signUp({

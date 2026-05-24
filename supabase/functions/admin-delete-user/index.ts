@@ -36,10 +36,22 @@ serve(async (req) => {
       return json({ error: 'You cannot delete your own account' }, 400);
     }
 
+    // Capture email before deletion so we can ban it
+    const { data: targetUser } = await admin.auth.admin.getUserById(target_user_id);
+    const targetEmail = targetUser?.user?.email;
+
     // Step 1: Wipe PII via RPC (blacklist + anonymise profile fields)
     await admin.rpc('admin_delete_user', { p_user_id: target_user_id });
 
-    // Step 2: Hard-delete from auth.users — removes login credentials permanently
+    // Step 2: Ban the email so they can't re-register
+    if (targetEmail) {
+      await admin.from('banned_emails').upsert({
+        email:  targetEmail,
+        reason: 'Account permanently deleted by admin',
+      }, { onConflict: 'email' });
+    }
+
+    // Step 3: Hard-delete from auth.users — removes login credentials permanently
     const { error: delErr } = await admin.auth.admin.deleteUser(target_user_id);
     if (delErr) return json({ error: delErr.message }, 500);
 

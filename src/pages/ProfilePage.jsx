@@ -1,8 +1,38 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
-import { User, Phone, BookOpen, Home, LogOut, Bike, Trash2, Shield, Star, Gift, Mail, PhoneCall, ChevronRight, Camera } from 'lucide-react';
+import { User, Phone, BookOpen, Home, LogOut, Bike, Trash2, Shield, Star, Gift, Mail, PhoneCall, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+function GenderAvatar({ gender }) {
+  const isFemale = gender === 'female';
+  return (
+    <div className={`w-14 h-14 rounded-full flex items-center justify-center relative z-10 overflow-hidden ${isFemale ? 'bg-pink-400/30' : 'bg-blue-400/30'}`}>
+      <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-14 h-14">
+        {/* Head */}
+        <circle cx="28" cy="20" r="9" fill={isFemale ? '#f9a8d4' : '#93c5fd'} />
+        {isFemale ? (
+          /* Female hair */
+          <>
+            <path d="M19 20 Q19 10 28 9 Q37 10 37 20 Q37 14 34 12 Q28 8 22 12 Q19 14 19 20Z" fill="#c084fc" />
+            <path d="M19 20 Q17 26 18 30 Q19 24 19 20Z" fill="#c084fc" />
+            <path d="M37 20 Q39 26 38 30 Q37 24 37 20Z" fill="#c084fc" />
+          </>
+        ) : (
+          /* Male hair */
+          <path d="M19 18 Q19 10 28 9 Q37 10 37 18 Q36 12 28 11 Q20 12 19 18Z" fill="#60a5fa" />
+        )}
+        {/* Body */}
+        <path
+          d={isFemale
+            ? "M16 44 Q16 33 28 32 Q40 33 40 44"
+            : "M15 44 Q15 33 28 32 Q41 33 41 44"}
+          fill={isFemale ? '#f9a8d4' : '#93c5fd'}
+        />
+      </svg>
+    </div>
+  );
+}
 
 function DeleteAccountModal({ onClose }) {
   const { session, profile } = useAuth();
@@ -94,8 +124,6 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const fileInputRef = useRef(null);
 
   async function saveProfile() {
     setSaving(true);
@@ -117,21 +145,6 @@ export default function ProfilePage() {
     await signOut();
   }
 
-  async function handlePhotoUpload(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingPhoto(true);
-    const ext = file.name.split('.').pop();
-    const path = `${session.user.id}/${Date.now()}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: true });
-    if (!uploadError) {
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
-      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', session.user.id);
-      updateProfileLocally({ avatar_url: publicUrl });
-    }
-    setUploadingPhoto(false);
-  }
-
   const isCourier = profile?.is_courier;
   const initial = (profile?.full_name?.[0] || session?.user.email?.[0] || 'U').toUpperCase();
 
@@ -150,22 +163,7 @@ export default function ProfilePage() {
         >
           <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/10" />
           <div className="relative w-14 h-14 shrink-0">
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="Profile" className="w-14 h-14 rounded-full object-cover relative z-10" />
-            ) : (
-              <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold text-white relative z-10">
-                {initial}
-              </div>
-            )}
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
-            <button
-              aria-label="Change profile photo"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingPhoto}
-              className="absolute -bottom-0.5 -right-0.5 w-6 h-6 bg-brand-500 rounded-full flex items-center justify-center border-2 border-[#1a0a2e] z-20 disabled:opacity-50"
-            >
-              <Camera className="w-3 h-3 text-white" aria-hidden="true" />
-            </button>
+            <GenderAvatar gender={profile?.gender} />
           </div>
           <div className="relative z-10">
             <p className="font-bold text-lg text-white">{profile?.full_name || 'Student'}</p>

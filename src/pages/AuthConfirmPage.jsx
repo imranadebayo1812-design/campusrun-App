@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { CheckCircle, XCircle } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 
 export default function AuthConfirmPage() {
-  const navigate = useNavigate();
   const [status, setStatus] = useState('verifying');
   const [message, setMessage] = useState('');
 
@@ -100,12 +98,6 @@ export default function AuthConfirmPage() {
                 <p className="text-xl font-bold text-white">Link expired</p>
                 <p className="text-sm text-gray-400 mt-2">{message}</p>
               </div>
-              <button
-                onClick={() => navigate('/', { replace: true })}
-                className="w-full bg-brand-500 hover:bg-brand-600 text-white font-bold py-4 rounded-2xl text-sm"
-              >
-                Go to Login
-              </button>
             </>
           )}
 

@@ -126,7 +126,32 @@ function orderReceiptEmail(name: string, pickup: string, dropoff: string, total:
   };
 }
 
-serve(async (req) => {
+function accountRestoredEmail(name: string) {
+  return {
+    subject: 'Your CampusRun account has been restored',
+    html: baseTemplate(`
+      <h1 style="color:#fff;font-size:20px;font-weight:700;margin:0 0 8px;">Account Restored ✅</h1>
+      <p style="color:#9ca3af;font-size:14px;line-height:1.6;margin:0 0 20px;">
+        Hi ${name}, your CampusRun account has been reviewed and access has been fully restored.
+      </p>
+      <table width="100%" style="background:#111827;border-radius:12px;padding:16px;margin-bottom:20px;">
+        <tr><td style="color:#6b7280;font-size:12px;padding-bottom:8px;">Next steps</td></tr>
+        <tr><td style="color:#e5e7eb;font-size:13px;padding:3px 0;">1. Log in to CampusRun</td></tr>
+        <tr><td style="color:#e5e7eb;font-size:13px;padding:3px 0;">2. Complete your profile details</td></tr>
+        <tr><td style="color:#e5e7eb;font-size:13px;padding:3px 0;">3. Resume ordering as normal</td></tr>
+      </table>
+      <p style="color:#6b7280;font-size:13px;line-height:1.6;margin:0 0 20px;">
+        If you believe this was a mistake or have any questions, please contact us at
+        <a href="mailto:support@campusrun.online" style="color:#7c3aed;">support@campusrun.online</a>
+      </p>
+      <a href="https://campusrun-hw4febeh7-campus-run.vercel.app" style="display:block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;text-align:center;padding:14px;border-radius:12px;font-weight:700;font-size:14px;">
+        Log In to CampusRun →
+      </a>
+    `),
+  };
+}
+
+
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
 
   try {
@@ -145,6 +170,8 @@ serve(async (req) => {
       emailContent = topupReceiptEmail(data.name, data.amount, data.new_balance, data.reference);
     } else if (type === 'order_receipt') {
       emailContent = orderReceiptEmail(data.name, data.pickup, data.dropoff, data.total, data.delivery_id);
+    } else if (type === 'account_restored') {
+      emailContent = accountRestoredEmail(data.name || 'there');
     } else {
       return new Response(JSON.stringify({ error: 'Unknown email type' }), {
         status: 400, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },

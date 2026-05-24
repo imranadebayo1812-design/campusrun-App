@@ -22,6 +22,7 @@ function UserDetailModal({ user, onClose, onUpdate }) {
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [actionMsg, setActionMsg] = useState({ error: '', success: '' });
 
   useEffect(() => {
     async function load() {
@@ -39,15 +40,50 @@ function UserDetailModal({ user, onClose, onUpdate }) {
 
   async function toggleBlacklist() {
     setActionLoading(true);
+    setActionMsg({ error: '', success: '' });
     const isBlacklisted = profile?.is_blacklisted;
-    await supabase.from('profiles').update(
-      isBlacklisted
-        ? { is_blacklisted: false, blacklist_reason: null }
-        : { is_blacklisted: true, blacklist_reason: blacklistReason || 'Admin action' }
-    ).eq('id', user.id);
-    setActionLoading(false);
-    onUpdate();
-    onClose();
+
+    if (isBlacklisted) {
+      // RESTORE ACCESS
+      const isWiped = profile?.full_name === '[Deleted User]';
+      const restoreFields = { is_blacklisted: false, blacklist_reason: null };
+      if (isWiped) {
+        // Profile was deleted — force full re-onboarding so they re-enter their details
+        restoreFields.onboarding_complete = false;
+        restoreFields.terms_accepted = false;
+        restoreFields.full_name = null;
+      }
+      const { error } = await supabase.from('profiles').update(restoreFields).eq('id', user.id);
+      if (error) {
+        setActionMsg({ error: error.message, success: '' });
+        setActionLoading(false);
+        return;
+      }
+      // Send restoration email (fire-and-forget)
+      supabase.functions.invoke('send-email', {
+        body: {
+          type: 'account_restored',
+          to: user.email,
+          data: { name: isWiped ? 'there' : (profile?.full_name?.split(' ')[0] || 'there') },
+        },
+      }).then(() => {});
+      setActionMsg({ error: '', success: isWiped ? 'Access restored. User must re-complete their profile on next login.' : 'Access restored. Notification email sent.' });
+      setActionLoading(false);
+      setTimeout(() => { onUpdate(); onClose(); }, 2500);
+    } else {
+      // BAN USER
+      const { error } = await supabase.from('profiles')
+        .update({ is_blacklisted: true, blacklist_reason: blacklistReason || 'Admin action' })
+        .eq('id', user.id);
+      if (error) {
+        setActionMsg({ error: error.message, success: '' });
+        setActionLoading(false);
+        return;
+      }
+      setActionMsg({ error: '', success: 'User has been banned and can no longer access the app.' });
+      setActionLoading(false);
+      setTimeout(() => { onUpdate(); onClose(); }, 2000);
+    }
   }
 
   async function doTopup() {
@@ -289,15 +325,27 @@ function UserDetailModal({ user, onClose, onUpdate }) {
                 )}
                 <button
                   onClick={toggleBlacklist}
-                  disabled={actionLoading}
+                  disabled={actionLoading || !!actionMsg.success}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50 transition-all ${
                     profile?.is_blacklisted
                       ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25 border border-green-500/20'
                       : 'bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20'
                   }`}
                 >
-                  {profile?.is_blacklisted ? <><CheckCircle className="w-4 h-4" /> Restore Access</> : <><Ban className="w-4 h-4" /> Ban User</>}
+                  {actionLoading
+                    ? 'Please wait…'
+                    : profile?.is_blacklisted
+                      ? <><CheckCircle className="w-4 h-4" /> Restore Access</>
+                      : <><Ban className="w-4 h-4" /> Ban User</>}
                 </button>
+                {actionMsg.success && (
+                  <p className="text-xs text-green-400 mt-2 flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3 flex-shrink-0" /> {actionMsg.success}
+                  </p>
+                )}
+                {actionMsg.error && (
+                  <p className="text-xs text-red-400 mt-2">{actionMsg.error}</p>
+                )}
               </div>
 
               {/* Delete account */}

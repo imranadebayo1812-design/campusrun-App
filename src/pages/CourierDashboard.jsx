@@ -215,8 +215,8 @@ function CourierChatPanel({ deliveryId, session }) {
         .order('created_at', { ascending: true })
         .then(({ data }) => {
           const msgs = data || [];
-          setMessages(msgs);
-          setUnread(msgs.filter(m => m.sender_role !== 'courier').length);
+          if (msgs.length) setMessages(msgs);
+          setUnread(msgs.filter(m => m.sender_role !== 'courier' && !m.seen).length);
         });
     }
 

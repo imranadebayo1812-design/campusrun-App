@@ -254,7 +254,7 @@ export default function TrackingPage() {
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'deliveries',
         filter: `id=eq.${deliveryId}`,
-      }, payload => setDelivery(payload.new))
+      }, payload => setDelivery(prev => ({ ...prev, ...payload.new })))
       .subscribe();
 
     return () => { if (channel) supabase.removeChannel(channel); };
@@ -270,7 +270,7 @@ export default function TrackingPage() {
         .eq('delivery_id', deliveryId)
         .order('created_at', { ascending: true })
         .then(({ data }) => {
-          setChatMessages(data || []);
+          if (data?.length) setChatMessages(data);
           // Mark all courier messages as seen — buyer is viewing this page
           supabase.from('chat_messages')
             .update({ seen: true })

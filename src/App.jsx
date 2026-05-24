@@ -83,7 +83,14 @@ export default function App() {
       <div className="min-h-screen bg-surface-950 flex items-center justify-center p-4">
         <div className="bg-surface-900 border border-white/[0.08] rounded-2xl p-6 text-center max-w-sm">
           <p className="text-red-400 font-bold text-lg mb-2">Account Suspended</p>
-          <p className="text-gray-500 text-sm">{profile.blacklist_reason || 'Your account has been suspended. Contact support.'}</p>
+          <p className="text-gray-500 text-sm mb-4">{profile.blacklist_reason || 'Your account has been suspended.'}</p>
+          <p className="text-gray-600 text-xs mb-1">To appeal this decision, contact us at:</p>
+          <a
+            href="mailto:support@campusrun.online"
+            className="text-brand-400 text-sm font-medium hover:underline"
+          >
+            support@campusrun.online
+          </a>
         </div>
       </div>
     );

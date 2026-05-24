@@ -107,9 +107,15 @@ export default function PaymentPage() {
           metadata: { type: 'delivery_payment', delivery_id: deliveryId },
           onSuccess: async (response) => {
             const ref = response?.reference || response?.trxref || '';
-            await supabase.from('deliveries')
-              .update({ payment_verified: true, payment_method: 'paystack', paystack_reference: ref })
-              .eq('id', deliveryId);
+            // Server-side verification: calls Paystack API + uses service role to update DB
+            const { error: verifyErr } = await supabase.functions.invoke('verify-payment', {
+              body: { delivery_id: deliveryId, reference: ref },
+            });
+            if (verifyErr) {
+              setError('Payment received but verification failed. Contact support with ref: ' + ref);
+              setLoading(false);
+              return;
+            }
             setLoading(false);
             setPaid(true);
           },

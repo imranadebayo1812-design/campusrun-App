@@ -17,7 +17,7 @@ const SECTIONS = [
   },
   {
     title: '4. Third-Party Services',
-    body: `We share limited data with the following trusted third parties:\n\n• Supabase (supabase.com): provides our database, authentication, and file storage. Your account data is stored on Supabase servers. Supabase is SOC 2 Type II certified.\n• Paystack (paystack.com): processes all card payments. Paystack is PCI-DSS Level 1 compliant.\n\nBoth services operate under their own privacy policies and are bound by data processing agreements with us.`,
+    body: `We share limited data with the following trusted third parties:\n\n• Supabase (supabase.com): provides our database, authentication, and file storage. Your account data is stored on Supabase servers. Supabase is SOC 2 Type II certified.\n• Paystack (paystack.com): processes all card payments. Paystack is PCI-DSS Level 1 compliant.\n• Google Firebase (firebase.google.com): provides push notification delivery (Firebase Cloud Messaging) and crash analytics. Firebase may collect device identifiers (FCM token) solely to route push notifications to your device. Firebase is operated by Google LLC and subject to Google's Privacy Policy.\n\nAll services operate under their own privacy policies and are bound by data processing agreements with us.`,
   },
   {
     title: '5. Data Retention',
@@ -37,7 +37,7 @@ const SECTIONS = [
   },
   {
     title: '9. Children',
-    body: `CampusRun is intended for university students aged 16 and above. We do not knowingly collect data from children under 13. If you believe a child has created an account, please contact us and we will delete it promptly.`,
+    body: `CampusRun is intended for university students aged 17 and above. Because the app processes financial transactions, it carries a 17+ age rating on the App Store and Google Play. We do not knowingly collect data from children under 13. If you believe a child has created an account, please contact us and we will delete it promptly.`,
   },
   {
     title: '10. Changes to This Policy',

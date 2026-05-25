@@ -264,20 +264,20 @@ export default function WalletPage() {
       <div className="mx-4 mb-4">
         <div
           className="rounded-2xl p-6 relative overflow-hidden shadow-lg shadow-black/30"
-          style={{ background: '#ffffff' }}
+          style={{ background: 'linear-gradient(135deg, #00d1ff 0%, #0080ff 100%)', boxShadow: '0 0 32px rgba(0,209,255,0.25)' }}
         >
-          <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-black/5" />
-          <div className="absolute -right-2 -bottom-8 w-16 h-16 rounded-full bg-black/[0.03]" />
+          <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/10" />
+          <div className="absolute -right-2 -bottom-8 w-16 h-16 rounded-full bg-white/[0.07]" />
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-2">
-              <Wallet className="w-5 h-5 text-black/60" />
-              <p className="text-black/60 text-sm">Available Balance</p>
+              <Wallet className="w-5 h-5 text-white/70" />
+              <p className="text-white/70 text-sm">Available Balance</p>
             </div>
-            <p className="text-4xl font-bold text-black mb-4">₦{balance.toLocaleString()}</p>
+            <p className="text-4xl font-bold text-white mb-4">₦{balance.toLocaleString()}</p>
             <button
               onClick={() => setShowWithdraw(true)}
               disabled={balance < 500}
-              className="flex items-center gap-1.5 bg-black/10 hover:bg-black/20 disabled:opacity-40 text-black text-xs font-semibold px-3.5 py-2 rounded-xl transition-colors"
+              className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 disabled:opacity-40 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition-colors"
             >
               <Banknote className="w-3.5 h-3.5" aria-hidden="true" />
               Withdraw to Bank

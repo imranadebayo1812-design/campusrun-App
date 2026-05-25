@@ -6,6 +6,7 @@ import { MOCK_VENDORS } from '@/lib/mockData';
 import { isOrderingOpen, orderingClosedMessage } from '@/lib/restaurantHours';
 import { ChevronRight, Package, AlertCircle, Wallet } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { SkeletonVendor } from '@/components/ui/SkeletonCard';
 
 // Metadata-only lookup — emoji/color/zone not stored in DB
 const VENDOR_META = Object.fromEntries(MOCK_VENDORS.map(v => [v.name, v]));
@@ -211,12 +212,12 @@ export default function HomePage() {
         </div>
         <div className="grid grid-cols-2 gap-3" style={!open ? { opacity: 0.45, pointerEvents: 'none', userSelect: 'none' } : undefined}>
           {vendorsLoading
-            ? [1,2,3,4,5,6].map(i => <div key={i} className="h-28 bg-surface-900 rounded-2xl animate-pulse border border-white/[0.06]" />)
+            ? [1,2,3,4,5,6].map(i => <SkeletonVendor key={i} />)
             : vendors.map(vendor => (
             <button
               key={vendor.id}
               onClick={() => openVendor(vendor)}
-              className="bg-surface-900 border border-white/[0.08] rounded-2xl p-4 text-left active:scale-[0.97] transition-transform"
+              className="bg-surface-800 border border-white/[0.06] rounded-2xl p-4 text-left active:scale-[0.97] transition-all hover:border-brand-500/20 hover:shadow-[0_0_16px_rgba(0,209,255,0.08)]"
             >
               <div className={`w-10 h-10 ${vendor.color} rounded-xl flex items-center justify-center mb-3 text-lg`}>
                 {vendor.emoji}
@@ -225,7 +226,7 @@ export default function HomePage() {
               <p className="text-xs text-gray-500 mt-0.5 truncate">{vendor.zone}</p>
               {vendor.items?.[0] && (
                 <p className="text-xs text-gray-600 mt-2 truncate">
-                  {vendor.items[0].name} · <span className="text-gray-500">₦{vendor.items[0].price.toLocaleString()}</span>
+                  {vendor.items[0].name} · <span className="text-brand-400/70">₦{vendor.items[0].price.toLocaleString()}</span>
                 </p>
               )}
             </button>

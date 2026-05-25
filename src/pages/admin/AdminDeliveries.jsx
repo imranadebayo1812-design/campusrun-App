@@ -50,7 +50,7 @@ function AssignCourierModal({ delivery, onClose, onAssigned }) {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}>
-      <div className="bg-[#0a0a0a] border border-white/[0.08] rounded-2xl w-full max-w-md overflow-hidden max-h-[80vh] flex flex-col">
+      <div className="bg-[#111827] border border-white/[0.08] rounded-2xl w-full max-w-md overflow-hidden max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] shrink-0">
           <div>
             <p className="font-bold text-white">Assign Courier</p>
@@ -110,7 +110,7 @@ function DeliveryDetailModal({ delivery, onClose, onStatusChange }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
-      <div className="bg-[#0a0a0a] border border-white/[0.08] rounded-2xl w-full max-w-lg overflow-hidden">
+      <div className="bg-[#111827] border border-white/[0.08] rounded-2xl w-full max-w-lg overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
           <div>

@@ -63,24 +63,27 @@ export default function ReferralPage() {
       <div className="mx-4 mb-5">
         <div
           className="rounded-2xl p-5 relative overflow-hidden"
-          style={{ background: '#ffffff' }}
+          style={{
+            background: 'linear-gradient(135deg, #00d1ff 0%, #0080ff 100%)',
+            boxShadow: '0 0 32px rgba(0,209,255,0.3)',
+          }}
         >
-          <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full bg-black/5" />
-          <div className="absolute -left-4 -bottom-8 w-28 h-28 rounded-full bg-black/[0.03]" />
-          <p className="text-xs font-bold text-black/50 uppercase tracking-wider mb-3 relative z-10">Your Referral Code</p>
+          <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full bg-white/10" />
+          <div className="absolute -left-4 -bottom-8 w-28 h-28 rounded-full bg-white/5" />
+          <p className="text-xs font-bold text-white/60 uppercase tracking-wider mb-3 relative z-10">Your Referral Code</p>
           <div className="flex items-center gap-3 mb-3 relative z-10">
-            <p className="text-4xl font-black text-black tracking-widest">{code}</p>
+            <p className="text-4xl font-black text-white tracking-widest">{code}</p>
             <button
               onClick={copyCode}
               aria-label="Copy referral code"
-              className="flex items-center gap-1.5 bg-black/10 hover:bg-black/20 text-black text-xs font-semibold px-3 py-2 rounded-xl transition-colors"
+              className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-colors"
             >
               {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
               {copied ? 'Copied!' : 'Copy'}
             </button>
           </div>
-          <p className="text-xs text-black/40 relative z-10">
-            Tell your friend to enter this code in the <span className="text-black/70 font-semibold">Referral Code</span> field when signing up
+          <p className="text-xs text-white/50 relative z-10">
+            Tell your friend to enter this code in the <span className="text-white/80 font-semibold">Referral Code</span> field when signing up
           </p>
         </div>
       </div>

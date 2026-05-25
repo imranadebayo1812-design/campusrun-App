@@ -477,7 +477,7 @@ export default function CourierEarningsPage() {
         </div>
 
         {/* Delivery Earnings card */}
-        <div className="rounded-2xl p-5 overflow-hidden shadow-lg shadow-black/30" style={{ background: 'linear-gradient(135deg, #141414 0%, #0a0a0a 100%)', border: '1px solid rgba(255,255,255,0.1)' }}>
+        <div className="rounded-2xl p-5 overflow-hidden shadow-lg shadow-black/30" style={{ background: 'linear-gradient(135deg, #00d1ff 0%, #0080ff 100%)', boxShadow: '0 0 28px rgba(0,209,255,0.25)' }}>
           <div className="flex items-start justify-between mb-3">
             <p className="text-xs font-bold text-white/70 uppercase tracking-wider">Delivery Earnings</p>
             <span className="text-xs bg-white/20 text-white font-semibold px-2.5 py-1 rounded-full">15% COMMISSION</span>
@@ -520,7 +520,7 @@ export default function CourierEarningsPage() {
             onClick={() => setModal('earnings')}
             disabled={frozen || availableEarnings === 0}
             className="flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold text-white disabled:opacity-40"
-            style={{ background: 'linear-gradient(135deg, #1c1c1c 0%, #0f0f0f 100%)', border: '1px solid rgba(255,255,255,0.12)' }}
+            style={{ background: 'linear-gradient(135deg, #00d1ff 0%, #0080ff 100%)', boxShadow: '0 0 16px rgba(0,209,255,0.3)' }}
           >
             <Banknote className="w-4 h-4" aria-hidden="true" />
             Withdraw Earnings

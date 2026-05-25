@@ -181,7 +181,7 @@ export default function CampusMapPage() {
                         <button
                           key={v.id}
                           onClick={() => navigate('/create-order', { state: { type: 'purchase', vendor: v.zone, vendorId: v.id } })}
-                          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '3px 0', fontSize: 12, color: '#e5e5e5', cursor: 'pointer', background: 'none', border: 'none' }}
+                          style={{ display: 'block', width: '100%', textAlign: 'left', padding: '3px 0', fontSize: 12, color: '#00d1ff', cursor: 'pointer', background: 'none', border: 'none' }}
                         >
                           {v.emoji} {v.name}
                         </button>

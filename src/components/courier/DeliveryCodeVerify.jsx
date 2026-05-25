@@ -20,7 +20,7 @@ export default function DeliveryCodeVerify({ delivery, onSuccess, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}>
-      <div className="w-full max-w-sm rounded-2xl p-5 space-y-4 border border-white/10" style={{ backgroundColor: '#0a0a0a' }}>
+      <div className="w-full max-w-sm rounded-2xl p-5 space-y-4 border border-white/10" style={{ backgroundColor: '#111827' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-brand-400" />

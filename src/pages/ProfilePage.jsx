@@ -159,7 +159,7 @@ export default function ProfilePage() {
       <div className="mx-4 mb-5">
         <div
           className="rounded-2xl p-5 relative overflow-hidden flex items-center gap-4 shadow-lg shadow-black/30"
-          style={{ background: 'linear-gradient(135deg, #141414 0%, #0a0a0a 100%)', border: '1px solid rgba(255,255,255,0.1)' }}
+          style={{ background: 'linear-gradient(135deg, #161f2e 0%, #0b0f19 100%)', border: '1px solid rgba(0,209,255,0.15)', boxShadow: '0 0 24px rgba(0,209,255,0.08)' }}
         >
           <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/10" />
           <div className="relative w-14 h-14 shrink-0">
@@ -287,7 +287,7 @@ export default function ProfilePage() {
       <div className="mx-4 mb-4">
         <div
           className="rounded-2xl p-4 relative overflow-hidden flex items-center gap-3"
-          style={{ background: 'linear-gradient(135deg, #141414 0%, #0a0a0a 100%)', border: '1px solid rgba(255,255,255,0.1)' }}
+          style={{ background: 'linear-gradient(135deg, #161f2e 0%, #111827 100%)', border: '1px solid rgba(0,209,255,0.12)' }}
         >
           <div className="absolute -right-3 -bottom-3 w-20 h-20 rounded-full bg-white/10" />
           <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">

@@ -9,7 +9,7 @@
     padding: 0;
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
-    background-color: #000000;
+    background-color: #0b0f19;
     color: white;
   }
 
@@ -24,20 +24,43 @@
 }
 
 @layer utilities {
-  .safe-top { padding-top: env(safe-area-inset-top); }
+  .safe-top    { padding-top: env(safe-area-inset-top); }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
-  .pb-nav { padding-bottom: calc(4rem + env(safe-area-inset-bottom)); }
-  .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); }
-  .app-shell { height: 100vh; height: 100svh; }
+  .pb-nav      { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)); }
+  .app-shell   { height: 100vh; height: 100svh; }
 
-  /* Ivory & Ink: brand-500 is white — elements with white backgrounds need dark text.
-     Compound selectors (.a.b) have higher specificity than single-class utilities (.text-white),
-     so these rules win within the utilities layer regardless of declaration order. */
-  .bg-brand-500,
-  .from-brand-500.to-indigo-600,
-  .from-brand-500.to-indigo-700,
-  .from-brand-500.to-brand-600,
-  .from-brand-500.to-brand-700 {
-    color: #000000;
+  /* Glassmorphism */
+  .glass {
+    background: rgba(17, 24, 39, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
+  .glass-card {
+    background: rgba(22, 31, 46, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 209, 255, 0.08);
+  }
+
+  /* Cyan glow utilities */
+  .glow-cyan    { box-shadow: 0 0 20px rgba(0, 209, 255, 0.35); }
+  .glow-cyan-sm { box-shadow: 0 0 10px rgba(0, 209, 255, 0.25); }
+  .glow-cyan-xs { box-shadow: 0 0 6px  rgba(0, 209, 255, 0.20); }
+
+  /* Skeleton shimmer */
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      #161f2e 0%,
+      #1e2d40 50%,
+      #161f2e 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }

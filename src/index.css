@@ -9,7 +9,7 @@
     padding: 0;
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
-    background-color: #0f0f1a;
+    background-color: #000000;
     color: white;
   }
 
@@ -29,4 +29,15 @@
   .pb-nav { padding-bottom: calc(4rem + env(safe-area-inset-bottom)); }
   .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); }
   .app-shell { height: 100vh; height: 100svh; }
+
+  /* Ivory & Ink: brand-500 is white — elements with white backgrounds need dark text.
+     Compound selectors (.a.b) have higher specificity than single-class utilities (.text-white),
+     so these rules win within the utilities layer regardless of declaration order. */
+  .bg-brand-500,
+  .from-brand-500.to-indigo-600,
+  .from-brand-500.to-indigo-700,
+  .from-brand-500.to-brand-600,
+  .from-brand-500.to-brand-700 {
+    color: #000000;
+  }
 }

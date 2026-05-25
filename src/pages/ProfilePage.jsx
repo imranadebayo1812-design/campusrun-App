@@ -159,7 +159,7 @@ export default function ProfilePage() {
       <div className="mx-4 mb-5">
         <div
           className="rounded-2xl p-5 relative overflow-hidden flex items-center gap-4 shadow-lg shadow-black/30"
-          style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 60%, #2563eb 100%)' }}
+          style={{ background: 'linear-gradient(135deg, #141414 0%, #0a0a0a 100%)', border: '1px solid rgba(255,255,255,0.1)' }}
         >
           <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full bg-white/10" />
           <div className="relative w-14 h-14 shrink-0">
@@ -287,11 +287,11 @@ export default function ProfilePage() {
       <div className="mx-4 mb-4">
         <div
           className="rounded-2xl p-4 relative overflow-hidden flex items-center gap-3"
-          style={{ background: 'linear-gradient(135deg, #6d28d9 0%, #4338ca 100%)' }}
+          style={{ background: 'linear-gradient(135deg, #141414 0%, #0a0a0a 100%)', border: '1px solid rgba(255,255,255,0.1)' }}
         >
           <div className="absolute -right-3 -bottom-3 w-20 h-20 rounded-full bg-white/10" />
           <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-            <Star className="w-5 h-5 text-yellow-300" aria-hidden="true" />
+            <Star className="w-5 h-5 text-white" aria-hidden="true" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">

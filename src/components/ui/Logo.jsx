@@ -7,7 +7,7 @@ export default function Logo({ size = 40, className = '' }) {
       <img
         src="/logo.png"
         alt="CampusRun"
-        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+        style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'grayscale(1)' }}
       />
     </div>
   );

@@ -25,7 +25,7 @@ export default function MobileShell({ children }) {
     <div className="app-shell flex flex-col max-w-md mx-auto bg-surface-950 shadow-2xl relative overflow-x-hidden">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[999] focus:bg-brand-500 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-semibold"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[999] focus:bg-brand-500 focus:text-black focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-semibold"
       >
         Skip to main content
       </a>
@@ -48,8 +48,8 @@ export default function MobileShell({ children }) {
                   isCourier ? 'translate-x-[calc(100%+4px)]' : 'translate-x-0.5'
                 }`}
               />
-              <span className={`relative z-10 px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${!isCourier ? 'text-white' : 'text-gray-500'}`}>Buyer</span>
-              <span className={`relative z-10 px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${isCourier ? 'text-white' : 'text-gray-500'}`}>Courier</span>
+              <span className={`relative z-10 px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${!isCourier ? 'text-black' : 'text-gray-500'}`}>Buyer</span>
+              <span className={`relative z-10 px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${isCourier ? 'text-black' : 'text-gray-500'}`}>Courier</span>
             </button>
           </div>
         )}

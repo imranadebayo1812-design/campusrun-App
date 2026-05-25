@@ -88,7 +88,7 @@ export default function BottomNav() {
             className="w-13 h-13 bg-brand-500 hover:bg-brand-600 active:scale-95 rounded-full flex items-center justify-center shadow-lg shadow-brand-500/40 transition-all -mt-6"
             style={{ width: 52, height: 52 }}
           >
-            <Plus className="w-6 h-6 text-white" strokeWidth={2.5} aria-hidden="true" />
+            <Plus className="w-6 h-6 text-black" strokeWidth={2.5} aria-hidden="true" />
           </button>
           <span className="text-xs font-medium text-gray-500 mt-1" aria-hidden="true">New</span>
         </div>

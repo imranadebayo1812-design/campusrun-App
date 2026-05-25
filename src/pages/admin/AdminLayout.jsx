@@ -34,7 +34,7 @@ export default function AdminLayout() {
   const currentPage = NAV.find(n => n.end ? location.pathname === n.to : location.pathname.startsWith(n.to));
 
   return (
-    <div className="flex h-screen bg-[#080812] overflow-hidden font-sans">
+    <div className="flex h-screen bg-black overflow-hidden font-sans">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-20 bg-black/60 md:hidden" onClick={() => setSidebarOpen(false)} />

@@ -7,12 +7,12 @@ import {
 } from 'recharts';
 import { TrendingUp, DollarSign, Package, Users, RefreshCw, Download } from 'lucide-react';
 
-const COLORS = ['#7c3aed', '#4f46e5', '#2563eb', '#0891b2', '#059669'];
+const COLORS = ['#ffffff', '#d4d4d4', '#a3a3a3', '#737373', '#4b5563'];
 
 function CustomTooltip({ active, payload, label, prefix = '' }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#0d0d1f] border border-white/[0.10] rounded-xl px-3 py-2.5 shadow-xl">
+    <div className="bg-[#0a0a0a] border border-white/[0.10] rounded-xl px-3 py-2.5 shadow-xl">
       <p className="text-xs text-gray-400 mb-1">{label}</p>
       {payload.map((p, i) => (
         <p key={i} className="text-sm font-semibold" style={{ color: p.color }}>
@@ -205,8 +205,8 @@ export default function AdminReports() {
               />
               <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} width={40} />
               <Tooltip content={<CustomTooltip />} />
-              <Line type="monotone" dataKey="net_income" stroke="#7c3aed" strokeWidth={2} dot={false} name="Net Income (₦)" />
-              <Line type="monotone" dataKey="orders" stroke="#2563eb" strokeWidth={2} dot={false} name="Orders" />
+              <Line type="monotone" dataKey="net_income" stroke="#ffffff" strokeWidth={2} dot={false} name="Net Income (₦)" />
+              <Line type="monotone" dataKey="orders" stroke="#a3a3a3" strokeWidth={2} dot={false} name="Orders" />
             </LineChart>
           </ResponsiveContainer>
         )}
@@ -231,7 +231,7 @@ export default function AdminReports() {
                 />
                 <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} width={25} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="deliveries_completed" fill="#7c3aed" radius={[3, 3, 0, 0]} name="Completed" />
+                <Bar dataKey="deliveries_completed" fill="#ffffff" radius={[3, 3, 0, 0]} name="Completed" />
               </BarChart>
             </ResponsiveContainer>
           )}

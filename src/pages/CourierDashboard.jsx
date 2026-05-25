@@ -377,16 +377,16 @@ function getEta(order) {
 
 const STATUS_NEXT = {
   placed:     { label: 'Mark as Bought',       next: 'bought',     color: 'from-blue-600 to-blue-700' },
-  bought:     { label: 'Mark On The Way',      next: 'on_the_way', color: 'from-brand-500 to-indigo-600' },
-  on_the_way: { label: 'Mark as Arrived',      next: 'arrived',    color: 'from-indigo-600 to-indigo-700' },
+  bought:     { label: 'Mark On The Way',      next: 'on_the_way', color: 'from-neutral-600 to-neutral-700' },
+  on_the_way: { label: 'Mark as Arrived',      next: 'arrived',    color: 'from-neutral-700 to-neutral-800' },
   arrived:    { label: 'Verify Delivery Code', next: 'delivered',  color: 'from-green-600 to-green-700', requiresCode: true },
 };
 
 const STATUS_BADGE = {
   placed:     'text-yellow-400 bg-yellow-400/10',
   bought:     'text-blue-400 bg-blue-400/10',
-  on_the_way: 'text-brand-400 bg-brand-400/10',
-  arrived:    'text-indigo-400 bg-indigo-400/10',
+  on_the_way: 'text-gray-200 bg-white/10',
+  arrived:    'text-gray-300 bg-white/[0.08]',
 };
 
 const STATUS_LABEL = {

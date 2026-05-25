@@ -17,6 +17,8 @@ export default function App() {
 
   // confirm subdomain — always show the confirmation page
   if (window.location.hostname === 'confirm.campusrun.online') return <AuthConfirmPage />;
+  // reset subdomain — always show the password reset page
+  if (window.location.hostname === 'reset.campusrun.online') return <ResetPasswordPage />;
 
   // Public routes — no auth required, always render directly
   if (location.pathname === '/privacy') return <PrivacyPolicyPage />;

@@ -287,27 +287,6 @@ function UserDetailModal({ user, onClose, onUpdate }) {
                 </button>
               </div>
 
-              {/* Toggle admin — hidden for the owner account */}
-              {user.email !== OWNER_EMAIL && (
-              <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
-                <p className="text-sm font-medium text-white mb-1">Admin Access</p>
-                <p className="text-xs text-gray-500 mb-3">
-                  {profile?.is_admin ? 'This user has admin access.' : 'Grant admin access to this user.'}
-                </p>
-                <button
-                  onClick={toggleAdmin}
-                  disabled={actionLoading}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50 transition-all ${
-                    profile?.is_admin
-                      ? 'bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20'
-                      : 'bg-yellow-500/15 text-yellow-400 hover:bg-yellow-500/25 border border-yellow-500/20'
-                  }`}
-                >
-                  <Shield className="w-4 h-4" />
-                  {profile?.is_admin ? 'Revoke Admin' : 'Grant Admin'}
-                </button>
-              </div>
-              )}
 
               {/* Blacklist */}
               <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">

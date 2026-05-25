@@ -30,24 +30,29 @@ function jwtPayload(token: string): Record<string, unknown> {
 
 function baseTemplate(body: string) {
   return `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#0f0f1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f1a;padding:32px 16px;">
+<body style="margin:0;padding:0;background:#0b0f19;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0b0f19;padding:40px 16px;">
     <tr><td align="center">
-      <table width="100%" style="max-width:480px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
         <!-- Logo -->
-        <tr><td style="padding-bottom:24px;text-align:center;">
-          <span style="font-size:22px;font-weight:800;color:#7c3aed;letter-spacing:-0.5px;">CampusRun</span>
-          <span style="font-size:11px;color:#6b7280;display:block;margin-top:2px;">Campus Deliveries · Nile University</span>
+        <tr><td style="padding-bottom:28px;text-align:center;">
+          <table cellpadding="0" cellspacing="0" style="display:inline-table;">
+            <tr><td style="background:linear-gradient(135deg,#00d1ff 0%,#0080ff 100%);border-radius:14px;padding:10px 22px;">
+              <span style="font-size:20px;font-weight:800;color:#0b0f19;letter-spacing:-0.5px;">CampusRun</span>
+            </td></tr>
+          </table>
+          <span style="font-size:11px;color:#475569;display:block;margin-top:8px;">Campus Deliveries · Nile University</span>
         </td></tr>
         <!-- Card -->
-        <tr><td style="background:#1a1a2e;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px 24px;">
+        <tr><td style="background:#111827;border:1px solid rgba(0,209,255,0.15);border-radius:20px;padding:32px 28px;box-shadow:0 0 40px rgba(0,209,255,0.06);">
           ${body}
         </td></tr>
         <!-- Footer -->
-        <tr><td style="padding-top:20px;text-align:center;">
-          <p style="font-size:11px;color:#4b5563;margin:0;">© ${new Date().getFullYear()} CampusRun · support@campusrun.online · 08144009370</p>
+        <tr><td style="padding-top:24px;text-align:center;">
+          <p style="font-size:11px;color:#334155;margin:0;">© ${new Date().getFullYear()} CampusRun · Nile University, Abuja</p>
+          <p style="font-size:11px;color:#334155;margin:4px 0 0;">support@campusrun.online · 08144009370</p>
         </td></tr>
       </table>
     </td></tr>
@@ -60,23 +65,29 @@ function welcomeEmail(name: string, referralCode: string) {
   return {
     subject: `Welcome to CampusRun, ${h(name)}!`,
     html: baseTemplate(`
-      <h1 style="color:#fff;font-size:20px;font-weight:700;margin:0 0 8px;">Welcome, ${h(name)}! 👋</h1>
-      <p style="color:#9ca3af;font-size:14px;line-height:1.6;margin:0 0 20px;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="width:52px;height:52px;background:rgba(0,209,255,0.12);border-radius:50%;display:inline-block;line-height:52px;font-size:22px;">👋</div>
+      </div>
+      <h1 style="color:#f8fafc;font-size:22px;font-weight:700;margin:0 0 8px;text-align:center;">Welcome, ${h(name)}!</h1>
+      <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0 0 24px;text-align:center;">
         You're now part of CampusRun — the fastest way to get deliveries done at Nile University.
       </p>
-      <table width="100%" style="background:#111827;border-radius:12px;padding:16px;margin-bottom:20px;">
-        <tr><td style="color:#6b7280;font-size:12px;padding-bottom:4px;">How it works</td></tr>
-        <tr><td style="color:#e5e7eb;font-size:13px;padding:3px 0;">🏠 Browse vendors on the Home tab</td></tr>
-        <tr><td style="color:#e5e7eb;font-size:13px;padding:3px 0;">📦 Place your order in seconds</td></tr>
-        <tr><td style="color:#e5e7eb;font-size:13px;padding:3px 0;">📍 Track your runner in real-time</td></tr>
-        <tr><td style="color:#e5e7eb;font-size:13px;padding:3px 0;">💸 Pay with card or wallet balance</td></tr>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#161f2e;border:1px solid rgba(0,209,255,0.08);border-radius:14px;padding:16px;margin-bottom:20px;">
+        <tr><td style="color:#64748b;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;padding-bottom:10px;">How it works</td></tr>
+        <tr><td style="color:#e2e8f0;font-size:13px;padding:4px 0;">🏠&nbsp; Browse vendors on the Home tab</td></tr>
+        <tr><td style="color:#e2e8f0;font-size:13px;padding:4px 0;">📦&nbsp; Place your order in seconds</td></tr>
+        <tr><td style="color:#e2e8f0;font-size:13px;padding:4px 0;">📍&nbsp; Track your runner in real-time</td></tr>
+        <tr><td style="color:#e2e8f0;font-size:13px;padding:4px 0;">💸&nbsp; Pay with card or wallet balance</td></tr>
       </table>
       ${referralCode ? `
-      <table width="100%" style="background:#1e1b4b;border:1px solid rgba(124,58,237,0.2);border-radius:12px;padding:16px;margin-bottom:20px;">
-        <tr><td style="color:#a78bfa;font-size:12px;padding-bottom:6px;">Your referral code</td></tr>
-        <tr><td style="color:#fff;font-size:22px;font-weight:800;letter-spacing:4px;">${h(referralCode)}</td></tr>
-        <tr><td style="color:#6b7280;font-size:12px;padding-top:4px;">Earn ₦100 for every friend who joins</td></tr>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(0,209,255,0.06);border:1px solid rgba(0,209,255,0.2);border-radius:14px;padding:16px;margin-bottom:20px;">
+        <tr><td style="color:#00d1ff;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;padding-bottom:6px;">Your Referral Code</td></tr>
+        <tr><td style="color:#f8fafc;font-size:24px;font-weight:800;letter-spacing:6px;padding-bottom:4px;">${h(referralCode)}</td></tr>
+        <tr><td style="color:#64748b;font-size:12px;">Earn ₦100 for every friend who joins</td></tr>
       </table>` : ''}
+      <a href="https://app.campusrun.online" style="display:block;background:linear-gradient(135deg,#00d1ff 0%,#0080ff 100%);color:#0b0f19;text-decoration:none;text-align:center;padding:15px;border-radius:14px;font-weight:700;font-size:15px;box-shadow:0 0 24px rgba(0,209,255,0.3);">
+        Start Ordering →
+      </a>
     `),
   };
 }
@@ -85,28 +96,31 @@ function topupReceiptEmail(name: string, amount: number, newBalance: number, ref
   return {
     subject: `Wallet credited: ₦${amount.toLocaleString()}`,
     html: baseTemplate(`
-      <h1 style="color:#fff;font-size:20px;font-weight:700;margin:0 0 4px;">Payment Confirmed</h1>
-      <p style="color:#9ca3af;font-size:14px;margin:0 0 20px;">Hi ${h(name)}, your wallet has been topped up.</p>
-      <table width="100%" style="background:#111827;border-radius:12px;padding:16px;margin-bottom:20px;border-collapse:collapse;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="width:52px;height:52px;background:rgba(0,209,255,0.12);border-radius:50%;display:inline-block;line-height:52px;font-size:22px;">💳</div>
+      </div>
+      <h1 style="color:#f8fafc;font-size:22px;font-weight:700;margin:0 0 6px;text-align:center;">Wallet Credited</h1>
+      <p style="color:#94a3b8;font-size:14px;margin:0 0 24px;text-align:center;">Hi ${h(name)}, your wallet has been topped up.</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#161f2e;border:1px solid rgba(0,209,255,0.08);border-radius:14px;padding:0 16px;margin-bottom:20px;">
         <tr>
-          <td style="color:#6b7280;font-size:13px;padding:6px 0;">Amount added</td>
-          <td style="color:#34d399;font-size:16px;font-weight:700;text-align:right;">+₦${amount.toLocaleString()}</td>
+          <td style="color:#64748b;font-size:13px;padding:12px 0;">Amount added</td>
+          <td style="color:#4ade80;font-size:18px;font-weight:700;text-align:right;padding:12px 0;">+₦${amount.toLocaleString()}</td>
         </tr>
-        <tr>
-          <td style="color:#6b7280;font-size:13px;padding:6px 0;border-top:1px solid rgba(255,255,255,0.06);">New balance</td>
-          <td style="color:#fff;font-size:14px;font-weight:600;text-align:right;border-top:1px solid rgba(255,255,255,0.06);">₦${newBalance.toLocaleString()}</td>
+        <tr style="border-top:1px solid rgba(255,255,255,0.06);">
+          <td style="color:#64748b;font-size:13px;padding:12px 0;">New balance</td>
+          <td style="color:#f8fafc;font-size:15px;font-weight:600;text-align:right;padding:12px 0;">₦${newBalance.toLocaleString()}</td>
         </tr>
-        <tr>
-          <td style="color:#6b7280;font-size:12px;padding:6px 0;">Reference</td>
-          <td style="color:#9ca3af;font-size:12px;font-family:monospace;text-align:right;">${h(reference)}</td>
+        <tr style="border-top:1px solid rgba(255,255,255,0.06);">
+          <td style="color:#64748b;font-size:12px;padding:10px 0;">Reference</td>
+          <td style="color:#94a3b8;font-size:11px;font-family:monospace;text-align:right;padding:10px 0;">${h(reference)}</td>
         </tr>
-        <tr>
-          <td style="color:#6b7280;font-size:12px;padding:6px 0;">Date</td>
-          <td style="color:#9ca3af;font-size:12px;text-align:right;">${new Date().toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+        <tr style="border-top:1px solid rgba(255,255,255,0.06);">
+          <td style="color:#64748b;font-size:12px;padding:10px 0;">Date</td>
+          <td style="color:#94a3b8;font-size:12px;text-align:right;padding:10px 0;">${new Date().toLocaleString('en-NG', { dateStyle: 'medium', timeStyle: 'short' })}</td>
         </tr>
       </table>
-      <p style="color:#6b7280;font-size:12px;text-align:center;margin:0;">
-        Not you? Contact us at support@campusrun.online
+      <p style="color:#475569;font-size:12px;text-align:center;margin:0;">
+        Not you? Contact us at <a href="mailto:support@campusrun.online" style="color:#00d1ff;text-decoration:none;">support@campusrun.online</a>
       </p>
     `),
   };
@@ -114,29 +128,32 @@ function topupReceiptEmail(name: string, amount: number, newBalance: number, ref
 
 function orderReceiptEmail(name: string, pickup: string, dropoff: string, total: number, deliveryId: string) {
   return {
-    subject: `Order confirmed - ₦${total.toLocaleString()}`,
+    subject: `Order confirmed — ₦${total.toLocaleString()}`,
     html: baseTemplate(`
-      <h1 style="color:#fff;font-size:20px;font-weight:700;margin:0 0 4px;">Order Confirmed</h1>
-      <p style="color:#9ca3af;font-size:14px;margin:0 0 20px;">Hi ${h(name)}, your order is confirmed. A runner will pick it up shortly.</p>
-      <table width="100%" style="background:#111827;border-radius:12px;padding:16px;margin-bottom:20px;border-collapse:collapse;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="width:52px;height:52px;background:rgba(0,209,255,0.12);border-radius:50%;display:inline-block;line-height:52px;font-size:22px;">📦</div>
+      </div>
+      <h1 style="color:#f8fafc;font-size:22px;font-weight:700;margin:0 0 6px;text-align:center;">Order Confirmed</h1>
+      <p style="color:#94a3b8;font-size:14px;margin:0 0 24px;text-align:center;">Hi ${h(name)}, your order is placed. A runner will pick it up shortly.</p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#161f2e;border:1px solid rgba(0,209,255,0.08);border-radius:14px;padding:0 16px;margin-bottom:20px;">
         <tr>
-          <td style="color:#6b7280;font-size:12px;padding:5px 0;">Pickup</td>
-          <td style="color:#fff;font-size:13px;font-weight:500;text-align:right;">${h(pickup)}</td>
+          <td style="color:#64748b;font-size:12px;padding:11px 0;">Pickup</td>
+          <td style="color:#f8fafc;font-size:13px;font-weight:500;text-align:right;padding:11px 0;">${h(pickup)}</td>
         </tr>
-        <tr>
-          <td style="color:#6b7280;font-size:12px;padding:5px 0;border-top:1px solid rgba(255,255,255,0.06);">Dropoff</td>
-          <td style="color:#fff;font-size:13px;font-weight:500;text-align:right;border-top:1px solid rgba(255,255,255,0.06);">${h(dropoff)}</td>
+        <tr style="border-top:1px solid rgba(255,255,255,0.06);">
+          <td style="color:#64748b;font-size:12px;padding:11px 0;">Dropoff</td>
+          <td style="color:#f8fafc;font-size:13px;font-weight:500;text-align:right;padding:11px 0;">${h(dropoff)}</td>
         </tr>
-        <tr>
-          <td style="color:#6b7280;font-size:12px;padding:5px 0;border-top:1px solid rgba(255,255,255,0.06);">Total paid</td>
-          <td style="color:#34d399;font-size:15px;font-weight:700;text-align:right;border-top:1px solid rgba(255,255,255,0.06);">₦${total.toLocaleString()}</td>
+        <tr style="border-top:1px solid rgba(255,255,255,0.06);">
+          <td style="color:#64748b;font-size:12px;padding:11px 0;">Total paid</td>
+          <td style="color:#4ade80;font-size:16px;font-weight:700;text-align:right;padding:11px 0;">₦${total.toLocaleString()}</td>
         </tr>
-        <tr>
-          <td style="color:#6b7280;font-size:12px;padding:5px 0;">Order ID</td>
-          <td style="color:#9ca3af;font-size:11px;font-family:monospace;text-align:right;">${h(deliveryId.slice(0, 8))}</td>
+        <tr style="border-top:1px solid rgba(255,255,255,0.06);">
+          <td style="color:#64748b;font-size:12px;padding:11px 0;">Order ID</td>
+          <td style="color:#94a3b8;font-size:11px;font-family:monospace;text-align:right;padding:11px 0;">${h(deliveryId.slice(0, 8)).toUpperCase()}</td>
         </tr>
       </table>
-      <a href="https://app.campusrun.online/track/${h(deliveryId)}" style="display:block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;text-align:center;padding:14px;border-radius:12px;font-weight:700;font-size:14px;">
+      <a href="https://app.campusrun.online/track/${h(deliveryId)}" style="display:block;background:linear-gradient(135deg,#00d1ff 0%,#0080ff 100%);color:#0b0f19;text-decoration:none;text-align:center;padding:15px;border-radius:14px;font-weight:700;font-size:15px;box-shadow:0 0 24px rgba(0,209,255,0.3);">
         Track My Order →
       </a>
     `),
@@ -147,21 +164,24 @@ function accountRestoredEmail(name: string) {
   return {
     subject: 'Your CampusRun account has been restored',
     html: baseTemplate(`
-      <h1 style="color:#fff;font-size:20px;font-weight:700;margin:0 0 8px;">Account Restored ✅</h1>
-      <p style="color:#9ca3af;font-size:14px;line-height:1.6;margin:0 0 20px;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="width:52px;height:52px;background:rgba(74,222,128,0.12);border-radius:50%;display:inline-block;line-height:52px;font-size:22px;">✅</div>
+      </div>
+      <h1 style="color:#f8fafc;font-size:22px;font-weight:700;margin:0 0 6px;text-align:center;">Account Restored</h1>
+      <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0 0 24px;text-align:center;">
         Hi ${h(name)}, your CampusRun account has been reviewed and access has been fully restored.
       </p>
-      <table width="100%" style="background:#111827;border-radius:12px;padding:16px;margin-bottom:20px;">
-        <tr><td style="color:#6b7280;font-size:12px;padding-bottom:8px;">Next steps</td></tr>
-        <tr><td style="color:#e5e7eb;font-size:13px;padding:3px 0;">1. Log in to CampusRun</td></tr>
-        <tr><td style="color:#e5e7eb;font-size:13px;padding:3px 0;">2. Complete your profile details</td></tr>
-        <tr><td style="color:#e5e7eb;font-size:13px;padding:3px 0;">3. Resume ordering as normal</td></tr>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#161f2e;border:1px solid rgba(0,209,255,0.08);border-radius:14px;padding:16px;margin-bottom:20px;">
+        <tr><td style="color:#64748b;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;padding-bottom:10px;">Next steps</td></tr>
+        <tr><td style="color:#e2e8f0;font-size:13px;padding:4px 0;">1.&nbsp; Log in to CampusRun</td></tr>
+        <tr><td style="color:#e2e8f0;font-size:13px;padding:4px 0;">2.&nbsp; Complete your profile details</td></tr>
+        <tr><td style="color:#e2e8f0;font-size:13px;padding:4px 0;">3.&nbsp; Resume ordering as normal</td></tr>
       </table>
-      <p style="color:#6b7280;font-size:13px;line-height:1.6;margin:0 0 20px;">
-        If you believe this was a mistake or have any questions, please contact us at
-        <a href="mailto:support@campusrun.online" style="color:#7c3aed;">support@campusrun.online</a>
+      <p style="color:#475569;font-size:13px;line-height:1.6;margin:0 0 20px;text-align:center;">
+        Questions? Contact us at
+        <a href="mailto:support@campusrun.online" style="color:#00d1ff;text-decoration:none;">support@campusrun.online</a>
       </p>
-      <a href="https://app.campusrun.online" style="display:block;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;text-decoration:none;text-align:center;padding:14px;border-radius:12px;font-weight:700;font-size:14px;">
+      <a href="https://app.campusrun.online" style="display:block;background:linear-gradient(135deg,#00d1ff 0%,#0080ff 100%);color:#0b0f19;text-decoration:none;text-align:center;padding:15px;border-radius:14px;font-weight:700;font-size:15px;box-shadow:0 0 24px rgba(0,209,255,0.3);">
         Log In to CampusRun →
       </a>
     `),

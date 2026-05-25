@@ -5,7 +5,7 @@ export const VF_ESTATE = new Set([
 ]);
 
 export const MH_ESTATE = new Set([
-  'Moat Heaven', 'Zambezi', 'Moat Orange', 'Black Volta', 'Red Volta',
+  'Moat Heaven', 'Zambezi', 'Moat Orange', 'Orange', 'Black Volta', 'Red Volta',
   'Blue Nile', 'Lake Chad', 'Moat Heaven Cafeteria',
 ]);
 

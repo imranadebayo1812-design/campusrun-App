@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { supabase } from '@/api/supabaseClient';
 import Logo from '@/components/ui/Logo';
 import { X } from 'lucide-react';
 
@@ -71,7 +72,7 @@ export default function LoginPage() {
   const { signIn, signUp } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [mode, setMode] = useState('login');
+  const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'forgot'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -81,6 +82,18 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  async function handleForgotPassword(e) {
+    e.preventDefault();
+    if (!email) { setError('Enter your email address.'); return; }
+    setLoading(true); setError('');
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://app.campusrun.online/reset-password',
+    });
+    setLoading(false);
+    if (error) { setError(error.message); return; }
+    setSuccess('Reset link sent! Check your email (and spam folder).');
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -138,27 +151,59 @@ export default function LoginPage() {
         </div>
 
         {/* Mode toggle */}
-        <div className="flex bg-surface-900 rounded-2xl p-1 mb-6 border border-white/[0.08]">
-          <button
-            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-              mode === 'login' ? 'bg-brand-500 text-white shadow-lg' : 'text-gray-400'
-            }`}
-            onClick={() => { setMode('login'); setError(''); setSuccess(''); }}
-          >
-            Log In
-          </button>
-          <button
-            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-              mode === 'signup' ? 'bg-brand-500 text-white shadow-lg' : 'text-gray-400'
-            }`}
-            onClick={() => { setMode('signup'); setError(''); setSuccess(''); }}
-          >
-            Sign Up
-          </button>
-        </div>
+        {mode !== 'forgot' && (
+          <div className="flex bg-surface-900 rounded-2xl p-1 mb-6 border border-white/[0.08]">
+            <button
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                mode === 'login' ? 'bg-brand-500 text-white shadow-lg' : 'text-gray-400'
+              }`}
+              onClick={() => { setMode('login'); setError(''); setSuccess(''); }}
+            >
+              Log In
+            </button>
+            <button
+              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                mode === 'signup' ? 'bg-brand-500 text-white shadow-lg' : 'text-gray-400'
+              }`}
+              onClick={() => { setMode('signup'); setError(''); setSuccess(''); }}
+            >
+              Sign Up
+            </button>
+          </div>
+        )}
 
         {/* Card */}
         <div className="bg-surface-900 rounded-2xl border border-white/[0.08] p-6 space-y-4">
+
+          {/* Forgot password form */}
+          {mode === 'forgot' && (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div>
+                <p className="text-base font-bold text-white mb-1">Reset Password</p>
+                <p className="text-xs text-gray-500 mb-4">Enter your email and we'll send a reset link.</p>
+                <label htmlFor="forgot-email" className="block text-sm font-medium text-gray-300 mb-1.5">Email</label>
+                <input
+                  id="forgot-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                />
+              </div>
+              {error && <div role="alert" className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3">{error}</div>}
+              {success && <div role="status" className="bg-green-500/10 border border-green-500/30 text-green-400 text-sm rounded-xl px-4 py-3">{success}</div>}
+              <button type="submit" disabled={loading} className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 disabled:opacity-40 text-white font-bold py-3.5 rounded-xl text-sm">
+                {loading ? 'Sending…' : 'Send Reset Link'}
+              </button>
+              <button type="button" onClick={() => { setMode('login'); setError(''); setSuccess(''); }} className="w-full text-sm text-gray-500 hover:text-gray-300 py-1">
+                Back to Log In
+              </button>
+            </form>
+          )}
+
+          {mode !== 'forgot' && (
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'signup' && (
               <div>
@@ -272,7 +317,14 @@ export default function LoginPage() {
             >
               {loading ? 'Please wait…' : mode === 'login' ? 'Log In' : 'Create Account'}
             </button>
+
+            {mode === 'login' && (
+              <button type="button" onClick={() => { setMode('forgot'); setError(''); setSuccess(''); }} className="w-full text-sm text-gray-500 hover:text-gray-300 text-center py-1">
+                Forgot password?
+              </button>
+            )}
           </form>
+          )}
 
           {mode === 'signup' && (
             <p className="text-xs text-gray-500 text-center">

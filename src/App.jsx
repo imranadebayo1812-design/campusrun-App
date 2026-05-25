@@ -9,6 +9,7 @@ import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import WelcomePage from '@/pages/WelcomePage';
 import AuthConfirmPage from '@/pages/AuthConfirmPage';
 import ResetPasswordPage from '@/pages/ResetPasswordPage';
+import ThemePreviewPage from '@/pages/ThemePreviewPage';
 import { ToastProvider } from '@/context/ToastContext';
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
   if (location.pathname === '/privacy') return <PrivacyPolicyPage />;
   if (location.pathname === '/auth/confirm') return <AuthConfirmPage />;
   if (location.pathname === '/reset-password') return <ResetPasswordPage />;
+  if (location.pathname === '/theme-preview') return <ThemePreviewPage />;
 
   // /welcome: only keep if still loading OR user just finished onboarding (has nav state)
   // If fully authenticated + onboarded with no onboarding state, redirect home

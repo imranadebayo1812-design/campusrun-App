@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Anthropic from 'npm:@anthropic-ai/sdk';
 
 const CORS_HEADERS = {
@@ -31,6 +32,28 @@ serve(async (req) => {
     return new Response('Method not allowed', { status: 405, headers: CORS_HEADERS });
   }
 
+  // Require a valid Supabase user session
+  const authHeader = req.headers.get('Authorization') ?? '';
+  if (!authHeader.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const anonKey    = Deno.env.get('SUPABASE_ANON_KEY')!;
+  const userClient = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: { user }, error: authErr } = await userClient.auth.getUser();
+  if (authErr || !user) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const { messages } = await req.json();
 
@@ -55,7 +78,7 @@ serve(async (req) => {
       model: 'claude-haiku-4-5',
       max_tokens: 512,
       system: SYSTEM_PROMPT,
-      messages: messages.slice(-10), // keep last 10 turns to stay within limits
+      messages: messages.slice(-10),
     });
 
     const text = response.content[0]?.type === 'text' ? response.content[0].text : '';

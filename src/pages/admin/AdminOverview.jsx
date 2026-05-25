@@ -82,12 +82,12 @@ export default function AdminOverview() {
         .select('id, full_name, email, created_at, is_courier')
         .order('created_at', { ascending: false }).limit(6),
       // Platform revenue: service fees on paid non-cancelled orders
-      supabase.from('deliveries').select('service_fee').eq('payment_verified', true).neq('status', 'cancelled'),
-      supabase.from('deliveries').select('service_fee').eq('payment_verified', true).neq('status', 'cancelled').gte('created_at', monthStart),
+      supabase.from('deliveries').select('service_fee').eq('payment_verified', true).neq('status', 'cancelled').limit(50000),
+      supabase.from('deliveries').select('service_fee').eq('payment_verified', true).neq('status', 'cancelled').gte('created_at', monthStart).limit(50000),
       // Commission: 15% kept from courier earnings transfers
-      supabase.from('courier_withdrawals').select('commission').eq('status', 'completed').eq('type', 'earnings'),
+      supabase.from('courier_withdrawals').select('commission').eq('status', 'completed').eq('type', 'earnings').limit(50000),
       // Tips collected (all time)
-      supabase.from('deliveries').select('tip').eq('status', 'delivered').gt('tip', 0),
+      supabase.from('deliveries').select('tip').eq('status', 'delivered').gt('tip', 0).limit(50000),
     ]);
 
     const revenueToday   = (revenueRows || []).reduce((s, d) => s + (d.total_amount || 0), 0);

@@ -327,13 +327,13 @@ export default function TrackingPage() {
     return () => clearInterval(id);
   }, [delivery?.courier_accepted, delivery?.accepted_at, delivery?.created_at]);
 
-  // Tick every 10s so hostel-fallback age threshold is re-evaluated reactively
+  // Tick every 90s so hostel-fallback age threshold is re-evaluated reactively
   useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 10000);
+    const id = setInterval(() => setTick(t => t + 1), 90000);
     return () => clearInterval(id);
   }, []);
 
-  // Repeat in-app notification every 5s while buyer has a pending action to confirm
+  // Remind buyer every 90s while they have a pending action (price edit or off-campus approval)
   useEffect(() => {
     if (!delivery) return;
     const orderAgeS = (Date.now() - new Date(delivery.created_at)) / 1000;
@@ -346,26 +346,24 @@ export default function TrackingPage() {
     const hasPending = delivery.price_edit_flag || needsHostelFallback;
     if (!hasPending) return;
 
-    // Send one real push notification (DB insert triggers send-push webhook)
-    supabase.from('notifications').insert({
-      user_id: session.user.id,
-      type: delivery?.price_edit_flag ? 'price_edit' : 'no_runner',
-      title: 'Action Required',
-      body: delivery?.price_edit_flag
-        ? 'Your runner updated item prices. Tap to review.'
-        : 'No hostel runner found yet. Tap to allow an off-campus runner.',
-      read: false,
-    }).then(() => {});
-
     function fire() {
-      if (delivery?.price_edit_flag) {
-        addNotification({ title: 'Action Required', body: 'Your runner updated item prices. Tap to review.', type: 'warning' });
-      } else {
-        addNotification({ title: 'Action Required', body: 'No hostel runner found. Tap to allow an off-campus runner.', type: 'warning' });
-      }
+      const isPriceEdit = delivery?.price_edit_flag;
+      const title = 'Action Required';
+      const body = isPriceEdit
+        ? 'Your runner updated item prices. Tap to review.'
+        : 'No hostel runner found. Tap to allow an off-campus runner.';
+      supabase.from('notifications').insert({
+        user_id: session.user.id,
+        type: isPriceEdit ? 'price_edit' : 'no_runner',
+        title,
+        body,
+        read: false,
+      }).then(() => {});
+      addNotification({ title, body, type: 'warning' });
     }
+
     fire();
-    const id = setInterval(fire, 5000);
+    const id = setInterval(fire, 90000);
     return () => clearInterval(id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [delivery?.price_edit_flag, delivery?.allow_offcampus, delivery?.courier_id, delivery?.status, tick]);

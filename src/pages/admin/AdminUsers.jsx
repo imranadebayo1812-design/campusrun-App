@@ -7,6 +7,8 @@ import {
   Wallet, Package, Trash2, BookOpen, Home,
 } from 'lucide-react';
 
+const OWNER_EMAIL = 'imranadebayo1812@gmail.com';
+
 function UserDetailModal({ user, onClose, onUpdate }) {
   const [profile, setProfile] = useState(null);
   const [deliveries, setDeliveries] = useState([]);
@@ -285,7 +287,8 @@ function UserDetailModal({ user, onClose, onUpdate }) {
                 </button>
               </div>
 
-              {/* Toggle admin */}
+              {/* Toggle admin — hidden for the owner account */}
+              {user.email !== OWNER_EMAIL && (
               <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
                 <p className="text-sm font-medium text-white mb-1">Admin Access</p>
                 <p className="text-xs text-gray-500 mb-3">
@@ -304,6 +307,7 @@ function UserDetailModal({ user, onClose, onUpdate }) {
                   {profile?.is_admin ? 'Revoke Admin' : 'Grant Admin'}
                 </button>
               </div>
+              )}
 
               {/* Blacklist */}
               <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">

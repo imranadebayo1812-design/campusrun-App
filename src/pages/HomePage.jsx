@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
 import { MOCK_VENDORS } from '@/lib/mockData';
@@ -49,6 +50,7 @@ const ACTIVE_STATUSES = ['placed', 'bought', 'on_the_way', 'arrived'];
 export default function HomePage() {
   const navigate = useNavigate();
   const { profile, session } = useAuth();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(() => isOrderingOpen());
   const [activeOrders, setActiveOrders] = useState([]);
   const [vendors, setVendors] = useState([]);
@@ -96,6 +98,26 @@ export default function HomePage() {
     }
     loadVendors();
   }, []);
+
+  // Prefetch vendor menus so CreateDeliveryPage opens instantly
+  useEffect(() => {
+    if (!vendors.length || vendorsLoading) return;
+    vendors.forEach(vendor => {
+      queryClient.prefetchQuery({
+        queryKey: ['menu', vendor.name],
+        queryFn: async () => {
+          const [{ data: cats }, { data: items }] = await Promise.all([
+            supabase.from('menu_categories').select('id, name, display_order')
+              .eq('vendor_name', vendor.name).order('display_order'),
+            supabase.from('menu_items').select('id, name, price, is_available, category_id')
+              .eq('vendor_name', vendor.name).order('name'),
+          ]);
+          return { cats: cats || [], items: items || [] };
+        },
+        staleTime: 5 * 60 * 1000,
+      });
+    });
+  }, [vendors, vendorsLoading, queryClient]);
 
   useEffect(() => {
     if (!session?.user?.id) return;

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { MOCK_VENDORS } from '@/lib/mockData';
@@ -273,9 +274,6 @@ export default function CreateDeliveryPage() {
   const [itemDescription, setItemDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [dbMenu, setDbMenu] = useState(null);
-  const [menuLoading, setMenuLoading] = useState(false);
-
   // Vendor meta (emoji/zone) from MOCK_VENDORS; items come from DB
   const pickerMeta = !vendorMeta && pickupLocation
     ? MOCK_VENDORS.find(v => v.name === pickupLocation) ?? null
@@ -283,39 +281,36 @@ export default function CreateDeliveryPage() {
   const activeVendorMeta = vendorMeta || pickerMeta;
   const activeVendorName = activeVendorMeta?.name || null;
 
-  // Merge DB menu data onto vendor metadata
-  const activeVendor = activeVendorMeta
-    ? { ...activeVendorMeta, ...(dbMenu || {}) }
-    : null;
-
-  // Fetch live menu from DB whenever vendor changes
-  useEffect(() => {
-    if (!activeVendorName) { setDbMenu(null); return; }
-    let cancelled = false;
-    setMenuLoading(true);
-    async function fetchMenu() {
+  // Menu fetch — reads from prefetch cache if the user came from HomePage
+  const { data: menuRaw, isLoading: menuLoading } = useQuery({
+    queryKey: ['menu', activeVendorName],
+    queryFn: async () => {
       const [{ data: cats }, { data: items }] = await Promise.all([
         supabase.from('menu_categories').select('id, name, display_order')
           .eq('vendor_name', activeVendorName).order('display_order'),
         supabase.from('menu_items').select('id, name, price, is_available, category_id')
           .eq('vendor_name', activeVendorName).order('name'),
       ]);
-      if (cancelled) return;
-      if (items?.length) {
-        const menuItems = items.map(i => ({ name: i.name, price: i.price, available: i.is_available !== false }));
-        const menuGroups = (cats || []).map(cat => ({
-          label: cat.name,
-          names: items.filter(i => i.category_id === cat.id).map(i => i.name),
-        })).filter(g => g.names.length > 0);
-        setDbMenu({ items: menuItems, menuGroups: menuGroups.length > 0 ? menuGroups : undefined });
-      } else {
-        setDbMenu(null);
-      }
-      setMenuLoading(false);
-    }
-    fetchMenu();
-    return () => { cancelled = true; };
-  }, [activeVendorName]);
+      return { cats: cats || [], items: items || [] };
+    },
+    enabled: !!activeVendorName,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const dbMenu = useMemo(() => {
+    if (!menuRaw?.items?.length) return null;
+    const menuItems = menuRaw.items.map(i => ({ name: i.name, price: i.price, available: i.is_available !== false }));
+    const menuGroups = (menuRaw.cats || []).map(cat => ({
+      label: cat.name,
+      names: menuRaw.items.filter(i => i.category_id === cat.id).map(i => i.name),
+    })).filter(g => g.names.length > 0);
+    return { items: menuItems, menuGroups: menuGroups.length > 0 ? menuGroups : undefined };
+  }, [menuRaw]);
+
+  // Merge DB menu data onto vendor metadata
+  const activeVendor = activeVendorMeta
+    ? { ...activeVendorMeta, ...(dbMenu || {}) }
+    : null;
 
   function handlePickupChange(loc) {
     setPickupLocation(loc);
@@ -329,18 +324,6 @@ export default function CreateDeliveryPage() {
   const [documentFile, setDocumentFile] = useState(null);
   const [expandedMenuGroups, setExpandedMenuGroups] = useState(new Set());
   const [selectedItem, setSelectedItem] = useState(null);
-  const [dbMenuItems, setDbMenuItems] = useState([]);
-
-  useEffect(() => {
-    if (!activeVendor) { setDbMenuItems([]); return; }
-    supabase.from('menu_items')
-      .select('id, name, price, is_available, description')
-      .eq('vendor_name', activeVendor.name)
-      .order('name')
-      .then(({ data }) => {
-        setDbMenuItems((data || []).map(i => ({ ...i, available: i.is_available })));
-      });
-  }, [activeVendor?.name]);
 
   function toggleMenuGroup(label) {
     setExpandedMenuGroups(prev => {

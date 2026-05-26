@@ -20,10 +20,7 @@ export default function App() {
   if (window.location.hostname === 'confirm.campusrun.online') return <AuthConfirmPage />;
   // reset subdomain — always show the password reset page
   if (window.location.hostname === 'reset.campusrun.online') return <ResetPasswordPage />;
-  // admin subdomain — force every path to /admin
-  if (window.location.hostname === 'admin.campusrun.online' && !location.pathname.startsWith('/admin')) {
-    return <Navigate to="/admin" replace />;
-  }
+
 
   // Public routes — no auth required, always render directly
   if (location.pathname === '/privacy') return <PrivacyPolicyPage />;

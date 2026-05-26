@@ -10,7 +10,7 @@ import {
 const STATUS_BADGE = {
   placed:      'bg-blue-500/15 text-blue-400',
   bought:      'bg-yellow-500/15 text-yellow-400',
-  on_the_way:  'bg-purple-500/15 text-purple-400',
+  on_the_way:  'bg-brand-500/15 text-brand-400',
   arrived:     'bg-orange-500/15 text-orange-400',
   delivered:   'bg-green-500/15 text-green-400',
   cancelled:   'bg-red-500/15 text-red-400',
@@ -123,7 +123,7 @@ export default function AdminOverview() {
     { icon: CheckCircle, label: 'Completed Today',       value: stats.completedToday ?? '–',                     color: 'bg-gradient-to-r from-green-500 to-emerald-500' },
     { icon: TrendingUp,  label: 'Revenue Today',         value: `₦${(stats.revenueToday ?? 0).toLocaleString()}`, color: 'bg-gradient-to-r from-yellow-500 to-orange-500' },
     { icon: Banknote,    label: 'Pending Withdrawals',   value: stats.pendingWithdrawals ?? '–',                  color: 'bg-gradient-to-r from-red-500 to-pink-500',      sub: stats.pendingWithdrawals > 0 ? 'Needs attention' : 'All clear' },
-    { icon: Clock,       label: 'New Users (7 days)',    value: stats.newUsersWeek ?? '–',                        color: 'bg-gradient-to-r from-purple-500 to-violet-500' },
+    { icon: Clock,       label: 'New Users (7 days)',    value: stats.newUsersWeek ?? '–',                        color: 'bg-gradient-to-r from-brand-500 to-indigo-600' },
   ];
 
   return (
@@ -162,7 +162,7 @@ export default function AdminOverview() {
             { label: 'Net Revenue (all time)', value: `₦${(stats.netRevenue ?? 0).toLocaleString()}`, sub: 'Service fees + commissions', color: 'text-yellow-400' },
             { label: 'Service Fees (this month)', value: `₦${(stats.svcMonth ?? 0).toLocaleString()}`, sub: `₦${(stats.svcAll ?? 0).toLocaleString()} all time`, color: 'text-brand-400' },
             { label: 'Commission Earned', value: `₦${(stats.commissionAll ?? 0).toLocaleString()}`, sub: '15% of courier earnings withdrawn', color: 'text-green-400' },
-            { label: 'Tips Passed to Runners', value: `₦${(stats.tipsAll ?? 0).toLocaleString()}`, sub: '100% goes to couriers', color: 'text-purple-400' },
+            { label: 'Tips Passed to Runners', value: `₦${(stats.tipsAll ?? 0).toLocaleString()}`, sub: '100% goes to couriers', color: 'text-brand-400' },
           ].map(({ label, value, sub, color }) => (
             <div key={label} className="px-5 py-4">
               {loading ? (
@@ -266,7 +266,7 @@ export default function AdminOverview() {
           { label: 'Manage Deliveries', desc: 'View & update orders', path: '/admin/deliveries', color: 'from-blue-500/10 to-cyan-500/10 border-blue-500/20' },
           { label: 'Review Withdrawals', desc: `${stats.pendingWithdrawals || 0} pending`, path: '/admin/withdrawals', color: 'from-red-500/10 to-pink-500/10 border-red-500/20' },
           { label: 'Send Notification', desc: 'Broadcast a message', path: '/admin/notifications', color: 'from-yellow-500/10 to-orange-500/10 border-yellow-500/20' },
-          { label: 'View Reports', desc: 'Revenue & analytics', path: '/admin/reports', color: 'from-purple-500/10 to-violet-500/10 border-purple-500/20' },
+          { label: 'View Reports', desc: 'Revenue & analytics', path: '/admin/reports', color: 'from-brand-500/10 to-indigo-600/10 border-brand-500/20' },
         ].map(({ label, desc, path, color }) => (
           <button
             key={path}

@@ -89,7 +89,7 @@ function CourierDetailModal({ courier, onClose }) {
                   { label: 'Deliveries', value: data.deliveries.length, sub: `${completedDeliveries} completed`, icon: Package, color: 'text-blue-400' },
                   { label: 'Total Earned', value: `₦${totalEarned.toLocaleString()}`, sub: 'All time', icon: TrendingUp, color: 'text-green-400' },
                   { label: 'Wallet Balance', value: `₦${(data.profile?.wallet_balance || 0).toLocaleString()}`, sub: 'Current', icon: DollarSign, color: 'text-yellow-400' },
-                  { label: 'Active Since', value: format(new Date(data.profile?.created_at || Date.now()), 'MMM yyyy'), sub: formatDistanceToNow(new Date(data.profile?.created_at || Date.now())), icon: Star, color: 'text-purple-400' },
+                  { label: 'Active Since', value: format(new Date(data.profile?.created_at || Date.now()), 'MMM yyyy'), sub: formatDistanceToNow(new Date(data.profile?.created_at || Date.now())), icon: Star, color: 'text-brand-400' },
                 ].map(({ label, value, sub, icon: Icon, color }) => (
                   <div key={label} className="bg-white/[0.03] rounded-xl p-4">
                     <Icon className={`w-4 h-4 ${color} mb-2`} />

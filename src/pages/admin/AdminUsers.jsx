@@ -139,7 +139,7 @@ function UserDetailModal({ user, onClose, onUpdate }) {
   }
 
   const STATUS_COLORS = {
-    placed: 'text-blue-400', bought: 'text-yellow-400', on_the_way: 'text-purple-400',
+    placed: 'text-blue-400', bought: 'text-yellow-400', on_the_way: 'text-brand-400',
     arrived: 'text-orange-400', delivered: 'text-green-400', cancelled: 'text-red-400',
   };
 

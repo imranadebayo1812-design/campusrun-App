@@ -278,12 +278,22 @@ export default function CreateDeliveryPage() {
   const [itemDescription, setItemDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  // Vendor meta (emoji/zone) from MOCK_VENDORS; items come from DB
+  // Vendor meta (emoji/zone) from MOCK_VENDORS or DB vendors table; items come from DB
   const pickerMeta = !vendorMeta && pickupLocation
-    ? MOCK_VENDORS.find(v => v.name === pickupLocation) ?? null
+    ? (MOCK_VENDORS.find(v => v.name === pickupLocation) ?? dbVendors.find(v => v.name === pickupLocation) ?? null)
     : null;
   const activeVendorMeta = vendorMeta || pickerMeta;
   const activeVendorName = activeVendorMeta?.name || null;
+
+  // Fetch vendor metadata from DB so new vendors appear in pickup/dropoff lists
+  const { data: dbVendors = [] } = useQuery({
+    queryKey: ['vendors'],
+    queryFn: async () => {
+      const { data } = await supabase.from('vendors').select('name, zone, emoji, lat, lng');
+      return data || [];
+    },
+    staleTime: 10 * 60 * 1000,
+  });
 
   // Menu fetch — reads from prefetch cache if the user came from HomePage
   const { data: menuRaw, isLoading: menuLoading } = useQuery({
@@ -316,9 +326,29 @@ export default function CreateDeliveryPage() {
     ? { ...activeVendorMeta, ...(dbMenu || {}) }
     : null;
 
+  // Location groups extended with DB vendors so new vendors appear in pickup/dropoff lists
+  const allPickupGroups = useMemo(() => {
+    const existing = new Set(PURCHASE_LOCATION_GROUPS.flatMap(g => g.subItems ?? [g.label]));
+    const extra = dbVendors.filter(v => !existing.has(v.name));
+    return extra.length ? [...PURCHASE_LOCATION_GROUPS, ...extra.map(v => ({ label: v.name, subItems: null }))] : PURCHASE_LOCATION_GROUPS;
+  }, [dbVendors]);
+
+  const allLocationGroups = useMemo(() => {
+    const existing = new Set(LOCATION_GROUPS.flatMap(g => g.subItems ?? [g.label]));
+    const extra = dbVendors.filter(v => !existing.has(v.name));
+    return extra.length ? [...LOCATION_GROUPS, ...extra.map(v => ({ label: v.name, subItems: null }))] : LOCATION_GROUPS;
+  }, [dbVendors]);
+
+  // Coords: prefer DB vendor coords, fall back to static VENUE_COORDS
+  function getCoords(name) {
+    const dbV = dbVendors.find(v => v.name === name);
+    if (dbV?.lat && dbV?.lng) return { lat: Number(dbV.lat), lng: Number(dbV.lng) };
+    return getCoordsForVenue(name);
+  }
+
   function handlePickupChange(loc) {
     setPickupLocation(loc);
-    if (MOCK_VENDORS.find(v => v.name === loc)) setOrderType('purchase');
+    if (MOCK_VENDORS.find(v => v.name === loc) || dbVendors.find(v => v.name === loc)) setOrderType('purchase');
   }
   const [savedAddresses, setSavedAddresses] = useState(() => {
     try { return JSON.parse(localStorage.getItem('campusrun_saved_addresses') || '[]'); }
@@ -424,8 +454,8 @@ export default function CreateDeliveryPage() {
       order_type: orderType,
       pickup_location: pickupName,
       dropoff_location: dropoff,
-      pickup_coords:  getCoordsForVenue(pickupName),
-      dropoff_coords: getCoordsForVenue(dropoff),
+      pickup_coords:  getCoords(pickupName),
+      dropoff_coords: getCoords(dropoff),
       items: orderType === 'purchase'
         ? items.map(i => ({ name: i.name, qty: i.qty, price: String(i.price) }))
         : [],
@@ -543,7 +573,7 @@ export default function CreateDeliveryPage() {
                 icon={MapPin}
                 iconColor="text-green-400"
                 savedAddresses={savedAddresses}
-                groups={orderType === 'purchase' ? PURCHASE_LOCATION_GROUPS : LOCATION_GROUPS}
+                groups={orderType === 'purchase' ? allPickupGroups : allLocationGroups}
               />
             )}
             <InlineLocationSelect
@@ -553,6 +583,7 @@ export default function CreateDeliveryPage() {
               icon={Navigation}
               iconColor="text-brand-400"
               savedAddresses={savedAddresses}
+              groups={allLocationGroups}
             />
 
             {/* Room number — shown for hostel sub-venues */}

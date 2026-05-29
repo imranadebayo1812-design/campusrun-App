@@ -179,6 +179,10 @@ export default function AdminMenuCategories() {
   const [addingCatToVendor, setAddingCatToVendor] = useState(null);
   const [newCatName, setNewCatName] = useState('');
   const [newVendorName, setNewVendorName] = useState('');
+  const [newZone, setNewZone] = useState('');
+  const [newEmoji, setNewEmoji] = useState('');
+  const [newLat, setNewLat] = useState('');
+  const [newLng, setNewLng] = useState('');
   const [showAddVendor, setShowAddVendor] = useState(false);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -367,12 +371,27 @@ export default function AdminMenuCategories() {
     if (!error && data) {
       setCategories(prev => [...prev, data]);
       setExpandedVendors(p => ({ ...p, [newVendorName.trim()]: true }));
+      // Upsert vendor metadata so it appears in pickup/dropoff lists
+      const vendorMeta = {
+        name: newVendorName.trim(),
+        zone: newZone.trim() || 'Campus',
+        emoji: newEmoji.trim() || '🏪',
+      };
+      if (newLat && newLng) {
+        vendorMeta.lat = parseFloat(newLat);
+        vendorMeta.lng = parseFloat(newLng);
+      }
+      await supabase.from('vendors').upsert(vendorMeta, { onConflict: 'name' });
     } else {
       setError(error?.message || 'Failed to create vendor');
     }
     setShowAddVendor(false);
     setNewVendorName('');
     setNewCatName('');
+    setNewZone('');
+    setNewEmoji('');
+    setNewLat('');
+    setNewLng('');
     setSaving(false);
   }
 
@@ -447,11 +466,51 @@ export default function AdminMenuCategories() {
                 className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
               />
             </div>
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Zone / Location Area</label>
+              <input
+                value={newZone}
+                onChange={e => setNewZone(e.target.value)}
+                placeholder="e.g. Food Court"
+                className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Emoji Icon</label>
+              <input
+                value={newEmoji}
+                onChange={e => setNewEmoji(e.target.value)}
+                placeholder="e.g. 🍕"
+                className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Latitude (GPS)</label>
+              <input
+                type="number"
+                step="any"
+                value={newLat}
+                onChange={e => setNewLat(e.target.value)}
+                placeholder="e.g. 9.0762"
+                className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Longitude (GPS)</label>
+              <input
+                type="number"
+                step="any"
+                value={newLng}
+                onChange={e => setNewLng(e.target.value)}
+                placeholder="e.g. 7.4002"
+                className="w-full bg-surface-800 border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+              />
+            </div>
           </div>
           {error && <p className="text-xs text-red-400">{error}</p>}
           <div className="flex gap-2">
             <button
-              onClick={() => { setShowAddVendor(false); setNewVendorName(''); setNewCatName(''); setError(''); }}
+              onClick={() => { setShowAddVendor(false); setNewVendorName(''); setNewCatName(''); setNewZone(''); setNewEmoji(''); setNewLat(''); setNewLng(''); setError(''); }}
               className="flex-1 bg-surface-800 border border-white/[0.08] text-gray-400 py-2 rounded-xl text-sm"
             >
               Cancel

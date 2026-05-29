@@ -217,13 +217,17 @@ serve(async (req) => {
           Deno.env.get('SUPABASE_URL')!,
           Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
         );
-        const { data: allowed } = await admin.rpc('check_rate_limit', {
+        const { data: allowed, error: rlErr } = await admin.rpc('check_rate_limit', {
           p_user_id:        userId,
           p_action:         'send_email',
           p_max_calls:      10,
           p_window_seconds: 3600,
         });
-        if (!allowed) return res({ error: 'Too many requests. Try again later.' }, 429);
+        if (rlErr) {
+          console.error('Rate limit check failed (continuing):', rlErr.message);
+        } else if (!allowed) {
+          return res({ error: 'Too many requests. Try again later.' }, 429);
+        }
       }
     }
 

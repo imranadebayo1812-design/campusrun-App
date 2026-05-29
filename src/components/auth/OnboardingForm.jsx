@@ -57,6 +57,8 @@ export default function OnboardingForm() {
           to: session.user.email,
           data: { name: data.full_name.split(' ')[0], referral_code: '' },
         },
+      }).then(({ error: emailErr }) => {
+        if (emailErr) console.error('Welcome email failed:', emailErr);
       });
     } catch {
       setError('Could not save. Please try again.');

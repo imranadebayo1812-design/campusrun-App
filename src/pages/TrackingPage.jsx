@@ -320,7 +320,7 @@ export default function TrackingPage() {
     if (!delivery?.courier_accepted) return;
     const ref = delivery.accepted_at || delivery.created_at;
     const elapsed = Math.floor((Date.now() - new Date(ref).getTime()) / 1000);
-    const initial = Math.max(0, 120 - elapsed);
+    const initial = Math.max(0, 60 - elapsed);
     setGraceLeft(initial);
     if (initial <= 0) return;
     const id = setInterval(() => setGraceLeft(n => { if (n <= 1) { clearInterval(id); return 0; } return n - 1; }), 1000);
@@ -598,18 +598,28 @@ export default function TrackingPage() {
         {/* Grace period / cancellation window */}
         {delivery.courier_accepted && !isCancelled && !isDelivered && (
           gracePeriodActive ? (
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold text-amber-400">Grace period: {fmt(graceLeft)}</p>
-                <p className="text-xs text-amber-400/70 mt-0.5">Both sides can cancel freely</p>
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-amber-400">Grace period: {fmt(graceLeft)}</p>
+                  <p className="text-xs text-amber-400/70 mt-0.5">Both sides can cancel freely</p>
+                </div>
+                <button
+                  onClick={cancelOrder}
+                  disabled={cancelling}
+                  className="shrink-0 text-xs font-semibold bg-amber-500/20 border border-amber-500/30 text-amber-400 px-3 py-1.5 rounded-lg disabled:opacity-50"
+                >
+                  Cancel
+                </button>
               </div>
-              <button
-                onClick={cancelOrder}
-                disabled={cancelling}
-                className="shrink-0 text-xs font-semibold bg-amber-500/20 border border-amber-500/30 text-amber-400 px-3 py-1.5 rounded-lg disabled:opacity-50"
-              >
-                Cancel
-              </button>
+              {delivery.estimated_delivery_minutes && (
+                <div className="flex items-center gap-2 pt-1 border-t border-amber-500/20">
+                  <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
+                  <p className="text-xs text-amber-300 font-medium">
+                    Runner estimates ~{delivery.estimated_delivery_minutes} min delivery
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex items-center gap-2 text-gray-500 text-xs font-medium px-1">

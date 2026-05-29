@@ -364,7 +364,7 @@ function fmt(secs) {
 
 function graceLeft(order) {
   if (!order.accepted_at) return 0;
-  return Math.max(0, 120 - Math.floor((Date.now() - new Date(order.accepted_at).getTime()) / 1000));
+  return Math.max(0, 60 - Math.floor((Date.now() - new Date(order.accepted_at).getTime()) / 1000));
 }
 
 function getEta(order) {
@@ -407,6 +407,7 @@ export default function CourierDashboard() {
   const [fraudWarningTarget, setFraudWarningTarget] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [acceptError, setAcceptError] = useState('');
+  const [etaByOrder, setEtaByOrder] = useState({});
   const [earningsSummary, setEarningsSummary] = useState({ earned: 0, reimbursed: 0, totalDeliveries: 0 });
   const [courierCoords, setCourierCoords] = useState(null);
   const [locationStatus, setLocationStatus] = useState('pending'); // pending | ok | denied | offcampus
@@ -632,10 +633,12 @@ export default function CourierDashboard() {
 
   async function acceptOrder(order) {
     setAcceptError('');
+    const eta = etaByOrder[order.id];
+    if (!eta) { setAcceptError('Please select an estimated delivery time first.'); return; }
     const now = new Date().toISOString();
     const { data, error } = await supabase
       .from('deliveries')
-      .update({ courier_id: session.user.id, courier_accepted: true, accepted_at: now })
+      .update({ courier_id: session.user.id, courier_accepted: true, accepted_at: now, estimated_delivery_minutes: eta })
       .eq('id', order.id)
       .is('courier_id', null)
       .select()
@@ -1104,6 +1107,26 @@ export default function CourierDashboard() {
                       </p>
                     </div>
                   )}
+                  {!locked && (
+                    <div className="mb-3">
+                      <p className="text-xs text-gray-400 mb-2 font-medium">How long will delivery take?</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[5, 10, 15, 20, 30, 45].map(mins => (
+                          <button
+                            key={mins}
+                            onClick={() => setEtaByOrder(p => ({ ...p, [order.id]: mins }))}
+                            className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-colors ${
+                              etaByOrder[order.id] === mins
+                                ? 'bg-brand-500 border-brand-500 text-white'
+                                : 'bg-surface-800 border-white/[0.08] text-gray-400 hover:border-brand-500/50'
+                            }`}
+                          >
+                            {mins} min
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {locked ? (
                     <div className="w-full bg-surface-800 border border-white/[0.06] rounded-xl py-2.5 flex items-center justify-center gap-2 text-sm text-gray-500">
                       <Lock className="w-3.5 h-3.5" />
@@ -1112,9 +1135,10 @@ export default function CourierDashboard() {
                   ) : (
                     <button
                       onClick={() => acceptOrder(order)}
-                      className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 text-white font-semibold py-2.5 rounded-xl text-sm shadow-lg shadow-brand-500/20"
+                      disabled={!etaByOrder[order.id]}
+                      className="w-full bg-gradient-to-br from-brand-500 to-indigo-600 hover:from-brand-600 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-xl text-sm shadow-lg shadow-brand-500/20"
                     >
-                      Accept Order
+                      {etaByOrder[order.id] ? `Accept — ~${etaByOrder[order.id]} min` : 'Select a time estimate first'}
                     </button>
                   )}
                 </div>

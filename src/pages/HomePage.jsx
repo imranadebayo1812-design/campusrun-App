@@ -141,7 +141,7 @@ export default function HomePage() {
   function openVendor(vendor) {
     if (!open) return;
     navigate('/create-order', {
-      state: { type: 'purchase', vendor: vendor.zone, vendorId: vendor.id },
+      state: { type: 'purchase', vendor: vendor.zone, vendorId: vendor.id, vendorName: vendor.name },
     });
   }
 

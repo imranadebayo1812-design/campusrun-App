@@ -261,9 +261,13 @@ export default function CreateDeliveryPage() {
   const initType = location.state?.type || 'purchase';
   const initVendor = location.state?.vendor || '';
   const initVendorId = location.state?.vendorId || null;
+  const initVendorName = location.state?.vendorName || null;
 
-  // Metadata lookup only — DB does not store emoji/zone/color
-  const vendorMeta = initVendorId ? MOCK_VENDORS.find(v => v.id === initVendorId) : null;
+  // Metadata lookup — falls back to a minimal object for DB-only vendors not in MOCK_VENDORS
+  const vendorMeta = initVendorId
+    ? (MOCK_VENDORS.find(v => v.id === initVendorId) ||
+       (initVendorName ? { id: initVendorId, name: initVendorName, zone: initVendor || 'Campus', emoji: '🏪', color: 'bg-brand-500', items: [] } : null))
+    : null;
 
   const [orderType, setOrderType] = useState(initType);
   const [pickupLocation, setPickupLocation] = useState(initVendor || '');

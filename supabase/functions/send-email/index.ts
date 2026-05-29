@@ -94,11 +94,6 @@ function welcomeEmail(name: string, referralCode: string) {
         <tr><td style="color:#f8fafc;font-size:26px;font-weight:800;letter-spacing:8px;padding-bottom:6px;">${h(referralCode)}</td></tr>
         <tr><td style="color:#64748b;font-size:12px;">Earn &#x20a6;100 for every friend who joins</td></tr>
       </table>` : ''}
-      <table width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr><td align="center" bgcolor="#00d1ff" style="background-color:#00d1ff;border-radius:12px;padding:15px;">
-          <a href="https://app.campusrun.online" style="color:#0b0f19;text-decoration:none;font-weight:700;font-size:15px;">Start Ordering &rarr;</a>
-        </td></tr>
-      </table>
     `),
   };
 }

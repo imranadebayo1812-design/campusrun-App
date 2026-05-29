@@ -1,11 +1,12 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
+const _ALLOWED = new Set(['https://campusrun.online', 'https://admin.campusrun.online']);
+const _getCors = (origin: string) => ({
+  'Access-Control-Allow-Origin': _ALLOWED.has(origin) ? origin : 'https://campusrun.online',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+});
 
 const FROM = 'CampusRun <hello@campusrun.online>';
 
@@ -202,13 +203,9 @@ function accountRestoredEmail(name: string) {
   };
 }
 
-function res(body: unknown, status: number) {
-  return new Response(JSON.stringify(body), {
-    status, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  });
-}
-
 serve(async (req) => {
+  const CORS_HEADERS = _getCors(req.headers.get('Origin') ?? '');
+  const res = (body: unknown, status: number) => new Response(JSON.stringify(body), { status, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
 
   try {

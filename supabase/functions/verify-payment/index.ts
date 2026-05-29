@@ -5,12 +5,12 @@ const PAYSTACK_SECRET = Deno.env.get('PAYSTACK_SECRET_KEY')!;
 const SUPABASE_URL    = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY     = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-const CORS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-};
+const ALLOWED = new Set(['https://campusrun.online', 'https://admin.campusrun.online']);
 
 serve(async (req) => {
+  const origin = req.headers.get('Origin') ?? '';
+  const CORS = { 'Access-Control-Allow-Origin': ALLOWED.has(origin) ? origin : 'https://campusrun.online', 'Access-Control-Allow-Headers': 'authorization, content-type' };
+  const json = (data: unknown, status: number) => new Response(JSON.stringify(data), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   try {
@@ -58,7 +58,7 @@ serve(async (req) => {
 
     // Amount check: Paystack returns kobo, we store naira
     const paidNaira = psBody.data.amount / 100;
-    if (Math.abs(paidNaira - delivery.total_amount) > 5) {
+    if (paidNaira < delivery.total_amount) {
       return json({ error: 'Amount mismatch' }, 400);
     }
 
@@ -77,9 +77,3 @@ serve(async (req) => {
   }
 });
 
-function json(body: unknown, status: number) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
-}

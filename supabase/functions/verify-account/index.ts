@@ -1,11 +1,10 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, content-type',
-};
+const ALLOWED = new Set(['https://campusrun.online', 'https://admin.campusrun.online']);
+const getCors = (o: string) => ({ 'Access-Control-Allow-Origin': ALLOWED.has(o) ? o : 'https://campusrun.online', 'Access-Control-Allow-Headers': 'authorization, content-type' });
 
 serve(async (req) => {
+  const CORS = getCors(req.headers.get('Origin') ?? '');
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
 
   const { account_number, bank_code } = await req.json();

@@ -35,17 +35,23 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+
+	<!-- Location — required for courier delivery tracking -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>CampusRun uses your location to enable accurate delivery tracking when you are actively on a courier route.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>CampusRun may use your location in the background while you are actively delivering an order so buyers can track progress in real time.</string>
+
+	<!-- App Tracking Transparency — Firebase uses device identifiers for crash analytics and push routing only; no advertising -->
+	<key>NSUserTrackingUsageDescription</key>
+	<string>CampusRun uses a device identifier solely to deliver push notifications about your orders and to improve app stability. We do not use it for advertising.</string>
 </dict>
 </plist>

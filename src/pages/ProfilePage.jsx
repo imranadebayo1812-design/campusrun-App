@@ -35,7 +35,7 @@ function GenderAvatar({ gender }) {
 }
 
 function DeleteAccountModal({ onClose }) {
-  const { session, profile } = useAuth();
+  const { session, profile, signOut } = useAuth();
   const [confirm, setConfirm] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -58,6 +58,8 @@ function DeleteAccountModal({ onClose }) {
     }
     setSubmitted(true);
     setSubmitting(false);
+    // Sign the user out — they will be fully deleted within 30 days
+    setTimeout(() => signOut(), 3000);
   }
 
   return (
@@ -71,21 +73,30 @@ function DeleteAccountModal({ onClose }) {
       <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4">
         <div className="flex items-center justify-between">
           <p className="font-bold text-white text-base">Delete your account?</p>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 text-xl font-bold leading-none">×</button>
+          {!submitted && (
+            <button onClick={onClose} aria-label="Close" className="text-gray-400 text-xl font-bold leading-none">×</button>
+          )}
         </div>
 
         {submitted ? (
-          <div className="text-center py-6">
-            <p className="text-green-400 font-semibold">Request submitted.</p>
-            <p className="text-gray-400 text-sm mt-1">Our team will review and process your request shortly.</p>
-            <button onClick={onClose} className="mt-4 bg-brand-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">Done</button>
+          <div className="text-center py-6 space-y-2">
+            <div className="w-12 h-12 rounded-full bg-red-500/15 flex items-center justify-center mx-auto mb-3">
+              <Trash2 className="w-6 h-6 text-red-400" />
+            </div>
+            <p className="text-white font-semibold">Deletion requested</p>
+            <p className="text-gray-400 text-sm">
+              Your account and all associated data will be <strong className="text-white">permanently deleted within 30 days</strong>. You have been signed out.
+            </p>
+            <p className="text-gray-500 text-xs">To cancel this request before deletion, email support@campusrun.online within 30 days.</p>
           </div>
         ) : (
           <>
             <p className="text-sm text-gray-400">
-              This will permanently delete all your orders, wallet balance, and profile data.{' '}
-              <strong className="text-white">This cannot be undone.</strong>
+              This will permanently delete your profile, orders, wallet balance, and all personal data within <strong className="text-white">30 days</strong>. This cannot be undone.
             </p>
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+              <p className="text-xs text-red-400">Any remaining wallet balance will be forfeited. Withdraw your balance before proceeding.</p>
+            </div>
             <div>
               <label htmlFor="delete-confirm" className="text-xs font-medium text-gray-400 block mb-1">
                 Type <strong className="text-white">DELETE</strong> to confirm

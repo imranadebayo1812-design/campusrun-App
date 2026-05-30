@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const _ALLOWED = new Set(['https://campusrun.online', 'https://admin.campusrun.online']);
+const _ALLOWED = new Set(['https://campusrun.online', 'https://app.campusrun.online', 'https://admin.campusrun.online']);
 const _getCors = (origin: string) => ({
   'Access-Control-Allow-Origin': _ALLOWED.has(origin) ? origin : 'https://campusrun.online',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',

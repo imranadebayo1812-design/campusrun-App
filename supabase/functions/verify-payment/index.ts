@@ -5,7 +5,7 @@ const PAYSTACK_SECRET = Deno.env.get('PAYSTACK_SECRET_KEY')!;
 const SUPABASE_URL    = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY     = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-const ALLOWED = new Set(['https://campusrun.online', 'https://admin.campusrun.online']);
+const ALLOWED = new Set(['https://campusrun.online', 'https://app.campusrun.online', 'https://admin.campusrun.online']);
 
 serve(async (req) => {
   const origin = req.headers.get('Origin') ?? '';

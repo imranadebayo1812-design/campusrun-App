@@ -7,6 +7,15 @@ import { AuthProvider } from './context/AuthContext.jsx';
 import { ModeProvider } from './context/ModeContext.jsx';
 import './index.css';
 
+// When a new service worker activates and takes control, reload once so the
+// app immediately runs the latest code instead of waiting for a manual restart.
+if ('serviceWorker' in navigator) {
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!reloading) { reloading = true; window.location.reload(); }
+  });
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

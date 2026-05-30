@@ -11,11 +11,6 @@
 -- pg_cron is available on Supabase Pro plans. If on Free plan, skip the
 -- cron section and process manually via the Admin Deletions panel.
 
--- ── Add scheduled_for column (tracks when auto-deletion fires) ─────────────
-alter table public.deletion_requests
-  add column if not exists scheduled_for timestamptz
-    generated always as (created_at + interval '30 days') stored;
-
 -- ── Function: auto-delete all overdue pending requests ────────────────────
 create or replace function public.process_pending_deletions()
 returns void language plpgsql security definer as $$

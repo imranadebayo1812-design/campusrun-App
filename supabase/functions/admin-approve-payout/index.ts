@@ -5,9 +5,9 @@ const ALLOWED = new Set(['https://campusrun.online', 'https://app.campusrun.onli
 
 serve(async (req) => {
   const origin = req.headers.get('Origin') ?? '';
-  const CORS = { 'Access-Control-Allow-Origin': ALLOWED.has(origin) ? origin : 'https://campusrun.online', 'Access-Control-Allow-Headers': 'authorization, content-type' };
+  const CORS = { 'Access-Control-Allow-Origin': ALLOWED.has(origin) ? origin : 'https://campusrun.online', 'Access-Control-Allow-Headers': 'authorization, content-type, x-client-info, apikey', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
   const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
-  if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,

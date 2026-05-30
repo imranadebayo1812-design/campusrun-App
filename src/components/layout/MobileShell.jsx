@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMode } from '@/context/ModeContext';
 import { useAuth } from '@/context/AuthContext';
@@ -21,36 +21,55 @@ export default function MobileShell({ children }) {
 
   usePushNotifications();
 
+  // Attach touch listeners as non-passive so preventDefault() works inside
+  // Capacitor WebView — React synthetic touch events are passive by default
+  // which means the WebView swallows the gesture before our handler runs.
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+
+    function start(e) {
+      if (el.scrollTop > 0) return;
+      touchStartY.current = e.touches[0].clientY;
+      pulling.current = true;
+    }
+
+    function move(e) {
+      if (!pulling.current) return;
+      const delta = e.touches[0].clientY - touchStartY.current;
+      if (delta <= 0) { setPullY(0); return; }
+      e.preventDefault(); // stops WebView overscroll interfering
+      setPullY(Math.min(delta * 0.45, PULL_THRESHOLD + 16));
+    }
+
+    function end() {
+      if (!pulling.current) return;
+      pulling.current = false;
+      setPullY(prev => {
+        if (prev >= PULL_THRESHOLD) {
+          setRefreshing(true);
+          setTimeout(() => window.location.reload(), 400);
+          return PULL_THRESHOLD;
+        }
+        return 0;
+      });
+    }
+
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchmove',  move,  { passive: false });
+    el.addEventListener('touchend',   end,   { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', start);
+      el.removeEventListener('touchmove',  move);
+      el.removeEventListener('touchend',   end);
+    };
+  }, []);
+
   const isCourier = mode === 'courier';
 
   function handleToggle() {
     toggleMode();
     navigate(isCourier ? '/' : '/courier');
-  }
-
-  function onTouchStart(e) {
-    if ((contentRef.current?.scrollTop ?? 0) > 0) return;
-    touchStartY.current = e.touches[0].clientY;
-    pulling.current = true;
-  }
-
-  function onTouchMove(e) {
-    if (!pulling.current) return;
-    const delta = e.touches[0].clientY - touchStartY.current;
-    if (delta <= 0) { setPullY(0); return; }
-    setPullY(Math.min(delta * 0.45, PULL_THRESHOLD + 16));
-  }
-
-  function onTouchEnd() {
-    if (!pulling.current) return;
-    pulling.current = false;
-    if (pullY >= PULL_THRESHOLD) {
-      setRefreshing(true);
-      setPullY(PULL_THRESHOLD);
-      setTimeout(() => window.location.reload(), 400);
-    } else {
-      setPullY(0);
-    }
   }
 
   const showIndicator = pullY > 6 || refreshing;
@@ -111,9 +130,6 @@ export default function MobileShell({ children }) {
         ref={contentRef}
         className="flex-1 overflow-y-auto pb-nav bg-surface-950"
         style={{ transform: pullY > 0 ? `translateY(${Math.min(pullY, PULL_THRESHOLD) * 0.3}px)` : undefined, transition: pulling.current ? undefined : 'transform 0.2s ease' }}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
       >
         {children}
       </main>

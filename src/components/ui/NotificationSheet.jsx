@@ -3,15 +3,17 @@ import { useAuth } from '@/context/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Bell, Package, Wallet, AlertTriangle, CheckCircle,
-  Bike, X, BellOff,
+  Bike, X, BellOff, XCircle,
 } from 'lucide-react';
 
 const TYPE_ICON = {
-  order_accepted: { Icon: Bike,          color: 'text-brand-400',  bg: 'bg-brand-500/15'  },
-  status_update:  { Icon: Package,       color: 'text-blue-400',   bg: 'bg-blue-500/15'   },
-  wallet:         { Icon: Wallet,        color: 'text-green-400',  bg: 'bg-green-500/15'  },
-  price_edit:     { Icon: AlertTriangle, color: 'text-amber-400',  bg: 'bg-amber-500/15'  },
-  delivered:      { Icon: CheckCircle,   color: 'text-green-400',  bg: 'bg-green-500/15'  },
+  order_accepted:      { Icon: Bike,          color: 'text-brand-400',  bg: 'bg-brand-500/15'  },
+  status_update:       { Icon: Package,       color: 'text-blue-400',   bg: 'bg-blue-500/15'   },
+  wallet:              { Icon: Wallet,        color: 'text-green-400',  bg: 'bg-green-500/15'  },
+  withdrawal_update:   { Icon: Wallet,        color: 'text-green-400',  bg: 'bg-green-500/15'  },
+  withdrawal_rejected: { Icon: XCircle,       color: 'text-red-400',    bg: 'bg-red-500/15'    },
+  price_edit:          { Icon: AlertTriangle, color: 'text-amber-400',  bg: 'bg-amber-500/15'  },
+  delivered:           { Icon: CheckCircle,   color: 'text-green-400',  bg: 'bg-green-500/15'  },
 };
 
 export default function NotificationSheet({ onClose }) {

@@ -52,8 +52,8 @@ begin
   -- Notify the courier
   insert into public.notifications (user_id, type, title, body)
   values (
-    v_withdrawal.courier_id, 'withdrawal',
-    'Withdrawal Request Rejected',
+    v_withdrawal.courier_id, 'withdrawal_rejected',
+    'Withdrawal Rejected',
     case
       when v_withdrawal.type = 'wallet_withdrawal'
         then '₦' || v_withdrawal.gross_amount::text || ' has been returned to your wallet. Reason: ' || p_reason

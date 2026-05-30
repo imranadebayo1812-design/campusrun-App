@@ -88,7 +88,7 @@ export default function LoginPage() {
     if (!email) { setError('Enter your email address.'); return; }
     setLoading(true); setError('');
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://campusrun.online/reset-password',
+      redirectTo: 'https://app.campusrun.online/reset-password',
     });
     setLoading(false);
     if (error) { setError(error.message); return; }

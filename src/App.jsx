@@ -6,6 +6,7 @@ import OnboardingForm from '@/components/auth/OnboardingForm';
 import ProfileUpdateRequired from '@/components/auth/ProfileUpdateRequired';
 import MobileShell from '@/components/layout/MobileShell';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
+import DeleteAccountPage from '@/pages/DeleteAccountPage';
 import WelcomePage from '@/pages/WelcomePage';
 import AuthConfirmPage from '@/pages/AuthConfirmPage';
 import ResetPasswordPage from '@/pages/ResetPasswordPage';
@@ -28,6 +29,7 @@ export default function App() {
 
   // Public routes — no auth required, always render directly
   if (location.pathname === '/privacy') return <PrivacyPolicyPage />;
+  if (location.pathname === '/delete-account') return <DeleteAccountPage />;
   if (location.pathname === '/auth/confirm') return <AuthConfirmPage />;
   if (location.pathname === '/reset-password') return <ResetPasswordPage />;
   if (location.pathname === '/theme-preview') return <ThemePreviewPage />;

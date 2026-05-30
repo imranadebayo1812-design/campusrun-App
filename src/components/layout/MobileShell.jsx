@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMode } from '@/context/ModeContext';
 import { useAuth } from '@/context/AuthContext';
@@ -6,11 +6,18 @@ import BottomNav from './BottomNav';
 import Logo from '@/components/ui/Logo';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
+const PULL_THRESHOLD = 68; // px before triggering refresh
+
 export default function MobileShell({ children }) {
   const { mode, toggleMode } = useMode();
   const { profile } = useAuth();
   const navigate = useNavigate();
   const contentRef = useRef(null);
+
+  const touchStartY = useRef(0);
+  const pulling = useRef(false);
+  const [pullY, setPullY] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   usePushNotifications();
 
@@ -20,6 +27,34 @@ export default function MobileShell({ children }) {
     toggleMode();
     navigate(isCourier ? '/' : '/courier');
   }
+
+  function onTouchStart(e) {
+    if ((contentRef.current?.scrollTop ?? 0) > 0) return;
+    touchStartY.current = e.touches[0].clientY;
+    pulling.current = true;
+  }
+
+  function onTouchMove(e) {
+    if (!pulling.current) return;
+    const delta = e.touches[0].clientY - touchStartY.current;
+    if (delta <= 0) { setPullY(0); return; }
+    setPullY(Math.min(delta * 0.45, PULL_THRESHOLD + 16));
+  }
+
+  function onTouchEnd() {
+    if (!pulling.current) return;
+    pulling.current = false;
+    if (pullY >= PULL_THRESHOLD) {
+      setRefreshing(true);
+      setPullY(PULL_THRESHOLD);
+      setTimeout(() => window.location.reload(), 400);
+    } else {
+      setPullY(0);
+    }
+  }
+
+  const showIndicator = pullY > 6 || refreshing;
+  const ready = pullY >= PULL_THRESHOLD || refreshing;
 
   return (
     <div className="app-shell flex flex-col max-w-md mx-auto bg-surface-950 shadow-2xl relative overflow-x-hidden">
@@ -55,8 +90,31 @@ export default function MobileShell({ children }) {
         )}
       </header>
 
+      {/* Pull-to-refresh indicator */}
+      {showIndicator && (
+        <div
+          className="absolute left-0 right-0 flex justify-center z-20 pointer-events-none"
+          style={{ top: 57 + Math.min(pullY, PULL_THRESHOLD) * 0.4 }}
+        >
+          <div className={`flex items-center gap-2 bg-surface-900 border rounded-full px-3 py-1.5 shadow-lg transition-colors ${ready ? 'border-brand-500/40' : 'border-white/[0.08]'}`}>
+            <div className={`w-4 h-4 rounded-full border-2 ${ready ? 'border-brand-500/40 border-t-brand-500 animate-spin' : 'border-gray-600 border-t-gray-400'}`}
+                 style={!ready ? { transform: `rotate(${(pullY / PULL_THRESHOLD) * 240}deg)` } : undefined} />
+            <span className="text-xs text-gray-400">{ready ? 'Refreshing…' : 'Pull to refresh'}</span>
+          </div>
+        </div>
+      )}
+
       {/* Scrollable content */}
-      <main id="main-content" role="main" ref={contentRef} className="flex-1 overflow-y-auto pb-nav bg-surface-950">
+      <main
+        id="main-content"
+        role="main"
+        ref={contentRef}
+        className="flex-1 overflow-y-auto pb-nav bg-surface-950"
+        style={{ transform: pullY > 0 ? `translateY(${Math.min(pullY, PULL_THRESHOLD) * 0.3}px)` : undefined, transition: pulling.current ? undefined : 'transform 0.2s ease' }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
         {children}
       </main>
 
@@ -66,3 +124,4 @@ export default function MobileShell({ children }) {
     </div>
   );
 }
+

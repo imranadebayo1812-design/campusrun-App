@@ -1,4 +1,42 @@
 workflows:
+  supabase-deploy:
+    name: Deploy Supabase Edge Functions
+    max_build_duration: 10
+    instance_type: linux_x2
+    environment:
+      groups:
+        - supabase
+      vars:
+        SUPABASE_PROJECT_REF: xwnedkgpwhbmoxanhmth
+    scripts:
+      - name: Install Supabase CLI
+        script: |
+          curl -fsSL https://supabase.com/install.sh | sh
+          export PATH="$HOME/.local/bin:$PATH"
+          supabase --version
+
+      - name: Deploy send-email function
+        script: |
+          export PATH="$HOME/.local/bin:$PATH"
+          supabase functions deploy send-email \
+            --project-ref "$SUPABASE_PROJECT_REF" \
+            --token "$SUPABASE_ACCESS_TOKEN"
+
+      - name: Set RESEND_API_KEY secret
+        script: |
+          export PATH="$HOME/.local/bin:$PATH"
+          supabase secrets set "RESEND_API_KEY=$RESEND_API_KEY" \
+            --project-ref "$SUPABASE_PROJECT_REF" \
+            --token "$SUPABASE_ACCESS_TOKEN"
+
+    publishing:
+      email:
+        recipients:
+          - imranadebayo1812@gmail.com
+        notify:
+          success: true
+          failure: true
+
   ios-build:
     name: CampusRun iOS
     max_build_duration: 60

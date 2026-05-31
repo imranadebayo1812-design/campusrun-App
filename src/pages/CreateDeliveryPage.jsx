@@ -214,7 +214,7 @@ function ItemDetailSheet({ item, inCart, onAdd, onClose }) {
       aria-modal="true"
       aria-label={item.name}
       className="fixed inset-0 z-[200] flex items-end justify-center kb-backdrop"
-      style={{ backgroundColor: 'rgba(0,0,0,0.7)', paddingBottom: 'var(--kb, 0px)' }}
+      style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
       onClick={onClose}
     >
       <div

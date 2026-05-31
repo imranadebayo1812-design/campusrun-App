@@ -68,7 +68,7 @@ function DeleteAccountModal({ onClose }) {
       aria-modal="true"
       aria-label="Delete account"
       className="fixed inset-0 z-[200] flex items-end justify-center kb-backdrop"
-      style={{ backgroundColor: 'rgba(0,0,0,0.7)', paddingBottom: 'var(--kb, 0px)' }}
+      style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
     >
       <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4"
         style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}>

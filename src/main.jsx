@@ -8,47 +8,72 @@ import { AuthProvider } from './context/AuthContext.jsx';
 import { ModeProvider } from './context/ModeContext.jsx';
 import './index.css';
 
-// iOS-only fixes — do not apply on Android or web
+// ─── iOS keyboard handling ────────────────────────────────────────────────────
+//
+// Strategy: KeyboardResize.Native
+//   The native WKWebView frame shrinks when the keyboard opens, so iOS viewport
+//   height (window.innerHeight / vh) decreases by exactly the keyboard height.
+//   position:fixed elements with bottom:0 therefore automatically float to the
+//   top of the keyboard — no custom --kb offset needed.
+//
+//   interactive-widget=overlays-content has been REMOVED from index.html because
+//   it conflicts with Native resize: it tells WebKit to keep the layout viewport
+//   full-size while Capacitor tries to shrink the frame, producing stale state.
+//
+//   The --kb variable is kept purely as a diagnostic; it is NOT used in any
+//   modal style. If keyboard events fire but the modal still misbehaves, the
+//   logs below will show exactly what iOS reported.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
 if (Capacitor.getPlatform() === 'ios') {
   // Prevent the outer WKWebView UIScrollView from rubber-banding.
-  // Only elements with [data-scroll] are allowed to scroll.
   document.addEventListener('touchmove', (e) => {
     if (!e.target.closest('[data-scroll]')) e.preventDefault();
   }, { passive: false });
 
-  // KeyboardResize.None keeps the WKWebView frame at full height so the layout
-  // never jumps. We track keyboard height ourselves via Capacitor events and
-  // expose it as --kb so modal backdrops can push panels above the keyboard.
-  // NOTE: window.visualViewport does NOT update in WKWebView with KeyboardResize.None
-  // (Capacitor owns the frame; WebKit never learns about the keyboard). The only
-  // reliable source of keyboard height in this configuration is the Capacitor
-  // keyboard plugin events — which is what we use here.
+  // Eager import — plugin must be ready before the first input is focused.
   import('@capacitor/keyboard').then(({ Keyboard, KeyboardResize }) => {
-    Keyboard.setResizeMode({ mode: KeyboardResize.None }).catch(() => {});
+    Keyboard.setResizeMode({ mode: KeyboardResize.Native }).catch(console.error);
 
-    const setKb = (h) => document.documentElement.style.setProperty('--kb', `${h}px`);
+    // ── Diagnostic logging ──────────────────────────────────────────────────
+    const stamp = () =>
+      `innerHeight=${window.innerHeight} --kb=${
+        getComputedStyle(document.documentElement).getPropertyValue('--kb').trim()
+      }`;
 
-    // Will* fires during animation start; Did* fires after animation completes.
-    // We listen to both so the panel moves with the keyboard rather than after it.
-    Keyboard.addListener('keyboardWillShow', ({ keyboardHeight }) => setKb(keyboardHeight));
-    Keyboard.addListener('keyboardDidShow',  ({ keyboardHeight }) => setKb(keyboardHeight));
-    Keyboard.addListener('keyboardWillHide', () => setKb(0));
-    Keyboard.addListener('keyboardDidHide',  () => setKb(0));
+    const setKb = (h) => {
+      document.documentElement.style.setProperty('--kb', `${h}px`);
+    };
+
+    // Store handles so listeners can be removed for debugging or cleanup.
+    const handles = Promise.all([
+      Keyboard.addListener('keyboardWillShow', ({ keyboardHeight }) => {
+        setKb(keyboardHeight);
+        console.log(`[KB] keyboardWillShow  height=${keyboardHeight}  ${stamp()}`);
+      }),
+      Keyboard.addListener('keyboardDidShow', ({ keyboardHeight }) => {
+        setKb(keyboardHeight);
+        console.log(`[KB] keyboardDidShow   height=${keyboardHeight}  ${stamp()}`);
+      }),
+      Keyboard.addListener('keyboardWillHide', () => {
+        console.log(`[KB] keyboardWillHide  (clearing --kb)  ${stamp()}`);
+        setKb(0);
+      }),
+      Keyboard.addListener('keyboardDidHide', () => {
+        setKb(0);
+        console.log(`[KB] keyboardDidHide   (final)  ${stamp()}`);
+      }),
+    ]);
+
+    // Expose cleanup on window so it can be called from Safari DevTools:
+    //   window.__removeKbListeners()
+    window.__removeKbListeners = async () => {
+      const hs = await handles;
+      await Promise.all(hs.map((h) => h.remove()));
+      console.log('[KB] All keyboard listeners removed.');
+    };
   });
-}
-
-// PWA / web fallback: VisualViewport works correctly in a real browser
-// (Safari, Chrome) where WebKit manages keyboard visibility natively.
-if (Capacitor.getPlatform() === 'web' && window.visualViewport) {
-  const updateKb = () => {
-    const kb = Math.max(
-      0,
-      window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop
-    );
-    document.documentElement.style.setProperty('--kb', `${Math.round(kb)}px`);
-  };
-  window.visualViewport.addEventListener('resize', updateKb);
-  window.visualViewport.addEventListener('scroll', updateKb);
 }
 
 // When a new service worker activates and takes control, reload once so the

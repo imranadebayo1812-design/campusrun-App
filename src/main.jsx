@@ -8,11 +8,38 @@ import { AuthProvider } from './context/AuthContext.jsx';
 import { ModeProvider } from './context/ModeContext.jsx';
 import './index.css';
 
-// VisualViewport: tracks keyboard height frame-by-frame on every platform.
-// Fires on every frame of the keyboard animation and resets reliably on close —
-// much more reliable than Capacitor keyboard events which fire once and can miss
-// the reset if the app is backgrounded or the keyboard is dismissed programmatically.
-if (window.visualViewport) {
+// iOS-only fixes — do not apply on Android or web
+if (Capacitor.getPlatform() === 'ios') {
+  // Prevent the outer WKWebView UIScrollView from rubber-banding.
+  // Only elements with [data-scroll] are allowed to scroll.
+  document.addEventListener('touchmove', (e) => {
+    if (!e.target.closest('[data-scroll]')) e.preventDefault();
+  }, { passive: false });
+
+  // KeyboardResize.None keeps the WKWebView frame at full height so the layout
+  // never jumps. We track keyboard height ourselves via Capacitor events and
+  // expose it as --kb so modal backdrops can push panels above the keyboard.
+  // NOTE: window.visualViewport does NOT update in WKWebView with KeyboardResize.None
+  // (Capacitor owns the frame; WebKit never learns about the keyboard). The only
+  // reliable source of keyboard height in this configuration is the Capacitor
+  // keyboard plugin events — which is what we use here.
+  import('@capacitor/keyboard').then(({ Keyboard, KeyboardResize }) => {
+    Keyboard.setResizeMode({ mode: KeyboardResize.None }).catch(() => {});
+
+    const setKb = (h) => document.documentElement.style.setProperty('--kb', `${h}px`);
+
+    // Will* fires during animation start; Did* fires after animation completes.
+    // We listen to both so the panel moves with the keyboard rather than after it.
+    Keyboard.addListener('keyboardWillShow', ({ keyboardHeight }) => setKb(keyboardHeight));
+    Keyboard.addListener('keyboardDidShow',  ({ keyboardHeight }) => setKb(keyboardHeight));
+    Keyboard.addListener('keyboardWillHide', () => setKb(0));
+    Keyboard.addListener('keyboardDidHide',  () => setKb(0));
+  });
+}
+
+// PWA / web fallback: VisualViewport works correctly in a real browser
+// (Safari, Chrome) where WebKit manages keyboard visibility natively.
+if (Capacitor.getPlatform() === 'web' && window.visualViewport) {
   const updateKb = () => {
     const kb = Math.max(
       0,
@@ -22,20 +49,6 @@ if (window.visualViewport) {
   };
   window.visualViewport.addEventListener('resize', updateKb);
   window.visualViewport.addEventListener('scroll', updateKb);
-}
-
-// iOS-only fixes — do not apply on Android or web
-if (Capacitor.getPlatform() === 'ios') {
-  // Prevent the outer WKWebView UIScrollView from rubber-banding.
-  // Only elements with [data-scroll] are allowed to scroll.
-  document.addEventListener('touchmove', (e) => {
-    if (!e.target.closest('[data-scroll]')) e.preventDefault();
-  }, { passive: false });
-
-  // Lock keyboard so it never resizes the WKWebView frame.
-  import('@capacitor/keyboard').then(({ Keyboard, KeyboardResize }) => {
-    Keyboard.setResizeMode({ mode: KeyboardResize.None }).catch(() => {});
-  });
 }
 
 // When a new service worker activates and takes control, reload once so the

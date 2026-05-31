@@ -70,7 +70,7 @@ function ReportIssueModal({ onClose, deliveryId, courierId, reporterId }) {
     <div role="dialog" aria-modal="true" aria-label="Report an issue"
       className="fixed inset-0 z-[200] flex items-end justify-center"
       style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}>
-      <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div data-scroll className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
         <div className="flex items-center justify-between">
           <p className="font-bold text-white text-base">Report an Issue</p>
           <button onClick={onClose} aria-label="Close" className="text-gray-400 text-xl font-bold leading-none">×</button>

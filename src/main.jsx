@@ -7,6 +7,12 @@ import { AuthProvider } from './context/AuthContext.jsx';
 import { ModeProvider } from './context/ModeContext.jsx';
 import './index.css';
 
+// Prevent the outer WKWebView UIScrollView from bouncing/rubber-banding.
+// Only the CSS overflow container (our <main>) should scroll.
+document.addEventListener('touchmove', (e) => {
+  if (!e.target.closest('[data-scroll]')) e.preventDefault();
+}, { passive: false });
+
 // When a new service worker activates and takes control, reload once so the
 // app immediately runs the latest code instead of waiting for a manual restart.
 if ('serviceWorker' in navigator) {

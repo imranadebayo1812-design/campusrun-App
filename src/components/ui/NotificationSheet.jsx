@@ -60,7 +60,7 @@ export default function NotificationSheet({ onClose }) {
         </div>
 
         {/* List */}
-        <div className="max-h-[70vh] overflow-y-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div data-scroll className="max-h-[70vh] overflow-y-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center py-14">
               <div className="w-14 h-14 bg-surface-800 rounded-full flex items-center justify-center mb-3">

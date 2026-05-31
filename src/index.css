@@ -17,8 +17,12 @@
     overscroll-behavior: none;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  /* Remove 300ms iOS tap delay on all interactive elements */
+  button, a, label, [role="button"], [role="tab"], select { touch-action: manipulation; }
   input, textarea, select { color-scheme: dark; }
   img, video, iframe, embed, object { max-width: 100%; }
+  /* Prevent accidental text selection on UI chrome */
+  button, nav, header { user-select: none; -webkit-user-select: none; }
 }
 
 @layer utilities {

@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useMode } from '@/context/ModeContext';
 import { useAuth } from '@/context/AuthContext';
 import BottomNav from './BottomNav';
@@ -12,7 +12,6 @@ export default function MobileShell({ children }) {
   const { mode, toggleMode } = useMode();
   const { profile } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const contentRef = useRef(null);
 
   const touchStartY = useRef(0);
@@ -132,17 +131,15 @@ export default function MobileShell({ children }) {
         id="main-content"
         role="main"
         ref={contentRef}
+        data-scroll
         className="flex-1 overflow-y-auto pb-nav bg-surface-950 scrollbar-hide"
         style={{
-          transform: pullY > 0 ? `translateY(${Math.min(pullY, PULL_THRESHOLD) * 0.3}px)` : undefined,
-          transition: pulling.current ? undefined : 'transform 0.2s ease',
           WebkitOverflowScrolling: 'touch',
           overscrollBehaviorY: 'none',
+          touchAction: 'pan-y',
         }}
       >
-        <div key={location.pathname} className="animate-page-enter">
-          {children}
-        </div>
+        {children}
       </main>
 
       {/* Bottom navigation */}

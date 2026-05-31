@@ -18,12 +18,24 @@ const config: CapacitorConfig = {
       showSpinner: false,
     },
     StatusBar: {
-      style: 'dark',
+      style: 'light',
       backgroundColor: '#080812',
+    },
+    Keyboard: {
+      resize: 'none',
+      style: 'dark',
+      resizeOnFullScreen: false,
     },
   },
   ios: {
-    contentInset: 'always',
+    // 'never' = we handle safe-areas purely in CSS via env(safe-area-inset-*).
+    // 'always' caused double-padding: native UIScrollView added safeAreaInset offset
+    // AND our CSS env() added the same again → huge gap at the top.
+    contentInset: 'never',
+    // Disable the outer WKWebView UIScrollView bounce. CSS overflow containers
+    // (our <main> scroll area) still scroll normally.
+    scrollEnabled: false,
+    allowsLinkPreview: false,
     backgroundColor: '#080812',
   },
   android: {

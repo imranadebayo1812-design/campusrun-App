@@ -102,12 +102,16 @@ workflows:
       - name: Set up code signing
         script: xcode-project use-profiles
 
-      - name: Lock portrait orientation
+      - name: Lock portrait orientation + enable Background Modes
         script: |
           PLIST="ios/App/App/Info.plist"
           /usr/libexec/PlistBuddy -c "Delete :UISupportedInterfaceOrientations" "$PLIST" 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations array" "$PLIST"
           /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait" "$PLIST"
+          # Background Modes — required for FCM silent push notifications
+          /usr/libexec/PlistBuddy -c "Delete :UIBackgroundModes" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string remote-notification" "$PLIST"
 
       - name: Set build number
         script: |

@@ -45,12 +45,13 @@ export default function ChatModal({ deliveryId, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-end">
+    <div className="fixed inset-x-0 top-0 bg-black/70 z-50 flex items-end" style={{ height: '100dvh' }}>
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Chat with courier"
-        className="bg-surface-900 border border-white/[0.08] rounded-t-2xl w-full max-w-md mx-auto h-[70vh] flex flex-col"
+        className="bg-surface-900 border border-white/[0.08] rounded-t-2xl w-full max-w-md mx-auto flex flex-col"
+        style={{ height: '70dvh' }}
       >
         <div className="flex items-center justify-between p-4 border-b border-white/[0.08]">
           <p className="font-semibold text-white">Chat with Courier</p>

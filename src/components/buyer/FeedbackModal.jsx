@@ -31,12 +31,13 @@ export default function FeedbackModal({ delivery, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-end">
+    <div className="fixed inset-x-0 top-0 bg-black/70 z-50 flex items-end" style={{ height: '100dvh' }}>
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Rate your delivery"
         className="bg-surface-900 border border-white/[0.08] rounded-t-2xl w-full max-w-md mx-auto p-5 space-y-4"
+        style={{ maxHeight: '90dvh', overflowY: 'auto' }}
       >
         <div className="flex items-center justify-between">
           <p className="font-semibold text-white">Rate your delivery</p>

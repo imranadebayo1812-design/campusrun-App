@@ -45,8 +45,8 @@ export default function TipModal({ delivery, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-end" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
-      <div className="w-full max-w-md mx-auto rounded-t-2xl p-5 space-y-4 border border-white/10" style={{ backgroundColor: '#111827' }}>
+    <div className="fixed inset-x-0 top-0 z-[200] flex items-end" style={{ height: '100dvh', backgroundColor: 'rgba(0,0,0,0.6)' }}>
+      <div className="w-full max-w-md mx-auto rounded-t-2xl p-5 space-y-4 border border-white/10" style={{ backgroundColor: '#111827', maxHeight: '90dvh', overflowY: 'auto' }}>
         <div className="flex items-center justify-between">
           <p className="font-semibold text-white">Add a Tip</p>
           <button onClick={onClose}><X className="w-5 h-5 text-gray-400" /></button>

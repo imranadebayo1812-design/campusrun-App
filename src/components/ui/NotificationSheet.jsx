@@ -30,12 +30,13 @@ export default function NotificationSheet({ onClose }) {
   return (
     <div
       role="dialog" aria-modal="true" aria-label="Notifications"
-      className="fixed inset-0 z-[250] flex items-end justify-center"
-      style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+      className="fixed inset-x-0 top-0 z-[250] flex items-end justify-center"
+      style={{ height: '100dvh', backgroundColor: 'rgba(0,0,0,0.7)' }}
       onClick={onClose}
     >
       <div
         className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl overflow-hidden"
+        style={{ maxHeight: '90dvh', overflowY: 'auto' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}

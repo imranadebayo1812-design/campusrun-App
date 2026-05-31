@@ -34,8 +34,8 @@ export default function TermsModal() {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-end justify-center p-4">
-      <div className="bg-surface-900 border border-white/[0.08] rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+    <div className="fixed inset-x-0 top-0 bg-black/80 z-50 flex items-end justify-center p-4" style={{ height: '100dvh' }}>
+      <div className="bg-surface-900 border border-white/[0.08] rounded-2xl w-full max-w-lg flex flex-col" style={{ maxHeight: '90dvh' }}>
         <div className="p-5 border-b border-white/[0.08]">
           <h2 className="text-lg font-bold text-white">Terms & Conditions</h2>
           <p className="text-sm text-gray-400 mt-0.5">Please read and accept before continuing</p>

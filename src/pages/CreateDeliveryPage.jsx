@@ -213,13 +213,13 @@ function ItemDetailSheet({ item, inCart, onAdd, onClose }) {
       role="dialog"
       aria-modal="true"
       aria-label={item.name}
-      className="fixed inset-0 z-[200] flex items-end justify-center kb-backdrop"
-      style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+      className="fixed inset-x-0 top-0 z-[200] flex items-end justify-center"
+      style={{ height: '100dvh', backgroundColor: 'rgba(0,0,0,0.7)' }}
       onClick={onClose}
     >
       <div
         className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4"
-        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}
+        style={{ maxHeight: '90dvh', overflowY: 'auto', paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">

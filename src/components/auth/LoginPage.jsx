@@ -10,11 +10,13 @@ const NILE_EMAIL_RE = /^[^\s@]+@([a-z0-9-]+\.)*nileuniversity\.edu\.ng$/i;
 function TermsSheet({ onClose }) {
   return (
     <div
-      className="fixed inset-0 bg-black/80 z-50 flex items-end justify-center p-4"
+      className="fixed inset-x-0 top-0 bg-black/80 z-50 flex items-end justify-center p-4"
+      style={{ height: '100dvh' }}
       onClick={onClose}
     >
       <div
-        className="bg-surface-900 border border-white/[0.08] rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col"
+        className="bg-surface-900 border border-white/[0.08] rounded-2xl w-full max-w-lg flex flex-col"
+        style={{ maxHeight: '85dvh' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-5 border-b border-white/[0.08]">

@@ -111,11 +111,11 @@ function WithdrawModal({ title, maxAmount, isEarnings, type, onSuccess, onClose 
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-end justify-center kb-backdrop"
-      style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+      className="fixed inset-x-0 top-0 z-[200] flex items-end justify-center"
+      style={{ height: '100dvh', backgroundColor: 'rgba(0,0,0,0.7)' }}
     >
-      <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4 max-h-[90vh] overflow-y-auto"
-        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}>
+      <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4"
+        style={{ maxHeight: '90dvh', overflowY: 'auto', paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}>
         <div className="flex items-center justify-between">
           <p className="font-bold text-white text-base">{title}</p>
           <button onClick={onClose} className="text-gray-400 text-xl font-bold leading-none">×</button>

@@ -8,11 +8,10 @@ workflows:
         - ios
       vars:
         BUNDLE_ID: com.campusrun.app
-        XCODE_WORKSPACE: ios/App/App.xcworkspace
+        XCODE_WORKSPACE: ios/App/App.xcodeproj/project.xcworkspace
         XCODE_SCHEME: App
       node: "22"
       xcode: latest
-      cocoapods: default
     scripts:
       - name: Install dependencies
         script: npm ci
@@ -22,11 +21,6 @@ workflows:
 
       - name: Sync Capacitor
         script: npx cap sync ios
-
-      - name: Install CocoaPods
-        script: |
-          cd ios/App
-          pod install
 
       - name: Set up keychain
         script: keychain initialize

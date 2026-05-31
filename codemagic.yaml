@@ -52,7 +52,7 @@ workflows:
         submit_to_testflight: true
       email:
         recipients:
-          - alameenimranade@gmail.com
+          - imranadebayo1812@gmail.com
         notify:
           success: true
           failure: true

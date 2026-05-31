@@ -19,9 +19,10 @@ export function usePushNotifications() {
   }, [session?.user?.id]);
 }
 
-// ── Native Android (Capacitor PushNotifications) ───────────────────
+// ── Native iOS / Android (Capacitor PushNotifications) ────────────
 
 async function setupNative(userId, addNotification) {
+  const platform = Capacitor.getPlatform(); // 'ios' | 'android'
   try {
     const { PushNotifications } = await import('@capacitor/push-notifications');
 
@@ -38,12 +39,12 @@ async function setupNative(userId, addNotification) {
     await PushNotifications.register();
 
     PushNotifications.addListener('registration', async ({ value: token }) => {
-      // Remove old web (Chrome) tokens so notifications only come from the native app
+      // Remove old web tokens so notifications come only from the native app
       await supabase.from('push_tokens').delete()
         .eq('user_id', userId).eq('platform', 'web');
 
       await supabase.from('push_tokens').upsert(
-        { user_id: userId, token, platform: 'android' },
+        { user_id: userId, token, platform },
         { onConflict: 'user_id,token' },
       );
     });

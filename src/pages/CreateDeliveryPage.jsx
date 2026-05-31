@@ -111,7 +111,7 @@ function InlineLocationSelect({ label, value, onChange, icon: Icon, iconColor, s
             className="flex-1 bg-transparent text-sm text-white placeholder-gray-500 outline-none"
           />
         </div>
-        <div className="max-h-52 overflow-y-auto">
+        <div data-scroll className="max-h-52 overflow-y-auto">
           {pinnedSaved.length > 0 && (
             <>
               {pinnedSaved.map(addr => (
@@ -278,12 +278,6 @@ export default function CreateDeliveryPage() {
   const [itemDescription, setItemDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  // Vendor meta (emoji/zone) from MOCK_VENDORS or DB vendors table; items come from DB
-  const pickerMeta = !vendorMeta && pickupLocation
-    ? (MOCK_VENDORS.find(v => v.name === pickupLocation) ?? dbVendors.find(v => v.name === pickupLocation) ?? null)
-    : null;
-  const activeVendorMeta = vendorMeta || pickerMeta;
-  const activeVendorName = activeVendorMeta?.name || null;
 
   // Fetch vendor metadata from DB so new vendors appear in pickup/dropoff lists
   const { data: dbVendors = [] } = useQuery({
@@ -294,6 +288,14 @@ export default function CreateDeliveryPage() {
     },
     staleTime: 10 * 60 * 1000,
   });
+
+  // Vendor meta (emoji/zone) from MOCK_VENDORS or DB vendors table; items come from DB
+  // NOTE: must come after dbVendors useQuery — pickerMeta references dbVendors
+  const pickerMeta = !vendorMeta && pickupLocation
+    ? (MOCK_VENDORS.find(v => v.name === pickupLocation) ?? dbVendors.find(v => v.name === pickupLocation) ?? null)
+    : null;
+  const activeVendorMeta = vendorMeta || pickerMeta;
+  const activeVendorName = activeVendorMeta?.name || null;
 
   // Menu fetch — reads from prefetch cache if the user came from HomePage
   const { data: menuRaw, isLoading: menuLoading } = useQuery({

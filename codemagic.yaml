@@ -52,16 +52,26 @@ workflows:
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME"
 
+      - name: Upload to TestFlight
+        script: |
+          KEY_B64=$(printf '%s' "$APP_STORE_CONNECT_PRIVATE_KEY" \
+            | sed 's/-----[A-Z ]*-----//g' \
+            | tr -d ' \n\r\t')
+          printf -- "-----BEGIN PRIVATE KEY-----\n%s\n-----END PRIVATE KEY-----\n" \
+            "$(printf '%s' "$KEY_B64" | fold -w 64)" > /tmp/api_key.p8
+          unset APP_STORE_CONNECT_PRIVATE_KEY
+          app-store-connect publish \
+            --path "$(find build/ios/ipa -name '*.ipa' | head -1)" \
+            --private-key @file:/tmp/api_key.p8 \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --testflight
+
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
 
     publishing:
-      app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        submit_to_testflight: true
       email:
         recipients:
           - imranadebayo1812@gmail.com

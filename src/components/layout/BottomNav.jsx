@@ -3,14 +3,25 @@ import { useMode } from '@/context/ModeContext';
 import { Home, Clock, Wallet, Bike, User, Plus } from 'lucide-react';
 
 const NAV_CLASSES = 'fixed bottom-0 left-0 right-0 max-w-xl mx-auto safe-bottom z-10';
-const NAV_INNER  = 'bg-surface-900/95 backdrop-blur-xl border-t border-surface-700';
+const NAV_INNER  = 'bg-surface-950/95 backdrop-blur-2xl border-t border-white/[0.06]';
 
-function tabClass(isActive) {
-  return `flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 min-h-[48px] text-xs font-medium transition-colors duration-150 ${
-    isActive
-      ? 'text-brand-400'
-      : 'text-gray-600 active:text-gray-400'
-  }`;
+function Tab({ icon: Icon, label, isActive }) {
+  return (
+    <>
+      <div className={`flex items-center justify-center rounded-2xl transition-all duration-150 w-10 h-10 ${
+        isActive ? 'bg-brand-500/15' : ''
+      }`}>
+        <Icon className={`w-[22px] h-[22px] transition-colors duration-150 ${
+          isActive ? 'text-brand-400' : 'text-gray-600'
+        }`} aria-hidden="true" />
+      </div>
+      <span className={`text-[10px] font-semibold tracking-wide transition-all duration-150 leading-none ${
+        isActive ? 'text-brand-400 opacity-100 max-h-4' : 'opacity-0 max-h-0 overflow-hidden'
+      }`}>
+        {label}
+      </span>
+    </>
+  );
 }
 
 export default function BottomNav() {
@@ -28,20 +39,15 @@ export default function BottomNav() {
     return (
       <nav aria-label="Main navigation" className={NAV_CLASSES}>
         <div className={`${NAV_INNER} flex`}>
-          {courierTabs.map(({ to, icon: Icon, label }) => (
+          {courierTabs.map(({ to, icon, label }) => (
             <NavLink
               key={to}
               to={to}
               end={to === '/courier'}
               aria-label={label}
-              className={({ isActive }) => tabClass(isActive)}
+              className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[52px]"
             >
-              {({ isActive }) => (
-                <>
-                  <Icon className="w-5 h-5" aria-hidden="true" />
-                  <span aria-current={isActive ? 'page' : undefined}>{label}</span>
-                </>
-              )}
+              {({ isActive }) => <Tab icon={icon} label={label} isActive={isActive} />}
             </NavLink>
           ))}
         </div>
@@ -54,28 +60,18 @@ export default function BottomNav() {
       <div className={`${NAV_INNER} flex items-end`}>
         {/* Home */}
         <NavLink to="/" end aria-label="Home"
-          className={({ isActive }) => tabClass(isActive)}>
-          {({ isActive }) => (
-            <>
-              <Home className="w-5 h-5" aria-hidden="true" />
-              <span aria-current={isActive ? 'page' : undefined}>Home</span>
-            </>
-          )}
+          className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[52px]">
+          {({ isActive }) => <Tab icon={Home} label="Home" isActive={isActive} />}
         </NavLink>
 
         {/* Orders */}
         <NavLink to="/orders" aria-label="Orders"
-          className={({ isActive }) => tabClass(isActive)}>
-          {({ isActive }) => (
-            <>
-              <Clock className="w-5 h-5" aria-hidden="true" />
-              <span aria-current={isActive ? 'page' : undefined}>Orders</span>
-            </>
-          )}
+          className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[52px]">
+          {({ isActive }) => <Tab icon={Clock} label="Orders" isActive={isActive} />}
         </NavLink>
 
         {/* FAB — elevated centre button */}
-        <div className="flex-1 flex flex-col items-center pb-1.5">
+        <div className="flex-1 flex flex-col items-center pb-1">
           <button
             onClick={() => navigate('/create-order')}
             aria-label="Create new delivery"
@@ -86,34 +82,23 @@ export default function BottomNav() {
               background: 'linear-gradient(135deg, #00d1ff 0%, #0080ff 100%)',
               boxShadow: '0 0 20px rgba(0,209,255,0.45), 0 4px 12px rgba(0,0,0,0.4)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginTop: -24,
+              marginTop: -20,
             }}
           >
             <Plus className="w-6 h-6 text-white" strokeWidth={2.5} aria-hidden="true" />
           </button>
-          <span className="text-xs font-medium text-gray-600 mt-1" aria-hidden="true">New</span>
         </div>
 
         {/* Wallet */}
         <NavLink to="/wallet" aria-label="Wallet"
-          className={({ isActive }) => tabClass(isActive)}>
-          {({ isActive }) => (
-            <>
-              <Wallet className="w-5 h-5" aria-hidden="true" />
-              <span aria-current={isActive ? 'page' : undefined}>Wallet</span>
-            </>
-          )}
+          className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[52px]">
+          {({ isActive }) => <Tab icon={Wallet} label="Wallet" isActive={isActive} />}
         </NavLink>
 
         {/* Profile */}
         <NavLink to="/profile" aria-label="Profile"
-          className={({ isActive }) => tabClass(isActive)}>
-          {({ isActive }) => (
-            <>
-              <User className="w-5 h-5" aria-hidden="true" />
-              <span aria-current={isActive ? 'page' : undefined}>Profile</span>
-            </>
-          )}
+          className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 min-h-[52px]">
+          {({ isActive }) => <Tab icon={User} label="Profile" isActive={isActive} />}
         </NavLink>
       </div>
     </nav>

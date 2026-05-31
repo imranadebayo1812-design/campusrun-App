@@ -71,7 +71,7 @@ function DeleteAccountModal({ onClose }) {
       style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
     >
       <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4"
-        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}>
+        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom) + var(--kb, 0px))' }}>
         <div className="flex items-center justify-between">
           <p className="font-bold text-white text-base">Delete your account?</p>
           {!submitted && (

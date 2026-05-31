@@ -20,6 +20,13 @@ if (Capacitor.getPlatform() === 'ios') {
   // misorientation when tapping inputs in modals and forms.
   import('@capacitor/keyboard').then(({ Keyboard, KeyboardResize }) => {
     Keyboard.setResizeMode({ mode: KeyboardResize.None }).catch(() => {});
+    // Push modal panels up when keyboard appears so inputs stay visible
+    Keyboard.addListener('keyboardWillShow', ({ keyboardHeight }) => {
+      document.documentElement.style.setProperty('--kb', `${keyboardHeight}px`);
+    });
+    Keyboard.addListener('keyboardWillHide', () => {
+      document.documentElement.style.setProperty('--kb', '0px');
+    });
   });
 }
 

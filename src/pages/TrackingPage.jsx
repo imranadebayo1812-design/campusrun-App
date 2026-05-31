@@ -71,7 +71,7 @@ function ReportIssueModal({ onClose, deliveryId, courierId, reporterId }) {
       className="fixed inset-0 z-[200] flex items-end justify-center"
       style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}>
       <div data-scroll className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto"
-        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}>
+        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom) + var(--kb, 0px))' }}>
         <div className="flex items-center justify-between">
           <p className="font-bold text-white text-base">Report an Issue</p>
           <button onClick={onClose} aria-label="Close" className="text-gray-400 text-xl font-bold leading-none">×</button>
@@ -176,7 +176,7 @@ function RatingModal({ delivery, session, onClose, onSubmit }) {
   return (
     <div className="fixed inset-0 z-[200] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
       <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4"
-        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}>
+        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom) + var(--kb, 0px))' }}>
         <div className="flex items-center justify-between">
           <p className="font-bold text-white text-base">Rate your courier</p>
           <button onClick={onClose} className="text-gray-400 text-xl font-bold leading-none">×</button>

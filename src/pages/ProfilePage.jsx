@@ -67,11 +67,25 @@ function DeleteAccountModal({ onClose }) {
       role="dialog"
       aria-modal="true"
       aria-label="Delete account"
-      className="fixed inset-0 z-[200] flex items-end justify-center kb-backdrop"
-      style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+      className="fixed inset-x-0 top-0 z-[200] flex items-end justify-center"
+      style={{
+        // 100dvh = dynamic viewport height — shrinks when iOS keyboard opens.
+        // Unlike inset-0 (anchors to the large/static viewport), this keeps
+        // flex items-end aligned to the visual viewport bottom (above keyboard).
+        height: '100dvh',
+        backgroundColor: 'rgba(0,0,0,0.7)',
+      }}
     >
-      <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4"
-        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}>
+      <div
+        data-scroll
+        className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4"
+        style={{
+          // Never taller than 90% of the visual viewport; scrollable if needed.
+          maxHeight: '90dvh',
+          overflowY: 'auto',
+          paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))',
+        }}
+      >
         <div className="flex items-center justify-between">
           <p className="font-bold text-white text-base">Delete your account?</p>
           {!submitted && (

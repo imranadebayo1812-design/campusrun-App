@@ -27,13 +27,12 @@ workflows:
 
       - name: Fetch signing files
         script: |
-          # Rebuild valid PEM from env var (handles stripped newlines)
-          KEY_B64=$(echo "$APP_STORE_CONNECT_PRIVATE_KEY" \
-            | sed 's/-----BEGIN PRIVATE KEY-----//g' \
-            | sed 's/-----END PRIVATE KEY-----//g' \
-            | tr -d ' \n\r')
-          printf "-----BEGIN PRIVATE KEY-----\n%s\n-----END PRIVATE KEY-----\n" \
-            "$(echo "$KEY_B64" | fold -w 64)" > /tmp/api_key.p8
+          KEY_B64=$(printf '%s' "$APP_STORE_CONNECT_PRIVATE_KEY" \
+            | sed 's/-----[A-Z ]*-----//g' \
+            | tr -d ' \n\r\t')
+          printf -- "-----BEGIN PRIVATE KEY-----\n%s\n-----END PRIVATE KEY-----\n" \
+            "$(printf '%s' "$KEY_B64" | fold -w 64)" > /tmp/api_key.p8
+          unset APP_STORE_CONNECT_PRIVATE_KEY
           openssl genrsa -out /tmp/cert_key.pem 2048
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \

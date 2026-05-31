@@ -2,8 +2,8 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useMode } from '@/context/ModeContext';
 import { Home, Clock, Wallet, Bike, User, Plus } from 'lucide-react';
 
-const NAV_CLASSES = 'fixed bottom-0 left-0 right-0 max-w-xl mx-auto safe-bottom z-10';
-const NAV_INNER  = 'bg-surface-950 border-t border-white/[0.06]';
+const NAV_CLASSES = 'shrink-0 bg-surface-950 relative z-10';
+const NAV_INNER  = 'border-t border-white/[0.06]';
 
 function Tab({ icon: Icon, label, isActive }) {
   return (
@@ -37,7 +37,7 @@ export default function BottomNav() {
 
   if (isCourier) {
     return (
-      <nav aria-label="Main navigation" className={NAV_CLASSES}>
+      <nav aria-label="Main navigation" className={NAV_CLASSES} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <div className={`${NAV_INNER} flex`}>
           {courierTabs.map(({ to, icon, label }) => (
             <NavLink
@@ -56,7 +56,7 @@ export default function BottomNav() {
   }
 
   return (
-    <nav aria-label="Main navigation" className={NAV_CLASSES}>
+    <nav aria-label="Main navigation" className={NAV_CLASSES} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className={`${NAV_INNER} flex items-end`}>
         {/* Home */}
         <NavLink to="/" end aria-label="Home"

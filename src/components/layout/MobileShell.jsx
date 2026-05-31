@@ -132,7 +132,7 @@ export default function MobileShell({ children }) {
         role="main"
         ref={contentRef}
         data-scroll
-        className="flex-1 overflow-y-auto pb-nav bg-surface-950 scrollbar-hide"
+        className="flex-1 overflow-y-auto bg-surface-950 scrollbar-hide"
         style={{
           overscrollBehaviorY: 'none',
           touchAction: 'pan-y',

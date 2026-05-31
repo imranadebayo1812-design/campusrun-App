@@ -3,7 +3,7 @@ import { useMode } from '@/context/ModeContext';
 import { Home, Clock, Wallet, Bike, User, Plus } from 'lucide-react';
 
 const NAV_CLASSES = 'fixed bottom-0 left-0 right-0 max-w-xl mx-auto safe-bottom z-10';
-const NAV_INNER  = 'bg-surface-950/95 backdrop-blur-2xl border-t border-white/[0.06]';
+const NAV_INNER  = 'bg-surface-950 border-t border-white/[0.06]';
 
 function Tab({ icon: Icon, label, isActive }) {
   return (

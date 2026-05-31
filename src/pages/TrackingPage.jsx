@@ -537,6 +537,7 @@ export default function TrackingPage() {
     }]);
     const { error } = await supabase.from('chat_messages').insert({
       delivery_id: deliveryId,
+      order_id:    deliveryId,
       sender_id:   session.user.id,
       sender_role: 'buyer',
       message:     text,

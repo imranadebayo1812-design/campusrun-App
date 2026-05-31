@@ -278,6 +278,7 @@ function CourierChatPanel({ deliveryId, buyerId, session }) {
     }]);
     const { error } = await supabase.from('chat_messages').insert({
       delivery_id: deliveryId,
+      order_id:    deliveryId,
       sender_id:   session.user.id,
       sender_role: 'courier',
       message:     text,

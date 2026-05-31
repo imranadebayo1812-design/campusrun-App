@@ -8,6 +8,22 @@ import { AuthProvider } from './context/AuthContext.jsx';
 import { ModeProvider } from './context/ModeContext.jsx';
 import './index.css';
 
+// VisualViewport: tracks keyboard height frame-by-frame on every platform.
+// Fires on every frame of the keyboard animation and resets reliably on close —
+// much more reliable than Capacitor keyboard events which fire once and can miss
+// the reset if the app is backgrounded or the keyboard is dismissed programmatically.
+if (window.visualViewport) {
+  const updateKb = () => {
+    const kb = Math.max(
+      0,
+      window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop
+    );
+    document.documentElement.style.setProperty('--kb', `${Math.round(kb)}px`);
+  };
+  window.visualViewport.addEventListener('resize', updateKb);
+  window.visualViewport.addEventListener('scroll', updateKb);
+}
+
 // iOS-only fixes — do not apply on Android or web
 if (Capacitor.getPlatform() === 'ios') {
   // Prevent the outer WKWebView UIScrollView from rubber-banding.
@@ -16,17 +32,9 @@ if (Capacitor.getPlatform() === 'ios') {
     if (!e.target.closest('[data-scroll]')) e.preventDefault();
   }, { passive: false });
 
-  // Lock keyboard so it never resizes the viewport — prevents layout
-  // misorientation when tapping inputs in modals and forms.
+  // Lock keyboard so it never resizes the WKWebView frame.
   import('@capacitor/keyboard').then(({ Keyboard, KeyboardResize }) => {
     Keyboard.setResizeMode({ mode: KeyboardResize.None }).catch(() => {});
-    // Push modal panels up when keyboard appears so inputs stay visible
-    Keyboard.addListener('keyboardWillShow', ({ keyboardHeight }) => {
-      document.documentElement.style.setProperty('--kb', `${keyboardHeight}px`);
-    });
-    Keyboard.addListener('keyboardWillHide', () => {
-      document.documentElement.style.setProperty('--kb', '0px');
-    });
   });
 }
 

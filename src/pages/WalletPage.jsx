@@ -59,7 +59,7 @@ function WithdrawToBankModal({ maxAmount, onSuccess, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.7)', paddingBottom: 'var(--kb, 0px)' }}>
+    <div className="fixed inset-0 z-[200] flex items-end justify-center kb-backdrop" style={{ backgroundColor: 'rgba(0,0,0,0.7)', paddingBottom: 'var(--kb, 0px)' }}>
       <div data-scroll className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4 max-h-[90vh] overflow-y-auto"
         style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}>
         <div className="flex items-center justify-between mb-1">

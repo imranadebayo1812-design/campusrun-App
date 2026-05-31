@@ -2,8 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Keyboard height injected by Capacitor keyboardWillShow on iOS */
+/* Keyboard height — updated frame-by-frame by VisualViewport events in main.jsx */
 :root { --kb: 0px; }
+
+/* Modal backdrops animate smoothly when keyboard slides up/down */
+.kb-backdrop { transition: padding-bottom 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
 
 @layer base {
   html {

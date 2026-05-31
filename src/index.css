@@ -6,15 +6,20 @@
   html {
     height: 100%; margin: 0; padding: 0;
     -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
-    overflow-x: hidden;
+    /* NO overflow:hidden on html — iOS WKWebView bug: overflow on html makes
+       position:fixed elements document-relative instead of viewport-relative,
+       breaking the nav bar, modals, and causing horizontal content clipping. */
   }
-  body, #root {
+  body {
     height: 100%; margin: 0; padding: 0;
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     background-color: #0b0f19; color: white;
-    overflow-x: hidden;
     overscroll-behavior: none;
+  }
+  #root {
+    height: 100%;
+    overflow-x: hidden; /* safe at component level — does not affect fixed elements */
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   /* Remove 300ms iOS tap delay on all interactive elements */

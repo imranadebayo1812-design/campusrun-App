@@ -60,6 +60,26 @@ workflows:
       - name: Sync Capacitor
         script: npx cap sync ios
 
+      - name: Re-add Firebase to Package.swift (cap sync overwrites it)
+        script: |
+          python3 - <<'PYEOF'
+          path = 'ios/App/CapApp-SPM/Package.swift'
+          txt = open(path).read()
+          if 'firebase-ios-sdk' not in txt:
+              txt = txt.replace(
+                  '        .package(name: "CapacitorStatusBar", path: "../../../node_modules/@capacitor/status-bar")\n    ],',
+                  '        .package(name: "CapacitorStatusBar", path: "../../../node_modules/@capacitor/status-bar"),\n        .package(url: "https://github.com/firebase/firebase-ios-sdk.git", from: "11.0.0")\n    ],'
+              )
+              txt = txt.replace(
+                  '                .product(name: "CapacitorStatusBar", package: "CapacitorStatusBar")\n            ]',
+                  '                .product(name: "CapacitorStatusBar", package: "CapacitorStatusBar"),\n                .product(name: "FirebaseMessaging", package: "firebase-ios-sdk")\n            ]'
+              )
+              open(path, 'w').write(txt)
+              print('Firebase re-added to Package.swift')
+          else:
+              print('Firebase already present in Package.swift')
+          PYEOF
+
       - name: Set up keychain
         script: keychain initialize
 

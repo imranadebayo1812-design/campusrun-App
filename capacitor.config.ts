@@ -21,11 +21,6 @@ const config: CapacitorConfig = {
       style: 'light',
       backgroundColor: '#080812',
     },
-    Keyboard: {
-      resize: 'none',
-      style: 'dark',
-      resizeOnFullScreen: false,
-    },
   },
   ios: {
     // 'never' = we handle safe-areas purely in CSS via env(safe-area-inset-*).

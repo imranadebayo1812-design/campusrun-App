@@ -2,16 +2,26 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Capacitor } from '@capacitor/core';
 import App from './App.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { ModeProvider } from './context/ModeContext.jsx';
 import './index.css';
 
-// Prevent the outer WKWebView UIScrollView from bouncing/rubber-banding.
-// Only the CSS overflow container (our <main>) should scroll.
-document.addEventListener('touchmove', (e) => {
-  if (!e.target.closest('[data-scroll]')) e.preventDefault();
-}, { passive: false });
+// iOS-only fixes — do not apply on Android or web
+if (Capacitor.getPlatform() === 'ios') {
+  // Prevent the outer WKWebView UIScrollView from rubber-banding.
+  // Only elements with [data-scroll] are allowed to scroll.
+  document.addEventListener('touchmove', (e) => {
+    if (!e.target.closest('[data-scroll]')) e.preventDefault();
+  }, { passive: false });
+
+  // Lock keyboard so it never resizes the viewport — prevents layout
+  // misorientation when tapping inputs in modals and forms.
+  import('@capacitor/keyboard').then(({ Keyboard, KeyboardResize }) => {
+    Keyboard.setResizeMode({ mode: KeyboardResize.None }).catch(() => {});
+  });
+}
 
 // When a new service worker activates and takes control, reload once so the
 // app immediately runs the latest code instead of waiting for a manual restart.

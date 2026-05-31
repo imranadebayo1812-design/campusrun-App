@@ -39,9 +39,16 @@ async function setupNative(userId, addNotification) {
     await PushNotifications.register();
 
     PushNotifications.addListener('registration', async ({ value: token }) => {
-      // Remove old web tokens so notifications come only from the native app
+      // The Capacitor plugin fires `registration` twice on iOS:
+      //   1. With the raw APNs device token (64 uppercase hex chars) — useless for FCM
+      //   2. With the real FCM token (long mixed string) — what we actually need
+      // MessagingDelegate in AppDelegate re-posts the FCM token via the same
+      // Capacitor notification channel, so we just skip the APNs-format one.
+      if (/^[0-9A-F]{64}$/.test(token)) return;
+
+      // Replace any stale token for this user+platform with the fresh FCM token
       await supabase.from('push_tokens').delete()
-        .eq('user_id', userId).eq('platform', 'web');
+        .eq('user_id', userId).eq('platform', platform);
 
       await supabase.from('push_tokens').upsert(
         { user_id: userId, token, platform },

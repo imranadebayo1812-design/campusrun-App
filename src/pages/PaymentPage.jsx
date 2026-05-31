@@ -13,7 +13,7 @@ export default function PaymentPage() {
 
   const delivery = location.state?.delivery;
   const [method, setMethod] = useState('paystack');
-  const [tip, setTip] = useState(0);
+  const [tip, setTip] = useState(delivery?.tip || 0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [paid, setPaid] = useState(false);
@@ -41,7 +41,9 @@ export default function PaymentPage() {
     }, 90000);
     return () => { clearInterval(pollRef.current); clearTimeout(timeout); };
   }, [loading, deliveryId]);
-  const baseTotal = delivery?.total_amount || 0;
+  // Always derive base from individual cost fields so returning to an
+  // awaiting-payment order never compounds a previously saved tip.
+  const baseTotal = (delivery?.food_cost || 0) + (delivery?.delivery_fee || 0) + (delivery?.service_fee || 0);
   const total = baseTotal + tip;
   const walletBalance = profile?.wallet_balance || 0;
   const canUseWallet = walletBalance >= total;

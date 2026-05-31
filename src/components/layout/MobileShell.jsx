@@ -76,7 +76,7 @@ export default function MobileShell({ children }) {
   const ready = pullY >= PULL_THRESHOLD || refreshing;
 
   return (
-    <div className="app-shell flex flex-col max-w-md mx-auto bg-surface-950 shadow-2xl relative overflow-x-hidden">
+    <div className="app-shell flex flex-col w-full max-w-xl mx-auto bg-surface-950 relative overflow-x-hidden">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[999] focus:bg-brand-500 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-semibold"
@@ -85,7 +85,10 @@ export default function MobileShell({ children }) {
       </a>
 
       {/* Header */}
-      <header className="relative flex items-center px-4 py-3 bg-surface-900 border-b border-white/[0.08] safe-top shrink-0 z-10 overflow-hidden">
+      <header
+        className="relative flex items-center px-4 pb-3 bg-surface-900 border-b border-white/[0.08] shrink-0 z-10 overflow-hidden"
+        style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top))' }}
+      >
         <Logo size={38} />
 
         {profile && (

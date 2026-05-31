@@ -148,7 +148,7 @@ export default function HomePage() {
   return (
     <div className="bg-surface-950 min-h-full">
       {/* Header */}
-      <div className="px-4 pt-5 pb-3 flex items-center justify-between gap-3">
+      <div className="px-4 sm:px-6 pt-5 pb-3 flex items-center justify-between gap-3">
         <div>
           <p className="text-gray-500 text-xs font-medium">{getGreeting()},</p>
           <h2 className="text-xl font-bold text-white">{firstName} 👋</h2>
@@ -217,7 +217,7 @@ export default function HomePage() {
       )}
 
       {/* All vendors */}
-      <div className="px-4">
+      <div className="px-4 sm:px-6">
         <div className="flex items-center justify-between mb-3">
           <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Order from Campus</p>
           {open ? (
@@ -232,7 +232,7 @@ export default function HomePage() {
             </span>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-3" style={!open ? { opacity: 0.45, pointerEvents: 'none', userSelect: 'none' } : undefined}>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" style={!open ? { opacity: 0.45, pointerEvents: 'none', userSelect: 'none' } : undefined}>
           {vendorsLoading
             ? [1,2,3,4,5,6].map(i => <SkeletonVendor key={i} />)
             : vendors.map(vendor => (

@@ -29,6 +29,11 @@
   .pb-nav      { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)); }
   .app-shell   { height: 100vh; height: 100svh; }
 
+  /* iPad centering background — fills space outside max-w-xl shell */
+  @media (min-width: 640px) {
+    body, #root { background-color: #06060f; }
+  }
+
   /* Glassmorphism */
   .glass {
     background: rgba(17, 24, 39, 0.75);

@@ -207,6 +207,7 @@ function CourierChatPanel({ deliveryId, buyerId, session }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
   const [unread, setUnread] = useState(0);
   const bottomRef = useRef(null);
 
@@ -266,21 +267,26 @@ function CourierChatPanel({ deliveryId, buyerId, session }) {
   async function send() {
     const text = input.trim();
     if (!text || sending) return;
+    const tempId = `temp-${Date.now()}`;
     setSending(true);
     setInput('');
+    setSendError('');
     setMessages(prev => [...prev, {
-      id: `temp-${Date.now()}`, delivery_id: deliveryId,
+      id: tempId, delivery_id: deliveryId,
       sender_id: session.user.id, sender_role: 'courier',
       message: text, created_at: new Date().toISOString(),
     }]);
-    await supabase.from('chat_messages').insert({
+    const { error } = await supabase.from('chat_messages').insert({
       delivery_id: deliveryId,
       sender_id:   session.user.id,
       sender_role: 'courier',
       message:     text,
     });
-    // Notify buyer via push (DB insert triggers send-push webhook)
-    if (buyerId) {
+    if (error) {
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      setInput(text);
+      setSendError('Failed to send — ' + error.message);
+    } else if (buyerId) {
       supabase.from('notifications').insert({
         user_id: buyerId,
         type:    'chat',
@@ -353,6 +359,7 @@ function CourierChatPanel({ deliveryId, buyerId, session }) {
               <Send className="w-4 h-4 text-white" aria-hidden="true" />
             </button>
           </div>
+          {sendError && <p className="text-xs text-red-400 mt-1">{sendError}</p>}
         </div>
       )}
     </div>

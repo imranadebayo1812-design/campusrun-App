@@ -6,7 +6,7 @@ import BottomNav from './BottomNav';
 import Logo from '@/components/ui/Logo';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
-const PULL_THRESHOLD = 68; // px before triggering refresh
+const PULL_THRESHOLD = 110; // px before triggering refresh
 
 export default function MobileShell({ children }) {
   const { mode, toggleMode } = useMode();

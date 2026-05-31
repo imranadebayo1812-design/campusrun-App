@@ -232,6 +232,7 @@ export default function TrackingPage() {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [chatSending, setChatSending] = useState(false);
+  const [chatError, setChatError] = useState('');
   const chatInputRef = useRef(null);
   const [graceLeft, setGraceLeft] = useState(0);
   const [accepting, setAccepting] = useState(false);
@@ -522,25 +523,29 @@ export default function TrackingPage() {
   async function sendChat() {
     const text = chatInput.trim();
     if (!text || chatSending) return;
+    const tempId = `temp-${Date.now()}`;
     setChatSending(true);
     setChatInput('');
-    // Optimistic update — message appears instantly before server confirms
+    setChatError('');
     setChatMessages(prev => [...prev, {
-      id:          `temp-${Date.now()}`,
+      id:          tempId,
       delivery_id: deliveryId,
       sender_id:   session.user.id,
       sender_role: 'buyer',
       message:     text,
       created_at:  new Date().toISOString(),
     }]);
-    await supabase.from('chat_messages').insert({
+    const { error } = await supabase.from('chat_messages').insert({
       delivery_id: deliveryId,
       sender_id:   session.user.id,
       sender_role: 'buyer',
       message:     text,
     });
-    // Notify courier via push (DB insert triggers send-push webhook)
-    if (delivery?.courier_id) {
+    if (error) {
+      setChatMessages(prev => prev.filter(m => m.id !== tempId));
+      setChatInput(text);
+      setChatError('Failed to send — ' + error.message);
+    } else if (delivery?.courier_id) {
       supabase.from('notifications').insert({
         user_id: delivery.courier_id,
         type:    'chat',
@@ -905,6 +910,9 @@ export default function TrackingPage() {
                 <Send className="w-4 h-4 text-white" aria-hidden="true" />
               </button>
             </div>
+            {chatError && (
+              <p className="px-3 pb-2 text-xs text-red-400">{chatError}</p>
+            )}
           </div>
         )}
 

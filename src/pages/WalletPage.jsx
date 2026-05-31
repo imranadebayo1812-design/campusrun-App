@@ -22,6 +22,11 @@ function WithdrawToBankModal({ maxAmount, onSuccess, onClose }) {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
+  function handleClose() {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    setTimeout(() => { window.scrollTo(0, 0); onClose(); }, 80);
+  }
+
   const amt = Math.round(parseFloat(amount) || 0);
 
   async function submit() {
@@ -54,18 +59,18 @@ function WithdrawToBankModal({ maxAmount, onSuccess, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-end justify-center p-0" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+    <div className="fixed inset-0 z-[200] flex items-end justify-center p-0 overflow-hidden" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
       <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4">
         <div className="flex items-center justify-between mb-1">
           <p className="font-bold text-white text-base">Withdraw to Bank</p>
-          <button onClick={onClose} className="text-gray-400 text-xl font-bold leading-none">×</button>
+          <button onClick={handleClose} className="text-gray-400 text-xl font-bold leading-none">×</button>
         </div>
 
         {done ? (
           <div className="text-center py-6">
             <p className="text-green-400 font-semibold text-base">Withdrawal requested!</p>
             <p className="text-gray-400 text-sm mt-1">₦{amt.toLocaleString()} will be processed within 24–48 hours.</p>
-            <button onClick={onClose} className="mt-4 bg-brand-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">Done</button>
+            <button onClick={handleClose} className="mt-4 bg-brand-500 text-white px-6 py-2.5 rounded-xl text-sm font-semibold">Done</button>
           </div>
         ) : (
           <>
@@ -103,7 +108,7 @@ function WithdrawToBankModal({ maxAmount, onSuccess, onClose }) {
 
             {error && <p className="text-xs text-red-400">{error}</p>}
             <div className="flex gap-2 pt-1">
-              <button onClick={onClose} className="flex-1 bg-surface-800 border border-white/[0.08] text-gray-400 font-medium py-3 rounded-xl text-sm">Cancel</button>
+              <button onClick={handleClose} className="flex-1 bg-surface-800 border border-white/[0.08] text-gray-400 font-medium py-3 rounded-xl text-sm">Cancel</button>
               <button onClick={submit} disabled={submitting} className="flex-1 bg-brand-500 text-white font-semibold py-3 rounded-xl text-sm disabled:opacity-50">
                 {submitting ? 'Processing…' : 'Submit Request'}
               </button>

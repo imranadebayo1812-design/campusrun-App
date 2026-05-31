@@ -33,15 +33,24 @@ workflows:
           printf -- "-----BEGIN PRIVATE KEY-----\n%s\n-----END PRIVATE KEY-----\n" \
             "$(printf '%s' "$KEY_B64" | fold -w 64)" > /tmp/api_key.p8
           unset APP_STORE_CONNECT_PRIVATE_KEY
+          # Build and validate cert key — fall back to generating if stored key is wrong
+          NEED_NEW_KEY=true
           if [ -n "$CERTIFICATE_PRIVATE_KEY" ]; then
             CERT_B64=$(printf '%s' "$CERTIFICATE_PRIVATE_KEY" \
               | sed 's/-----[A-Z ]*-----//g' \
               | tr -d ' \n\r\t')
             printf -- "-----BEGIN RSA PRIVATE KEY-----\n%s\n-----END RSA PRIVATE KEY-----\n" \
               "$(printf '%s' "$CERT_B64" | fold -w 64)" > /tmp/cert_key.pem
-          else
+            if openssl rsa -check -in /tmp/cert_key.pem -noout 2>/dev/null; then
+              NEED_NEW_KEY=false
+            else
+              echo "Stored CERTIFICATE_PRIVATE_KEY is not a valid RSA key — generating a new one"
+            fi
+          fi
+          if [ "$NEED_NEW_KEY" = "true" ]; then
             openssl genrsa -out /tmp/cert_key.pem 2048
-            cp /tmp/cert_key.pem "$CM_BUILD_DIR/certificate_private_key.pem"
+            cp /tmp/cert_key.pem ./certificate_private_key.pem
+            echo "=== NEW CERTIFICATE KEY SAVED TO ARTIFACTS ==="
           fi
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \

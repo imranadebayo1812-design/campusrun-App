@@ -234,7 +234,7 @@ function CourierChatPanel({ deliveryId, buyerId, session }) {
         setMessages(prev => {
           const withoutOptimistic = prev.filter(m =>
             !(String(m.id).startsWith('temp-') &&
-              m.message === payload.new.message &&
+              m.content === payload.new.content &&
               m.sender_id === payload.new.sender_id)
           );
           return withoutOptimistic.some(m => m.id === payload.new.id)
@@ -274,14 +274,14 @@ function CourierChatPanel({ deliveryId, buyerId, session }) {
     setMessages(prev => [...prev, {
       id: tempId, delivery_id: deliveryId,
       sender_id: session.user.id, sender_role: 'courier',
-      message: text, created_at: new Date().toISOString(),
+      content: text, created_at: new Date().toISOString(),
     }]);
     const { error } = await supabase.from('chat_messages').insert({
       delivery_id: deliveryId,
       order_id:    deliveryId,
       sender_id:   session.user.id,
       sender_role: 'courier',
-      message:     text,
+      content:     text,
     });
     if (error) {
       setMessages(prev => prev.filter(m => m.id !== tempId));
@@ -332,7 +332,7 @@ function CourierChatPanel({ deliveryId, buyerId, session }) {
                       ? 'bg-brand-500 text-white rounded-br-sm'
                       : 'bg-surface-800 text-gray-200 rounded-bl-sm'
                   }`}>
-                    <p>{msg.message}</p>
+                    <p>{msg.content}</p>
                     <p className={`text-xs mt-0.5 ${isMine ? 'text-white/60' : 'text-gray-500'}`}>
                       {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                     </p>

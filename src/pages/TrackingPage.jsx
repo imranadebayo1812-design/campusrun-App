@@ -297,7 +297,7 @@ export default function TrackingPage() {
           // Replace matching optimistic entry, or append if genuinely new
           const withoutOptimistic = prev.filter(m =>
             !(String(m.id).startsWith('temp-') &&
-              m.message === payload.new.message &&
+              m.content === payload.new.content &&
               m.sender_id === payload.new.sender_id)
           );
           return withoutOptimistic.some(m => m.id === payload.new.id)
@@ -532,7 +532,7 @@ export default function TrackingPage() {
       delivery_id: deliveryId,
       sender_id:   session.user.id,
       sender_role: 'buyer',
-      message:     text,
+      content:     text,
       created_at:  new Date().toISOString(),
     }]);
     const { error } = await supabase.from('chat_messages').insert({
@@ -540,7 +540,7 @@ export default function TrackingPage() {
       order_id:    deliveryId,
       sender_id:   session.user.id,
       sender_role: 'buyer',
-      message:     text,
+      content:     text,
     });
     if (error) {
       setChatMessages(prev => prev.filter(m => m.id !== tempId));
@@ -881,7 +881,7 @@ export default function TrackingPage() {
                         ? 'bg-brand-500 text-white rounded-br-sm'
                         : 'bg-surface-800 text-gray-300 rounded-bl-sm'
                     }`}>
-                      <p>{msg.message}</p>
+                      <p>{msg.content}</p>
                       <p className={`text-xs mt-0.5 ${isMine ? 'text-white/60' : 'text-gray-500'}`}>
                         {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                       </p>

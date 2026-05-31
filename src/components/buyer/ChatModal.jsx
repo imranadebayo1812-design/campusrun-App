@@ -37,7 +37,7 @@ export default function ChatModal({ deliveryId, onClose }) {
       delivery_id: deliveryId,
       sender_id: session.user.id,
       sender_role: 'buyer',
-      message: message.trim(),
+      content: message.trim(),
     });
     setMessage('');
     queryClient.invalidateQueries({ queryKey: ['chat', deliveryId] });
@@ -66,7 +66,7 @@ export default function ChatModal({ deliveryId, onClose }) {
                 <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
                   isMine ? 'bg-brand-500 text-white rounded-tr-sm' : 'bg-surface-800 text-gray-200 rounded-tl-sm'
                 }`}>
-                  <p>{msg.message}</p>
+                  <p>{msg.content}</p>
                   <p className={`text-xs mt-0.5 ${isMine ? 'text-brand-200/70' : 'text-gray-500'}`}>
                     {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                   </p>

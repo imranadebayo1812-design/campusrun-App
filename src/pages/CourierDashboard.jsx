@@ -61,7 +61,8 @@ function DeliveryCodeModal({ delivery, onSuccess, onClose }) {
 function FraudWarningModal({ itemName, onAccept, onClose }) {
   return (
     <div className="fixed inset-0 z-[200] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
-      <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4">
+      <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4"
+        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-red-400" aria-hidden="true" />
@@ -122,7 +123,8 @@ function ItemPriceEditModal({ target, onSubmit, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[200] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}>
-      <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4">
+      <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4"
+        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Pencil className="w-4 h-4 text-brand-400" aria-hidden="true" />

@@ -134,7 +134,6 @@ export default function MobileShell({ children }) {
         data-scroll
         className="flex-1 overflow-y-auto pb-nav bg-surface-950 scrollbar-hide"
         style={{
-          WebkitOverflowScrolling: 'touch',
           overscrollBehaviorY: 'none',
           touchAction: 'pan-y',
         }}

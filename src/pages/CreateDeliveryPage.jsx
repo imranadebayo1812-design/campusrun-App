@@ -219,6 +219,7 @@ function ItemDetailSheet({ item, inCart, onAdd, onClose }) {
     >
       <div
         className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4"
+        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">

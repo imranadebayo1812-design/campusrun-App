@@ -37,6 +37,47 @@ workflows:
           success: true
           failure: true
 
+  android-build:
+    name: CampusRun Android
+    max_build_duration: 30
+    instance_type: linux_x2
+    environment:
+      groups:
+        - android
+      vars:
+        PACKAGE_NAME: com.campusrun.app
+      node: "22"
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+
+      - name: Build web app
+        script: npm run build
+
+      - name: Sync Capacitor
+        script: npx cap sync android
+
+      - name: Restore keystore
+        script: |
+          mkdir -p android/keystore
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/keystore/campusrun-release.keystore
+
+      - name: Build AAB
+        script: |
+          cd android
+          ./gradlew bundleRelease
+
+    artifacts:
+      - android/app/build/outputs/bundle/release/*.aab
+
+    publishing:
+      email:
+        recipients:
+          - imranadebayo1812@gmail.com
+        notify:
+          success: true
+          failure: true
+
   ios-build:
     name: CampusRun iOS
     max_build_duration: 60

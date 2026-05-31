@@ -76,7 +76,7 @@ export default function MobileShell({ children }) {
   const ready = pullY >= PULL_THRESHOLD || refreshing;
 
   return (
-    <div className="app-shell flex flex-col w-full max-w-xl mx-auto bg-surface-950 relative overflow-x-hidden">
+    <div className="app-shell flex flex-col w-full max-w-xl mx-auto bg-surface-950 relative">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[999] focus:bg-brand-500 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:text-sm focus:font-semibold"

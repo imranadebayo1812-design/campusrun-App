@@ -22,10 +22,27 @@ workflows:
             --project-ref "$SUPABASE_PROJECT_REF" \
             --token "$SUPABASE_ACCESS_TOKEN"
 
+      - name: Deploy send-push function
+        script: |
+          export PATH="$HOME/.local/bin:$PATH"
+          supabase functions deploy send-push \
+            --project-ref "$SUPABASE_PROJECT_REF" \
+            --token "$SUPABASE_ACCESS_TOKEN"
+
       - name: Set RESEND_API_KEY secret
         script: |
           export PATH="$HOME/.local/bin:$PATH"
           supabase secrets set "RESEND_API_KEY=$RESEND_API_KEY" \
+            --project-ref "$SUPABASE_PROJECT_REF" \
+            --token "$SUPABASE_ACCESS_TOKEN"
+
+      - name: Set Firebase secrets
+        script: |
+          export PATH="$HOME/.local/bin:$PATH"
+          supabase secrets set "FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID" \
+            --project-ref "$SUPABASE_PROJECT_REF" \
+            --token "$SUPABASE_ACCESS_TOKEN"
+          supabase secrets set "FIREBASE_SERVICE_ACCOUNT=$FIREBASE_SERVICE_ACCOUNT" \
             --project-ref "$SUPABASE_PROJECT_REF" \
             --token "$SUPABASE_ACCESS_TOKEN"
 

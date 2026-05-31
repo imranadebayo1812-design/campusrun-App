@@ -84,8 +84,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [resendLoading, setResendLoading] = useState(false);
-  const [resendSuccess, setResendSuccess] = useState(false);
 
   async function handleForgotPassword(e) {
     e.preventDefault();
@@ -107,19 +105,6 @@ export default function LoginPage() {
       setMode('signup');
     }
   }, [location.search]);
-
-  async function resendConfirmation() {
-    if (!email || resendLoading) return;
-    setResendLoading(true);
-    const { error } = await supabase.auth.resend({ type: 'signup', email });
-    setResendLoading(false);
-    if (error) {
-      setError(error.message);
-    } else {
-      setResendSuccess(true);
-      setError('');
-    }
-  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -316,32 +301,14 @@ export default function LoginPage() {
             )}
 
             {error && (
-              <div id="login-error" role="alert" className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3 space-y-2">
-                <p>{error}</p>
-                {/not confirmed|confirm your email/i.test(error) && (
-                  <button
-                    type="button"
-                    onClick={resendConfirmation}
-                    disabled={resendLoading || resendSuccess}
-                    className="text-xs text-brand-400 underline underline-offset-2 disabled:opacity-50"
-                  >
-                    {resendLoading ? 'Sending…' : resendSuccess ? 'Email sent ✓' : 'Resend confirmation email'}
-                  </button>
-                )}
+              <div id="login-error" role="alert" className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-xl px-4 py-3">
+                {error}
               </div>
             )}
             {success && (
-              <div role="status" className="bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 space-y-2">
+              <div role="status" className="bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3 space-y-1">
                 <p className="text-green-400 text-sm font-medium">{success}</p>
                 <p className="text-green-600 text-xs">Can't find it? Check your Junk or Spam folder and mark us as safe.</p>
-                <button
-                  type="button"
-                  onClick={resendConfirmation}
-                  disabled={resendLoading || resendSuccess}
-                  className="text-xs text-brand-400 underline underline-offset-2 disabled:opacity-50"
-                >
-                  {resendLoading ? 'Sending…' : resendSuccess ? 'Email sent ✓' : 'Resend email'}
-                </button>
               </div>
             )}
 

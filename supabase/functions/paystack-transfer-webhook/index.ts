@@ -72,7 +72,7 @@ serve(async (req) => {
     if (meta?.type === 'delivery_payment' && meta.delivery_id) {
       await supabase
         .from('deliveries')
-        .update({ payment_verified: true, payment_method: 'paystack', payment_reference: reference })
+        .update({ payment_verified: true, status: 'placed', payment_method: 'paystack', payment_reference: reference })
         .eq('id', meta.delivery_id);
     }
   }

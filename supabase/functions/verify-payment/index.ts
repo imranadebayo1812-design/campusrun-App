@@ -34,14 +34,18 @@ serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
     const { data: delivery } = await admin
       .from('deliveries')
-      .select('buyer_id, total_amount, payment_verified')
+      .select('buyer_id, total_amount, payment_verified, status')
       .eq('id', delivery_id)
       .single();
 
     if (!delivery) return json({ error: 'Delivery not found' }, 404);
     if (delivery.buyer_id !== user.id) return json({ error: 'Forbidden' }, 403);
     if (delivery.payment_verified) {
-      // Already verified — idempotent response
+      // Already charged — webhook may have set payment_verified without status: placed.
+      // Ensure status is corrected so the order becomes visible to couriers.
+      if (delivery.status === 'pending_payment') {
+        await admin.from('deliveries').update({ status: 'placed' }).eq('id', delivery_id);
+      }
       return json({ success: true }, 200);
     }
 
@@ -65,7 +69,7 @@ serve(async (req) => {
     // Use service role to mark verified — bypasses RLS column guard
     const { error: updErr } = await admin
       .from('deliveries')
-      .update({ payment_verified: true, status: 'placed', payment_method: 'paystack', paystack_reference: reference })
+      .update({ payment_verified: true, status: 'placed', payment_method: 'paystack', payment_reference: reference })
       .eq('id', delivery_id);
 
     if (updErr) return json({ error: updErr.message }, 500);

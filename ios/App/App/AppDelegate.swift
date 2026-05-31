@@ -14,10 +14,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
         return true
     }
 
+    // Required by @capacitor/push-notifications — posts APNs token to Capacitor
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        NotificationCenter.default.post(
+            name: .capacitorDidRegisterForRemoteNotifications,
+            object: deviceToken
+        )
+    }
+
+    // Required by @capacitor/push-notifications — posts failure to Capacitor
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        NotificationCenter.default.post(
+            name: .capacitorDidFailToRegisterForRemoteNotifications,
+            object: error
+        )
+    }
+
     // Firebase gives us the real FCM token here.
-    // Re-post it via Capacitor's push registration notification so the
-    // push-notifications plugin fires a second `registration` event with
-    // the actual FCM token (not the raw APNs hex token it fires first).
+    // Re-post it via Capacitor's channel so the plugin fires a second
+    // `registration` event with the FCM token (not the raw APNs hex token).
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         guard let token = fcmToken else { return }
         NotificationCenter.default.post(

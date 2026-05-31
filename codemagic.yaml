@@ -102,6 +102,13 @@ workflows:
       - name: Set up code signing
         script: xcode-project use-profiles
 
+      - name: Lock portrait orientation
+        script: |
+          PLIST="ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Delete :UISupportedInterfaceOrientations" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait" "$PLIST"
+
       - name: Set build number
         script: |
           cd ios/App

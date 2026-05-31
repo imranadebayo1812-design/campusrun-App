@@ -63,7 +63,7 @@ workflows:
         - android
       vars:
         PACKAGE_NAME: com.campusrun.app
-      node: "22"
+      node: "20"
     scripts:
       - name: Install dependencies
         script: npm ci
@@ -106,7 +106,7 @@ workflows:
         BUNDLE_ID: com.campusrun.app
         XCODE_WORKSPACE: ios/App/App.xcodeproj/project.xcworkspace
         XCODE_SCHEME: App
-      node: "22"
+      node: "20"
       xcode: latest
     scripts:
       - name: Install dependencies

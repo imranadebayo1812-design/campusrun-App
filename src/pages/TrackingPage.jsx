@@ -70,7 +70,7 @@ function ReportIssueModal({ onClose, deliveryId, courierId, reporterId }) {
     <div role="dialog" aria-modal="true" aria-label="Report an issue"
       className="fixed inset-0 z-[200] flex items-end justify-center"
       style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}>
-      <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4">
+      <div className="w-full max-w-md bg-surface-900 border border-white/[0.08] rounded-t-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
         <div className="flex items-center justify-between">
           <p className="font-bold text-white text-base">Report an Issue</p>
           <button onClick={onClose} aria-label="Close" className="text-gray-400 text-xl font-bold leading-none">×</button>
@@ -390,7 +390,7 @@ export default function TrackingPage() {
     return (
       <div className="bg-surface-950 min-h-full">
         <div className="flex items-center gap-3 px-4 pt-5 pb-4">
-          <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-800 border border-white/[0.06]">
+          <button onClick={() => navigate(-1)} className="w-11 h-11 flex items-center justify-center rounded-xl bg-surface-800 border border-white/[0.06]">
             <ChevronLeft className="w-5 h-5 text-gray-400" />
           </button>
           <h1 className="font-bold text-white text-lg">Order Status</h1>
@@ -556,7 +556,7 @@ export default function TrackingPage() {
         <button
           onClick={() => navigate('/orders')}
           aria-label="Go back"
-          className="w-9 h-9 bg-surface-900 border border-white/[0.08] rounded-xl flex items-center justify-center"
+          className="w-11 h-11 bg-surface-900 border border-white/[0.08] rounded-xl flex items-center justify-center"
         >
           <ChevronLeft className="w-5 h-5 text-gray-400" aria-hidden="true" />
         </button>

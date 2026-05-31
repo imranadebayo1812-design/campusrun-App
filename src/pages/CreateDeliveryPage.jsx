@@ -496,7 +496,7 @@ export default function CreateDeliveryPage() {
       <div className="flex items-center gap-3 px-4 pt-5 pb-4">
         <button
           onClick={() => navigate(-1)}
-          className="w-9 h-9 bg-surface-900 border border-white/[0.08] rounded-xl flex items-center justify-center shrink-0"
+          className="w-11 h-11 bg-surface-900 border border-white/[0.08] rounded-xl flex items-center justify-center shrink-0"
         >
           <ChevronLeft className="w-5 h-5 text-gray-400" />
         </button>

@@ -33,7 +33,7 @@ const TYPE_STYLES = {
 function ToastStack({ toasts, onDismiss }) {
   if (toasts.length === 0) return null;
   return (
-    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[400] flex flex-col gap-2 w-full max-w-sm px-4 pointer-events-none">
+    <div className="fixed left-1/2 -translate-x-1/2 z-[400] flex flex-col gap-2 w-full max-w-sm px-4 pointer-events-none" style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
       {toasts.map(t => (
         <div
           key={t.id}

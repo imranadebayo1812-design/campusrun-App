@@ -2,14 +2,14 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useMode } from '@/context/ModeContext';
 import { Home, Clock, Wallet, Bike, User, Plus } from 'lucide-react';
 
-const NAV_CLASSES = 'fixed bottom-0 left-0 right-0 max-w-md mx-auto safe-bottom z-10';
-const NAV_INNER  = 'glass border-t border-white/[0.06]';
+const NAV_CLASSES = 'fixed bottom-0 left-0 right-0 max-w-xl mx-auto safe-bottom z-10';
+const NAV_INNER  = 'bg-surface-900/95 backdrop-blur-xl border-t border-surface-700';
 
 function tabClass(isActive) {
-  return `flex-1 flex flex-col items-center py-2.5 gap-0.5 text-xs font-medium transition-all duration-200 ${
+  return `flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 min-h-[48px] text-xs font-medium transition-colors duration-150 ${
     isActive
-      ? 'text-brand-400 [filter:drop-shadow(0_0_6px_#00d1ff)]'
-      : 'text-gray-600 hover:text-gray-400'
+      ? 'text-brand-400'
+      : 'text-gray-600 active:text-gray-400'
   }`;
 }
 

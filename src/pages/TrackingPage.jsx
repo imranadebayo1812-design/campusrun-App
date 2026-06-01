@@ -271,14 +271,14 @@ export default function TrackingPage() {
 
     function loadChat() {
       supabase.from('chat_messages').select('*')
-        .eq('order_id', deliveryId)
+        .eq('delivery_id', deliveryId)
         .order('created_at', { ascending: true })
         .then(({ data }) => {
           if (data?.length) setChatMessages(data);
           // Mark all courier messages as seen — buyer is viewing this page
           supabase.from('chat_messages')
             .update({ seen: true })
-            .eq('order_id', deliveryId)
+            .eq('delivery_id', deliveryId)
             .eq('sender_role', 'courier')
             .eq('seen', false)
             .then(() => {});
@@ -291,7 +291,7 @@ export default function TrackingPage() {
     chatChannel = supabase.channel(`chat:${deliveryId}`)
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'chat_messages',
-        filter: `order_id=eq.${deliveryId}`,
+        filter: `delivery_id=eq.${deliveryId}`,
       }, payload => {
         setChatMessages(prev => {
           // Replace matching optimistic entry, or append if genuinely new
@@ -536,7 +536,7 @@ export default function TrackingPage() {
       created_at:  new Date().toISOString(),
     }]);
     const { error } = await supabase.from('chat_messages').insert({
-      order_id:    deliveryId,
+      delivery_id: deliveryId,
       sender_id:   session.user.id,
       sender_role: 'buyer',
       content:     text,

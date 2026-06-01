@@ -18,7 +18,7 @@ export default function ChatModal({ deliveryId, onClose }) {
       const { data } = await supabase
         .from('chat_messages')
         .select('*, profiles!sender_id(full_name)')
-        .eq('order_id', deliveryId)
+        .eq('delivery_id', deliveryId)
         .order('created_at', { ascending: true });
       return data || [];
     },
@@ -34,7 +34,7 @@ export default function ChatModal({ deliveryId, onClose }) {
     if (!message.trim()) return;
     setSending(true);
     await supabase.from('chat_messages').insert({
-      order_id: deliveryId,
+      delivery_id: deliveryId,
       sender_id: session.user.id,
       sender_role: 'buyer',
       content: message.trim(),

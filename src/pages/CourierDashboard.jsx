@@ -214,7 +214,7 @@ function CourierChatPanel({ deliveryId, buyerId, session }) {
   useEffect(() => {
     function loadChat() {
       supabase.from('chat_messages').select('*')
-        .eq('order_id', deliveryId)
+        .eq('delivery_id', deliveryId)
         .order('created_at', { ascending: true })
         .then(({ data }) => {
           const msgs = data || [];
@@ -229,7 +229,7 @@ function CourierChatPanel({ deliveryId, buyerId, session }) {
     const channel = supabase.channel(`courier-chat:${deliveryId}`)
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'chat_messages',
-        filter: `order_id=eq.${deliveryId}`,
+        filter: `delivery_id=eq.${deliveryId}`,
       }, payload => {
         setMessages(prev => {
           const withoutOptimistic = prev.filter(m =>
@@ -257,7 +257,7 @@ function CourierChatPanel({ deliveryId, buyerId, session }) {
       // Mark all buyer messages as seen in DB
       supabase.from('chat_messages')
         .update({ seen: true })
-        .eq('order_id', deliveryId)
+        .eq('delivery_id', deliveryId)
         .eq('sender_role', 'buyer')
         .eq('seen', false)
         .then(() => {});
@@ -277,7 +277,7 @@ function CourierChatPanel({ deliveryId, buyerId, session }) {
       content: text, created_at: new Date().toISOString(),
     }]);
     const { error } = await supabase.from('chat_messages').insert({
-      order_id:    deliveryId,
+      delivery_id: deliveryId,
       sender_id:   session.user.id,
       sender_role: 'courier',
       content:     text,

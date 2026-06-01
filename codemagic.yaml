@@ -63,7 +63,7 @@ workflows:
         - android
       vars:
         PACKAGE_NAME: com.campusrun.app
-      node: "20"
+      node: "22"
     scripts:
       - name: Install dependencies
         script: npm ci
@@ -106,13 +106,13 @@ workflows:
         BUNDLE_ID: com.campusrun.app
         XCODE_WORKSPACE: ios/App/App.xcodeproj/project.xcworkspace
         XCODE_SCHEME: App
-      node: "20"
+      node: "22"
       xcode: latest
     scripts:
-      - name: Install Node 20
+      - name: Install Node 22
         script: |
-          # Download Node 20 LTS arm64 directly — avoids broken `n` on Xcode 26 image
-          curl -fsSL https://nodejs.org/dist/v20.18.3/node-v20.18.3-darwin-arm64.tar.gz \
+          # Download Node 22 LTS arm64 directly — avoids broken `n` on Xcode 26 image
+          curl -fsSL https://nodejs.org/dist/v22.15.0/node-v22.15.0-darwin-arm64.tar.gz \
             | sudo tar xzf - -C /usr/local --strip-components=1
           node --version
           npm --version

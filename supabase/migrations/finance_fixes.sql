@@ -133,13 +133,18 @@ create trigger delivery_completed_trigger
 -- ── 5. accept_price_edit RPC ─────────────────────────────────
 -- Clears price_edit_flag, strips original_price from items, and
 -- logs a reimbursement earning for the courier (for the extra they paid).
+-- When p_pay_with_wallet=true, deducts the price diff from the buyer's wallet.
 
-create or replace function public.accept_price_edit(p_delivery_id uuid)
+create or replace function public.accept_price_edit(
+  p_delivery_id     uuid,
+  p_pay_with_wallet boolean default false
+)
 returns void language plpgsql security definer as $$
 declare
   v_delivery record;
   v_diff     numeric := 0;
   v_item     jsonb;
+  v_wallet   numeric;
 begin
   select * into v_delivery
   from public.deliveries
@@ -159,12 +164,32 @@ begin
     end if;
   end loop;
 
+  -- Deduct diff from buyer wallet if requested
+  if p_pay_with_wallet and v_diff > 0 then
+    select wallet_balance into v_wallet
+    from public.profiles
+    where id = auth.uid()
+    for update;
+
+    if v_wallet < v_diff then raise exception 'insufficient_balance'; end if;
+
+    update public.profiles
+    set wallet_balance = wallet_balance - v_diff
+    where id = auth.uid();
+
+    insert into public.wallet_transactions (user_id, type, amount, balance_after, description, reference)
+    select auth.uid(), 'payment', v_diff::integer, wallet_balance,
+           'Price difference for order #' || left(p_delivery_id::text, 8),
+           'price_diff_' || to_char(now(), 'YYYYMMDDHH24MISS') || '_' || left(p_delivery_id::text, 8)
+    from public.profiles where id = auth.uid();
+  end if;
+
   -- Strip original_price from items, clear flag
   update public.deliveries
   set
-    items                    = (select jsonb_agg(item - 'original_price')
-                                 from jsonb_array_elements(items) as item),
-    price_edit_flag          = false,
+    items                     = (select jsonb_agg(item - 'original_price')
+                                  from jsonb_array_elements(items) as item),
+    price_edit_flag           = false,
     price_edit_buyer_response = 'accepted'
   where id = p_delivery_id;
 
@@ -180,4 +205,4 @@ begin
   end if;
 end;
 $$;
-grant execute on function public.accept_price_edit(uuid) to authenticated;
+grant execute on function public.accept_price_edit(uuid, boolean) to authenticated;

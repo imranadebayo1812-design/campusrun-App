@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/api/supabaseClient';
+import { ensurePaystack, PAYSTACK_PUBLIC_KEY } from '@/lib/paystack';
 import { calculateDeliveryFee } from '@/lib/deliveryPricing';
 import { getEstateRestriction } from '@/lib/hostelEstates';
 import { formatDistanceToNow } from 'date-fns';
@@ -221,7 +222,7 @@ function RatingModal({ delivery, session, onClose, onSubmit }) {
 export default function TrackingPage() {
   const { deliveryId } = useParams();
   const navigate = useNavigate();
-  const { session, refreshProfile, addNotification } = useAuth();
+  const { session, profile, updateProfileLocally, refreshProfile, addNotification } = useAuth();
   const [delivery, setDelivery] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -238,6 +239,7 @@ export default function TrackingPage() {
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const [priceEditError, setPriceEditError] = useState('');
+  const [diffPayMethod, setDiffPayMethod] = useState('wallet');
   const [allowOffcampusLoading, setAllowOffcampusLoading] = useState(false);
   const [tick, setTick] = useState(0);
 
@@ -450,15 +452,54 @@ export default function TrackingPage() {
         }))
     : [];
 
+  const totalDiff = priceEdits.reduce((sum, e) => sum + Math.max(0, e.diff) * (e.qty || 1), 0);
+  const walletBalance = profile?.wallet_balance || 0;
+  const canPayWithWallet = walletBalance >= totalDiff;
+
+  function clearPriceEditLocally() {
+    const updatedItems = (delivery.items || []).map(({ original_price, ...rest }) => rest);
+    setDelivery(prev => ({ ...prev, items: updatedItems, price_edit_flag: false }));
+  }
+
   async function acceptPriceEdit() {
     setAccepting(true);
     setPriceEditError('');
-    const { error } = await supabase.rpc('accept_price_edit', { p_delivery_id: deliveryId });
+
+    if (totalDiff > 0 && diffPayMethod === 'paystack') {
+      try {
+        await ensurePaystack();
+        const handler = window.PaystackPop.setup({
+          key: PAYSTACK_PUBLIC_KEY,
+          email: session.user.email,
+          amount: Math.round(totalDiff) * 100,
+          ref: `cr_diff_${deliveryId}_${Date.now()}`,
+          metadata: { type: 'price_diff', delivery_id: deliveryId },
+          onSuccess: async () => {
+            const { error } = await supabase.rpc('accept_price_edit', { p_delivery_id: deliveryId });
+            if (error) { setPriceEditError(error.message); }
+            else { clearPriceEditLocally(); }
+            setAccepting(false);
+          },
+          onCancel: () => { setPriceEditError('Payment cancelled.'); setAccepting(false); },
+        });
+        handler.openIframe();
+        return;
+      } catch {
+        setPriceEditError('Could not launch payment. Try again.');
+        setAccepting(false);
+        return;
+      }
+    }
+
+    const { error } = await supabase.rpc('accept_price_edit', {
+      p_delivery_id: deliveryId,
+      p_pay_with_wallet: totalDiff > 0,
+    });
     if (error) {
-      setPriceEditError(error.message);
+      setPriceEditError(error.message === 'insufficient_balance' ? 'Insufficient wallet balance.' : error.message);
     } else {
-      const updatedItems = (delivery.items || []).map(({ original_price, ...rest }) => rest);
-      setDelivery(prev => ({ ...prev, items: updatedItems, price_edit_flag: false }));
+      if (totalDiff > 0) updateProfileLocally({ wallet_balance: walletBalance - totalDiff });
+      clearPriceEditLocally();
     }
     setAccepting(false);
   }
@@ -719,6 +760,36 @@ export default function TrackingPage() {
               </div>
             )}
 
+            {/* Payment method selector — only shown when there is a price increase */}
+            {totalDiff > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-400">Pay the ₦{Math.round(totalDiff).toLocaleString()} difference via:</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setDiffPayMethod('wallet')}
+                    className={`flex-1 text-xs font-semibold py-2 rounded-lg border transition-colors ${
+                      diffPayMethod === 'wallet'
+                        ? 'bg-brand-500/20 border-brand-500/50 text-brand-400'
+                        : 'bg-surface-800 border-white/[0.08] text-gray-400'
+                    } ${!canPayWithWallet ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    disabled={!canPayWithWallet}
+                  >
+                    Wallet {canPayWithWallet ? `(₦${walletBalance.toLocaleString()})` : '(insufficient)'}
+                  </button>
+                  <button
+                    onClick={() => setDiffPayMethod('paystack')}
+                    className={`flex-1 text-xs font-semibold py-2 rounded-lg border transition-colors ${
+                      diffPayMethod === 'paystack'
+                        ? 'bg-brand-500/20 border-brand-500/50 text-brand-400'
+                        : 'bg-surface-800 border-white/[0.08] text-gray-400'
+                    }`}
+                  >
+                    Card / Transfer
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <button
                 onClick={rejectPriceEdit}
@@ -729,10 +800,14 @@ export default function TrackingPage() {
               </button>
               <button
                 onClick={acceptPriceEdit}
-                disabled={accepting}
+                disabled={accepting || (totalDiff > 0 && !canPayWithWallet && diffPayMethod === 'wallet')}
                 className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm"
               >
-                {accepting ? 'Accepting…' : 'Accept & Continue'}
+                {accepting
+                  ? 'Processing…'
+                  : totalDiff > 0
+                    ? `Pay ₦${Math.round(totalDiff).toLocaleString()} & Accept`
+                    : 'Accept & Continue'}
               </button>
             </div>
             {priceEditError && <p className="text-xs text-red-400 text-center">{priceEditError}</p>}

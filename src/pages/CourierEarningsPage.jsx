@@ -338,7 +338,7 @@ export default function CourierEarningsPage() {
   const [earningsList, setEarningsList]       = useState([]);
   const [withdrawalsList, setWithdrawalsList] = useState([]);
 
-  const pendingVerification = priceEditState.pendingVerificationAmount;
+  const pendingVerification = priceEditState?.pendingVerificationAmount ?? 0;
 
   // ── Load earnings + withdrawals ───────────────────────────
   useEffect(() => {

@@ -119,7 +119,7 @@ export default function ReferralPage() {
       ) : (
         <div className="mx-4 mb-5 bg-amber-500/10 border border-amber-500/20 rounded-2xl px-4 py-3.5">
           <p className="text-xs font-semibold text-amber-400">₦{needed.toLocaleString()} more to unlock withdrawal</p>
-          <p className="text-xs text-amber-400/70 mt-0.5">Refer {Math.ceil(needed / 100)} more friend{needed > 100 ? 's' : ''} to reach ₦1,000. Earnings go straight to your wallet.</p>
+          <p className="text-xs text-amber-400/70 mt-0.5">Refer {Math.ceil(needed / 100)} more friend{Math.ceil(needed / 100) > 1 ? 's' : ''} to reach ₦1,000. Earnings go straight to your wallet.</p>
         </div>
       )}
 

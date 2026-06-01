@@ -220,7 +220,7 @@ workflows:
             --private-key @file:/tmp/api_key.p8 \
             --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
-            --testflight || true
+            --testflight
 
     artifacts:
       - build/ios/ipa/*.ipa

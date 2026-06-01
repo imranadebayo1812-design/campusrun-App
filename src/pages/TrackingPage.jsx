@@ -251,6 +251,16 @@ export default function TrackingPage() {
         .from('deliveries').select('*').eq('id', deliveryId).single();
       if (error || !data) { setNotFound(true); return; }
       setDelivery(data);
+      // Check if buyer already submitted feedback — prevents modal re-appearing on revisit
+      if (data.status === 'delivered' && session?.user?.id === data.buyer_id) {
+        const { data: fb } = await supabase
+          .from('delivery_feedback')
+          .select('id')
+          .eq('delivery_id', deliveryId)
+          .eq('buyer_id', session.user.id)
+          .maybeSingle();
+        if (fb) setRatingSubmitted(true);
+      }
     }
     load();
 

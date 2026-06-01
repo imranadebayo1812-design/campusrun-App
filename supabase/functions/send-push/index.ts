@@ -38,12 +38,22 @@ serve(async (req) => {
         },
       };
 
-      // Native Android — channel config
+      // Native Android — channel + sound config
       if (platform === 'android') {
         message.android = {
           notification: {
-            icon:       'ic_launcher',
-            channel_id: 'campusrun_default',
+            icon:          'ic_launcher',
+            channel_id:    'campusrun_default',
+            default_sound: true,
+          },
+        };
+      }
+
+      // iOS — explicit sound via APNs override
+      if (platform === 'ios') {
+        message.apns = {
+          payload: {
+            aps: { sound: 'default' },
           },
         };
       }

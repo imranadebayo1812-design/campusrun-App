@@ -6,12 +6,15 @@ import { Wallet, Plus, ArrowDownLeft, ArrowUpRight, TrendingUp, Banknote } from 
 import { formatDistanceToNow } from 'date-fns';
 
 const TX_ICON = {
-  topup:      { icon: ArrowDownLeft, color: 'text-green-400', bg: 'bg-green-500/15' },
-  earning:    { icon: ArrowDownLeft, color: 'text-green-400', bg: 'bg-green-500/15' },
-  tip:        { icon: ArrowDownLeft, color: 'text-green-400', bg: 'bg-green-500/15' },
-  refund:     { icon: ArrowDownLeft, color: 'text-blue-400', bg: 'bg-blue-500/15' },
-  payment:    { icon: ArrowUpRight, color: 'text-red-400', bg: 'bg-red-500/15' },
-  withdrawal: { icon: ArrowUpRight, color: 'text-red-400', bg: 'bg-red-500/15' },
+  topup:            { icon: ArrowDownLeft, color: 'text-green-400', bg: 'bg-green-500/15' },
+  earning:          { icon: ArrowDownLeft, color: 'text-green-400', bg: 'bg-green-500/15' },
+  earnings:         { icon: ArrowDownLeft, color: 'text-green-400', bg: 'bg-green-500/15' },
+  tip:              { icon: ArrowDownLeft, color: 'text-green-400', bg: 'bg-green-500/15' },
+  refund:           { icon: ArrowDownLeft, color: 'text-blue-400',  bg: 'bg-blue-500/15'  },
+  reimbursement:    { icon: ArrowDownLeft, color: 'text-blue-400',  bg: 'bg-blue-500/15'  },
+  payment:          { icon: ArrowUpRight,  color: 'text-red-400',   bg: 'bg-red-500/15'   },
+  withdrawal:       { icon: ArrowUpRight,  color: 'text-red-400',   bg: 'bg-red-500/15'   },
+  wallet_withdrawal:{ icon: ArrowUpRight,  color: 'text-red-400',   bg: 'bg-red-500/15'   },
 };
 
 function WithdrawToBankModal({ maxAmount, onSuccess, onClose }) {
@@ -345,7 +348,7 @@ export default function WalletPage() {
           <div className="space-y-2">
             {walletTransactions.map(tx => {
               const { icon: Icon, color, bg } = TX_ICON[tx.type] || TX_ICON.payment;
-              const isCredit = ['topup', 'earning', 'tip', 'refund'].includes(tx.type);
+              const isCredit = ['topup', 'earning', 'earnings', 'tip', 'refund', 'reimbursement'].includes(tx.type);
               return (
                 <div key={tx.id} className="bg-surface-900 border border-white/[0.08] rounded-xl p-3 flex items-center gap-3">
                   <div className={`w-9 h-9 rounded-full ${bg} flex items-center justify-center shrink-0`}>
